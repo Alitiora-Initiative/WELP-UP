@@ -1,8 +1,8 @@
 import Link from 'next/link';
-import { Activity, ArrowDownUp, FileText, Home, LayoutDashboard, LineChart, LockKeyhole, ShieldCheck, UserRound } from 'lucide-react';
+import { Activity, ArrowDownUp, Bot, FileText, Home, LayoutDashboard, LineChart, LockKeyhole, ShieldCheck, UserRound } from 'lucide-react';
 
 type AppSidebarProps = {
-  active: 'home' | 'console' | 'signals' | 'swap' | 'safety' | 'profile' | 'activity' | 'terms';
+  active: 'home' | 'console' | 'signals' | 'autonomous' | 'swap' | 'safety' | 'profile' | 'activity' | 'terms';
   signalCount?: number | string;
   status?: string;
 };
@@ -24,6 +24,9 @@ export function AppSidebar({ active, signalCount = '—', status = 'Ready when w
         </Link>
         <Link className={`nav-item${active === 'signals' ? ' active' : ''}`} href="/signals" aria-current={active === 'signals' ? 'page' : undefined}>
           <Activity size={17} /> Live signals <span className="nav-count">{signalCount || '—'}</span>
+        </Link>
+        <Link className={`nav-item${active === 'autonomous' ? ' active' : ''}`} href="/autonomous" aria-current={active === 'autonomous' ? 'page' : undefined}>
+          <Bot size={17} /> Autonomous AI
         </Link>
         <Link className={`nav-item${active === 'swap' ? ' active' : ''}`} href="/swap" aria-current={active === 'swap' ? 'page' : undefined}><ArrowDownUp size={17} /> Swap</Link>
         <Link className={`nav-item${active === 'safety' ? ' active' : ''}`} href="/safety" aria-current={active === 'safety' ? 'page' : undefined}><ShieldCheck size={17} /> Safety rules</Link>

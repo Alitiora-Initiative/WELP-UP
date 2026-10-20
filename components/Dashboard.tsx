@@ -99,7 +99,7 @@ function ScoreRing({ score, eligible }: { score: number; eligible: boolean }) {
   );
 }
 
-type DashboardView = 'console' | 'signals' | 'swap';
+type DashboardView = 'console' | 'signals' | 'autonomous' | 'swap';
 
 export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
   const router = useRouter();
@@ -347,7 +347,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
 
   return (
     <main className="app-shell">
-      <AppSidebar active={view === 'signals' ? 'signals' : view === 'swap' ? 'swap' : 'console'} signalCount={currentSignals.length || '—'} status={signalsLoading ? 'Scanning live pools' : 'No auto-trading'} />
+      <AppSidebar active={view === 'signals' ? 'signals' : view === 'autonomous' ? 'autonomous' : view === 'swap' ? 'swap' : 'console'} signalCount={currentSignals.length || '—'} status={signalsLoading ? 'Scanning live pools' : 'No auto-trading'} />
 
       <section className="workspace" id="top">
         <header className="topbar">

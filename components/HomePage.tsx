@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowDownUp, ArrowRight, Activity, BookOpenCheck, ChartNoAxesCombined, CircleDollarSign, ExternalLink, LockKeyhole, ShieldCheck, Sparkles, Wallet } from 'lucide-react';
+import { ArrowDownUp, ArrowRight, Activity, BookOpenCheck, Bot, ChartNoAxesCombined, CircleDollarSign, ExternalLink, LockKeyhole, ShieldCheck, Sparkles, Wallet } from 'lucide-react';
 import { WalletReadyGate } from '@solana/kit-plugin-wallet/react';
 import { AppSidebar } from '@/components/AppSidebar';
 import { client } from '@/components/Providers';
@@ -15,6 +15,7 @@ const steps = [
 
 const destinations = [
   { href: '/signals', icon: Activity, title: 'Live signals', copy: 'Review candidates, price movement, score and entry status.' },
+  { href: '/autonomous', icon: Bot, title: 'Autonomous AI', copy: 'Configure AI-powered trading strategies (coming soon).' },
   { href: '/swap', icon: ArrowDownUp, title: 'Swap', copy: 'Prepare a quote and approve one transaction in your wallet.' },
   { href: '/activity', icon: ChartNoAxesCombined, title: 'Portfolio activity', copy: 'See recorded wallet snapshots, scans and approved swaps.' },
   { href: '/safety', icon: ShieldCheck, title: 'Safety rules', copy: 'Read the current limits and what the app does not do yet.' },
