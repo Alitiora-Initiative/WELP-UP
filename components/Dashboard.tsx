@@ -6,7 +6,6 @@ import {
   ArrowDownLeft,
   ArrowDownUp,
   ArrowUpRight,
-  ChevronDown,
   CircleHelp,
   CirclePlus,
   ExternalLink,
@@ -17,12 +16,13 @@ import {
   ShieldCheck,
   Sparkles,
   Wallet,
-  X,
 } from 'lucide-react';
 import { address, getTransactionDecoder, getTransactionEncoder } from '@solana/kit';
 import { useClient } from '@solana/react';
-import { useConnect, useConnectedWallet, useDisconnect, useIsWalletReady, useWallets, WalletReadyGate } from '@solana/kit-plugin-wallet/react';
+import { useConnectedWallet, WalletReadyGate } from '@solana/kit-plugin-wallet/react';
 import { client, type AppClient } from '@/components/Providers';
+import { AppSidebar } from '@/components/AppSidebar';
+import { WalletConnect } from '@/components/WalletConnect';
 import { SOL_MINT } from '@/lib/constants';
 import type { Signal } from '@/lib/signals';
 
@@ -87,49 +87,6 @@ function errorMessage(error: unknown) {
   return message || 'Something went wrong. Please try again.';
 }
 
-function WalletConnect() {
-  const wallets = useWallets(client);
-  const connected = useConnectedWallet(client);
-  const { dispatch: connect, isRunning } = useConnect(client);
-  const { dispatch: disconnect } = useDisconnect(client);
-  const ready = useIsWalletReady(client);
-  const phantom = wallets.find((wallet) => wallet.name.toLowerCase().includes('phantom'));
-
-  if (connected) {
-    return (
-      <div className="wallet-connected">
-        <span className="wallet-pip" />
-        <span className="wallet-name">{connected.wallet.name}</span>
-        <span className="wallet-address">{shortAddress(connected.account.address)}</span>
-        <button className="icon-button disconnect-button" onClick={() => disconnect()} aria-label="Disconnect wallet" title="Disconnect">
-          <X size={15} />
-        </button>
-      </div>
-    );
-  }
-
-  if (!ready) return <button className="connect-button" disabled><LoaderCircle className="spin" size={16} /> Finding wallet…</button>;
-  if (wallets.length === 0) {
-    return <a className="connect-button" href="https://phantom.app/download" target="_blank" rel="noreferrer">Install Phantom <ExternalLink size={15} /></a>;
-  }
-  return (
-    <div className="connect-wrap">
-      <button className="connect-button" disabled={isRunning} onClick={() => connect(phantom ?? wallets[0])}>
-        {isRunning ? <LoaderCircle className="spin" size={16} /> : <Wallet size={16} />}
-        {isRunning ? 'Connecting…' : phantom ? 'Connect Phantom' : `Connect ${wallets[0].name}`}
-      </button>
-      {wallets.length > 1 ? (
-        <details className="wallet-menu">
-          <summary aria-label="Choose another wallet"><ChevronDown size={15} /></summary>
-          <div className="wallet-menu-items">
-            {wallets.map((wallet) => <button key={wallet.name} onClick={() => connect(wallet)}>{wallet.name}</button>)}
-          </div>
-        </details>
-      ) : null}
-    </div>
-  );
-}
-
 function ScoreRing({ score, eligible }: { score: number; eligible: boolean }) {
   return (
     <div className={`score-ring${eligible ? ' score-ready' : ''}`} aria-label={`Rule score ${score}`}>
@@ -153,7 +110,7 @@ export function Dashboard() {
   const [searchResults, setSearchResults] = useState<Token[]>([]);
   const [searching, setSearching] = useState(false);
   const [direction, setDirection] = useState<'buy' | 'sell'>('buy');
-  const [amount, setAmount] = useState('0.01');
+  const [amount, setAmount] = useState('0.001');
   const [order, setOrder] = useState<Order | null>(null);
   const [orderTime, setOrderTime] = useState(0);
   const [pending, setPending] = useState<'quote' | 'sign' | ''>('');
@@ -359,23 +316,7 @@ export function Dashboard() {
 
   return (
     <main className="app-shell">
-      <aside className="sidebar">
-        <a className="brand" href="#top" aria-label="WELP UP home">
-          <span className="brand-mark">W</span>
-          <span><strong>WELP UP</strong><small>AGENT CONSOLE</small></span>
-        </a>
-        <div className="network-chip"><span className="network-pip" /> SOLANA MAINNET</div>
-        <nav className="side-nav" aria-label="Main navigation">
-          <a className="nav-item active" href="#signals"><Activity size={17} /> Live signals <span className="nav-count">{currentSignals.length || '—'}</span></a>
-          <a className="nav-item" href="#swap"><ArrowDownUp size={17} /> Swap</a>
-          <a className="nav-item" href="#safety"><ShieldCheck size={17} /> Safety rules</a>
-        </nav>
-        <div className="sidebar-bottom">
-          <div className="agent-status"><span className="status-pip" /><div><strong>Signal engine</strong><small>{signalsLoading ? 'Scanning live pools' : 'Ready when wallet connects'}</small></div></div>
-          <div className="sidebar-note"><LockKeyhole size={15} /><span>Keys stay inside your wallet. WELP never asks for a seed phrase.</span></div>
-          <div className="build-label">WELP UP <span>v1.0</span></div>
-        </div>
-      </aside>
+      <AppSidebar active="dashboard" signalCount={currentSignals.length || '—'} status={signalsLoading ? 'Scanning live pools' : 'Ready when wallet connects'} />
 
       <section className="workspace" id="top">
         <header className="topbar">
@@ -460,7 +401,8 @@ export function Dashboard() {
               </div>
               <div className="swap-box">
                 <div className="swap-box-top"><span>You {direction === 'buy' ? 'pay' : 'sell'}</span><span>{direction === 'buy' && activeSolBalance !== null ? `Balance ${activeSolBalance.toFixed(4)} SOL` : 'Mainnet'}</span></div>
-                <div className="amount-row"><input aria-label={`Amount in ${formToken}`} inputMode="decimal" value={amount} onChange={(event) => { setAmount(event.target.value); setOrder(null); }} /><span className="asset-pill">{direction === 'buy' ? <span className="sol-symbol">◎</span> : <span className="token-mini">{activeToken?.symbol.slice(0, 1) ?? '?'}</span>}{formToken}</span></div>
+                <div className="amount-row"><input type="number" min={direction === 'buy' ? '0.001' : '0'} max={direction === 'buy' ? '0.02' : undefined} step={direction === 'buy' ? '0.001' : 'any'} aria-label={`Amount in ${formToken}`} inputMode="decimal" value={amount} onChange={(event) => { setAmount(event.target.value); setOrder(null); }} /><span className="asset-pill">{direction === 'buy' ? <span className="sol-symbol">◎</span> : <span className="token-mini">{activeToken?.symbol.slice(0, 1) ?? '?'}</span>}{formToken}</span></div>
+                {direction === 'buy' ? <p className="amount-hint">Minimum 0.001 SOL · editable up to 0.02 SOL</p> : null}
               </div>
               <div className="swap-connector"><span><ArrowDownUp size={14} /></span></div>
               <div className="swap-box receive-box">
