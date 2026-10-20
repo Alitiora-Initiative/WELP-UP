@@ -1,8 +1,8 @@
 import Link from 'next/link';
-import { Activity, ArrowDownUp, LockKeyhole, ShieldCheck, UserRound } from 'lucide-react';
+import { Activity, ArrowDownUp, FileText, Home, LayoutDashboard, LineChart, LockKeyhole, ShieldCheck, UserRound } from 'lucide-react';
 
 type AppSidebarProps = {
-  active: 'dashboard' | 'profile';
+  active: 'home' | 'console' | 'signals' | 'swap' | 'safety' | 'profile' | 'activity' | 'terms';
   signalCount?: number | string;
   status?: string;
 };
@@ -10,19 +10,31 @@ type AppSidebarProps = {
 export function AppSidebar({ active, signalCount = '—', status = 'Ready when wallet connects' }: AppSidebarProps) {
   return (
     <aside className="sidebar">
-      <Link className="brand" href="/#top" aria-label="WELP UP home">
+      <Link className="brand" href="/" aria-label="WELP UP home">
         <span className="brand-mark">W</span>
         <span><strong>WELP UP</strong><small>AGENT CONSOLE</small></span>
       </Link>
       <div className="network-chip"><span className="network-pip" /> SOLANA MAINNET</div>
       <nav className="side-nav" aria-label="Main navigation">
-        <Link className={`nav-item${active === 'dashboard' ? ' active' : ''}`} href="/#signals" aria-current={active === 'dashboard' ? 'page' : undefined}>
+        <Link className={`nav-item${active === 'home' ? ' active' : ''}`} href="/" aria-current={active === 'home' ? 'page' : undefined}>
+          <Home size={17} /> Home
+        </Link>
+        <Link className={`nav-item${active === 'console' ? ' active' : ''}`} href="/dashboard" aria-current={active === 'console' ? 'page' : undefined}>
+          <LayoutDashboard size={17} /> Overview
+        </Link>
+        <Link className={`nav-item${active === 'signals' ? ' active' : ''}`} href="/signals" aria-current={active === 'signals' ? 'page' : undefined}>
           <Activity size={17} /> Live signals <span className="nav-count">{signalCount || '—'}</span>
         </Link>
-        <Link className="nav-item" href="/#swap"><ArrowDownUp size={17} /> Swap</Link>
-        <Link className="nav-item" href="/#safety"><ShieldCheck size={17} /> Safety rules</Link>
+        <Link className={`nav-item${active === 'swap' ? ' active' : ''}`} href="/swap" aria-current={active === 'swap' ? 'page' : undefined}><ArrowDownUp size={17} /> Swap</Link>
+        <Link className={`nav-item${active === 'safety' ? ' active' : ''}`} href="/safety" aria-current={active === 'safety' ? 'page' : undefined}><ShieldCheck size={17} /> Safety rules</Link>
+        <Link className={`nav-item${active === 'activity' ? ' active' : ''}`} href="/activity" aria-current={active === 'activity' ? 'page' : undefined}>
+          <LineChart size={17} /> Portfolio activity
+        </Link>
         <Link className={`nav-item${active === 'profile' ? ' active' : ''}`} href="/profile" aria-current={active === 'profile' ? 'page' : undefined}>
           <UserRound size={17} /> Profile
+        </Link>
+        <Link className={`nav-item${active === 'terms' ? ' active' : ''}`} href="/terms" aria-current={active === 'terms' ? 'page' : undefined}>
+          <FileText size={17} /> Terms &amp; Conditions
         </Link>
       </nav>
       <div className="sidebar-bottom">

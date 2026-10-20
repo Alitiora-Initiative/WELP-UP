@@ -4,8 +4,8 @@ import { Providers } from '@/components/Providers';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'WELP UP — Solana agent console',
-  description: 'Review live market signals and approve every Solana swap with your wallet.',
+  title: 'WELP UP — Solana market analysis and trading',
+  description: 'Review Solana market signals, wallet activity, and swaps you approve in your wallet.',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
