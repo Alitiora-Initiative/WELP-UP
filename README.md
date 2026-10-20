@@ -4,6 +4,19 @@ Self-learning Solana agent from [Alitiora Initiative](https://github.com/Alitior
 
 It is not Space Ledger and it is not MIRA. It is not an investment product. Read [LIMITS.md](LIMITS.md) before you arm it.
 
+## Browser frontend
+
+The web app connects to a browser wallet through Wallet Standard (including Phantom) and never asks for a seed phrase or private key. It discovers live Solana pool signals, applies the 80–98 entry window, and requires the connected wallet to sign every Jupiter swap. Google-created Phantom wallets work through Phantom's normal connect and approval flow; there is no need to export a key.
+
+```bash
+npm install
+npm run dev
+```
+
+Optional environment settings for the web app are `NEXT_PUBLIC_SOLANA_RPC_URL` (public mainnet RPC URL) and `JUPITER_API_KEY` (server-only; never prefix this with `NEXT_PUBLIC_`). The app works without a Jupiter key subject to Jupiter's keyless rate limits.
+
+**The Python command-line runner below is a separate legacy path and still reads `SOLANA_PRIVATE_KEY` to sign on the machine running it. It does not connect to Phantom.** Do not put a Phantom secret or Google-auth wallet secret into that runner. Use the browser frontend for wallet-connected approvals.
+
 ## Rules that are not configurable downward
 
 | Rule | Value |
