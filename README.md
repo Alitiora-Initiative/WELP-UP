@@ -1,74 +1,80 @@
 # WELP UP!
 
-Self-learning Solana agent from [Alitiora Initiative](https://github.com/Alitiora-Initiative). It buys and sells memecoins and tokenized stocks with **real Jupiter swaps**. There is no paper broker in this repository.
+WELP UP! is a Solana market-analysis and wallet trading interface. It reviews selected live token pools, shows the signals and limits it sees, and lets a user prepare a Jupiter swap for individual approval in Phantom or another compatible wallet.
 
-It is not Space Ledger and it is not MIRA. It is not an investment product. Read [LIMITS.md](LIMITS.md) before you arm it.
+The deployed browser app does **not** trade unattended. A signal is analysis, not an order. Every current swap must be reviewed and signed in the user's wallet. The app does not ask for a seed phrase or private key.
 
-## Browser frontend
+## Product flow
 
-The web app connects to a browser wallet through Wallet Standard (including Phantom) and never asks for a seed phrase or private key. It discovers live Solana pool signals, applies the 80–98 entry window, and requires the connected wallet to sign every Jupiter swap. Google-created Phantom wallets work through Phantom's normal connect and approval flow; there is no need to export a key.
+1. Connect a Solana wallet. WELP reads its public address and public balance data.
+2. Review market signals and the reason each token passed or failed the current rules.
+3. Set the swap amount, inspect the quote, and approve that transaction in the wallet.
+4. Review wallet balance snapshots and transaction activity in Portfolio and Profile.
+
+The swap amount opens at **0.001 SOL** and is editable. Current browser buy limits are 0.001 SOL minimum and 0.02 SOL maximum per buy.
+
+## Pages
+
+- `/` — product overview and how the current flow works.
+- `/dashboard` — trading console overview.
+- `/signals` — live market scanner and rule scores.
+- `/swap` — token search, Jupiter quote, and wallet-approved swap.
+- `/safety` — current rules, risks, and future vault requirements.
+- `/activity` — wallet-value snapshots, strategy scan events, and swaps recorded by this browser.
+- `/profile` — connected wallet, public balance summary, and paginated on-chain transaction history (10, 25, 50, or 100 per page).
+- `/terms` — draft Terms and Conditions.
+
+Activity snapshots and the activity feed are stored locally in the browser under the connected public wallet address. Profile transaction history is fetched from Solana RPC for the connected address. Neither page is an authenticated account service, complete portfolio ledger, tax report, or profit-and-loss statement. Local activity does not sync between devices.
+
+## Current market and trade limits
+
+- Signal discovery evaluates a small set of trending Solana pools. The current web scanner is rule-based; it is not an unattended AI trader.
+- Entry scores must fall within 80–98 inclusive. A score is not a probability of profit.
+- A buy requires at least $0.50 estimated wallet equity and checks that 0.003 SOL remains for fees.
+- The interface blocks buys below 0.001 SOL or above 0.02 SOL and blocks quoted price impact above 2.5%.
+- The wallet signs every current swap. Quotes can expire or change. Transactions use real mainnet assets and can lose all value.
+
+These are application checks, not guarantees of safety. See [LIMITS.md](LIMITS.md), [ROADMAP.md](ROADMAP.md), and [TERMS.md](TERMS.md).
+
+## Autonomous vault status
+
+Autonomous trading is a planned feature and is **not enabled**. The intended design is an isolated on-chain vault funded with an amount of SOL the user explicitly chooses and confirms. The planned agent should analyze the market and choose candidates, while an on-chain program enforces the user's total funding cap and a 0.02 SOL per-position ceiling. The user should be able to revoke trading authority and withdraw available funds to their wallet at any time.
+
+The vault program, automated trade executor, take-profit/exit service, durable consent record, and security audit have not been implemented. Do not send SOL to the current website expecting it to manage funds. Never provide WELP with your Phantom private key. Review [ROADMAP.md](ROADMAP.md) for the remaining work.
+
+## Run locally
+
+Requirements: Node.js and npm. The browser app uses Next.js, React, Solana Kit/Wallet Standard, and Jupiter Swap v2.
 
 ```bash
 npm install
 npm run dev
 ```
 
-Optional environment settings for the web app are `NEXT_PUBLIC_SOLANA_RPC_URL` (public mainnet RPC URL) and `JUPITER_API_KEY` (server-only; never prefix this with `NEXT_PUBLIC_`). The app works without a Jupiter key subject to Jupiter's keyless rate limits.
+Optional environment variables:
 
-**The Python command-line runner below is a separate legacy path and still reads `SOLANA_PRIVATE_KEY` to sign on the machine running it. It does not connect to Phantom.** Do not put a Phantom secret or Google-auth wallet secret into that runner. Use the browser frontend for wallet-connected approvals.
+- `NEXT_PUBLIC_SOLANA_RPC_URL` — public Solana RPC endpoint used by the wallet client.
+- `SOLANA_RPC_URL` — server-side RPC endpoint for balance and transaction-history reads.
+- `JUPITER_API_KEY` — server-only Jupiter API key; never prefix it with `NEXT_PUBLIC_`.
 
-## Rules that are not configurable downward
+The app falls back to public Solana RPC endpoints and Jupiter's unauthenticated limits if keys are not configured. See `.env.example` for variable names.
 
-| Rule | Value |
-| --- | --- |
-| Minimum trade | 0.001 SOL |
-| Minimum account equity | $0.50 |
-| Entry window | analysis score 80 through 98, inclusive |
-| Above 98 | skip. A perfect score is not a buy. |
-
-You can raise the size floor or the equity floor. You cannot lower them.
-
-## What it reads, and what it sends
-
-- **Charts.** GeckoTerminal 5-minute USD candles plus pool liquidity, age, volume, and buy/sell counts. Indicators: EMA 9/21, RSI 14, higher-high / higher-low, volume expansion.
-- **Routing.** Jupiter Swap v2 `GET https://api.jup.ag/swap/v2/order`.
-- **Execution.** The order is signed locally and submitted to `POST https://api.jup.ag/swap/v2/execute`. The fill is the change in the wallet's SOL and token balance after the signature confirms. Quotes are not fills.
-- **Marks.** Jupiter price v3 (`lite-api.jup.ag/price/v3`).
-- **Tokenized stocks.** Symbols such as `TSLAx` and `AAPLx` are resolved through Jupiter token search and kept only when the name is an xStock or other tokenized-stock listing. Mints are cached in `data/stocks.json` after the first successful lookup.
-- **Memecoins.** Solana trending pools quoted in SOL or a stablecoin, with at least $12k of pool liquidity and 30 candles of history.
-
-## Learning
-
-`data/brain.json` is a logistic model. Weights start at zero. They move only when a position this process opened is sold, the sell confirms, and the SOL balance change is known. A close counts as a positive label only above +0.5% after fees. Until 8 confirmed closes, the learned probability can shift the rule score by at most 12%. It never adds a simulated history.
-
-## Run
-
-Use a dedicated wallet. Anything already in that wallet can block an exit if the balance does not match the ledger.
+Before committing or deploying changes, run:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-# set SOLANA_PRIVATE_KEY and WELP_ARM=TRADE-LIVE
-python -m welp universe   # real pools and xStock names, no orders
-python -m welp status     # ledger, brain, equity
-python -m welp once       # one live cycle
-python -m welp run        # loop
+npm run lint
+npm run typecheck
+npm run build
 ```
 
-`WELP_ARM` must be exactly `TRADE-LIVE`. A public RPC often fails to land a swap. Point `SOLANA_RPC_URL` at a mainnet endpoint you control. `JUPITER_API_KEY` is optional; keyless Jupiter is rate-limited, so the agent only asks Jupiter for a route after the chart screen passes.
+## Legacy command-line agent
 
-The private key is an environment variable. It is not written to the ledger or the log. Do not delete `data/` while a position is open. The agent will forget a real bag.
+The repository still contains a separate Python command-line runner under `welp/`. It is not part of the deployed browser app and does not connect to Phantom. That legacy path can read `SOLANA_PRIVATE_KEY` from its local environment and sign from the machine running it. Review its source and its separate documentation before running it; do not place a Google-created Phantom wallet secret or recovery phrase in that environment. The browser interface never uses that key path.
 
-## Tests
+## Licensing and service terms
 
-```bash
-python -m unittest discover -s tests -v
-```
+Repository source code is distributed under the [MIT License](LICENSE). MIT is the software license; it does not replace or govern the service's Terms and Conditions, privacy disclosures, third-party services, or on-chain permissions. [TERMS.md](TERMS.md) is a separate draft service document and needs Kenyan legal review and an implemented acceptance flow before it is treated as final. Third-party packages and services retain their own licenses and terms.
 
-The tests check the band, the size floor, the indicators, and the learner. They do not send transactions and they do not invent fills.
+## Risks
 
-## Not built
-
-No interface, no multi-wallet, no adoption of bags the agent did not buy, no leverage, no CEX, no backtest report, no claim that the score is a probability of profit.
+Mainnet swaps move real assets. Token prices, liquidity, quotes, route availability, and wallet balance estimates can be wrong or change quickly. Blockchain transactions can fail, consume fees, or become irreversible. No signal, filter, chart, audit, or take-profit plan guarantees a return or an exit. Only transact with assets you can afford to lose.

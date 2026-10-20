@@ -6,6 +6,7 @@ import { useConnectedWallet, WalletReadyGate } from '@solana/kit-plugin-wallet/r
 import { AppSidebar } from '@/components/AppSidebar';
 import { client } from '@/components/Providers';
 import { WalletConnect } from '@/components/WalletConnect';
+import { TransactionHistory } from '@/components/TransactionHistory';
 
 type WalletProfile = {
   owner: string;
@@ -138,6 +139,13 @@ export function ProfilePage() {
             <span className="profile-privacy-icon"><LockKeyhole size={18} /></span>
             <div><p className="eyebrow">YOUR WALLET, YOUR APPROVAL</p><strong>Keys stay in Phantom.</strong><p>WELP only requests a wallet connection to read public account data. Each swap still needs its own approval in your wallet.</p></div>
           </section>
+
+          <section className="profile-privacy panel vault-plan-card">
+            <span className="profile-privacy-icon"><ShieldCheck size={18} /></span>
+            <div><p className="eyebrow">AUTONOMOUS VAULT · PLANNED, NOT ACTIVE</p><strong>Allocate only what you choose; withdraw when you choose.</strong><p>The planned agent will use a separate, user-funded and revocable vault with a user-set total cap and a 0.02 SOL per-position ceiling. Vault creation, automated trading and withdrawals are not implemented in this version.</p></div>
+          </section>
+
+          {walletAddress ? <TransactionHistory owner={walletAddress} /> : null}
         </div>
       </section>
     </main>

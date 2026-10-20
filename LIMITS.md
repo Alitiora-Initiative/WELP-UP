@@ -1,61 +1,50 @@
-# WELP UP! written limits
+# Current web application limits
 
-This file is the contract. If the code and this file disagree, this file wins and the code is wrong.
+This document describes the browser app as it is implemented today. It is not an authorization for unattended trading.
 
-## What it will do
+## Market analysis
 
-- Send real Solana transactions through Jupiter Swap v2 (`GET /swap/v2/order`, `POST /swap/v2/execute`) on mainnet.
-- Read real charts from GeckoTerminal OHLCV (5-minute USD candles) and real pool stats.
-- Mark SOL and tokens with the Jupiter price API.
-- Buy memecoins and tokenized stocks (xStock names resolved from Jupiter's token search) only when the final analysis score is inside **80 through 98 inclusive**.
-- Size every entry at least **0.001 SOL**, and only if account equity is at least **$0.50**.
-- Update its weights only after a confirmed round trip, using the SOL balance change on the wallet (fees included).
+- The web scanner evaluates a limited set of trending Solana pools with available chart history and liquidity.
+- Current analysis is deterministic and rule-based. It scores candidates; it does not use an autonomous AI model to submit orders.
+- A signal is eligible only for scores from 80 through 98 inclusive. A score does not measure the probability of profit.
+- Data providers, price marks, charts, quotes, token names, and liquidity figures can be incomplete, delayed, manipulated, or unavailable.
 
-## What it will not do
+## Manual swaps
 
-- No paper broker, no dry-run, no backtest, no simulated fills, no replayed candles as trades.
-- No trade when the score is under 80.
-- No trade when the score is over 98. A perfect 99 or 100 is a skip, not a stronger buy.
-- No trade smaller than 0.001 SOL. The floor cannot be lowered by an environment variable.
-- No new entry when equity is under $0.50. That floor cannot be lowered either.
-- No shorts, no leverage, no perpetual markets, no CEX orders.
-- No MEV bundles, no private mempool, no sandwiching.
-- No second wallet, no copy-trading, no social posting.
-- No learning from quotes that were not filled. A failed or unconfirmed swap does not teach the model.
-- No management of tokens it did not itself buy. A dedicated wallet is required.
-- No promise of profit. A 0.001 SOL memecoin trade can go to zero.
+| Control | Current value |
+| --- | ---: |
+| Buy input default | 0.001 SOL |
+| Minimum buy | 0.001 SOL |
+| Maximum buy | 0.02 SOL |
+| Minimum estimated wallet equity to quote | $0.50 |
+| SOL fee reserve check | 0.003 SOL |
+| Maximum quoted buy price impact | 2.5% |
+| Quote freshness window | 45 seconds |
+| Entry signal score | 80–98 inclusive |
 
-## Money rules
+The buy amount is editable between the enforced minimum and maximum. Quotes are estimates. The wallet user must review and sign each transaction. The current app does not make unattended purchases, monitor open positions, or execute take-profit and stop-loss orders.
 
-| Rule | Value |
-| --- | --- |
-| Minimum entry | 0.001 SOL |
-| Minimum equity to open | 0.50 USD |
-| Confidence window | 80 to 98 inclusive |
-| Fee reserve left in SOL | 0.003 SOL (tighten only upward) |
-| Default max one entry | 0.02 SOL |
-| Default open positions | 2 |
-| Meme stop | -8% SOL |
-| Stock stop | -5% SOL |
-| Meme take-profit | +15% SOL, or trail after +8% |
-| Stock take-profit | +8% SOL, or trail after +4% |
-| Meme max hold | 6 hours |
-| Stock max hold | 48 hours |
+## Wallet and user history
 
-Exits are risk cuts. They do not have to sit inside 80–98. Entries do.
+- The web interface connects through the wallet's supported signing flow and never requests the user's private key or seed phrase.
+- Profile transaction history reads signatures for the connected public address from Solana RPC, in selectable pages of 10, 25, 50, or 100.
+- Portfolio snapshots and displayed strategy events are stored locally in the current browser, keyed by public wallet address. They are not synchronized and are not a complete ledger.
+- Public wallet addresses and on-chain transactions are visible on Solana.
 
-## Learning limits
+## Planned vault requirements
 
-- The model starts untrained. Early scores are the strict rule score.
-- After 8 confirmed closes, the learned probability may move the score by up to 45%.
-- A close is a win for the label only when SOL gained more than 0.5% after fees. That does not make the next trade safe.
-- Weights live in `data/brain.json` on the machine that runs the agent. They are not in git.
-- Deleting `data/` while a position is open makes the agent forget a real bag. Do not do that.
+These controls are user-approved design goals only. The vault is not implemented or available:
 
-## Operating limits
+- The user chooses and explicitly confirms the SOL allocation.
+- The vault is isolated and funded by the user; the agent never receives the user's wallet private key.
+- The user sets a total funding cap; a verified on-chain program enforces it.
+- Maximum position size is 0.02 SOL unless the user later explicitly chooses a lower limit.
+- The user can stop or revoke the agent's authority and withdraw available vault assets to their wallet at any time.
+- AI market analysis, entry selection, trade execution, position monitoring, and take-profit/exit logic operate only under those enforced limits.
+- The deployed program and executor receive independent security review, published addresses and audit details, explicit user consent, and tested revocation/withdrawal paths before real funds are enabled.
 
-- `WELP_ARM` must equal `TRADE-LIVE`. Anything else and the process exits before it talks to Jupiter execute.
-- The private key is read from the environment. It is never written to the ledger, the log, or the repo.
-- Public RPC endpoints drop transactions. A failed landing is a failed trade, not a retry storm.
-- Jupiter keyless quota is small. The agent quotes only names that already passed the chart screen.
-- This is not Space Ledger and not MIRA. It is not an investment product of Alitiora Initiative.
+An interface setting by itself is not a secure on-chain limit. A withdrawal may require closing an open token position or withdrawing that token as-is; network congestion and liquidity can affect conversion and timing. The final implementation must describe this accurately before activation.
+
+## Separate legacy runner
+
+The Python CLI under `welp/` is a separate legacy path, not the browser product. It can read `SOLANA_PRIVATE_KEY` locally and is not covered by the browser wallet-signing statements above. See the README before running it.
