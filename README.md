@@ -69,7 +69,7 @@ npm run build
 
 ## Legacy command-line agent
 
-The repository still contains a separate Python command-line runner under `welp/`. It is not part of the deployed browser app and does not connect to Phantom. That legacy path can read `SOLANA_PRIVATE_KEY` from its local environment and sign from the machine running it. Review its source and its separate documentation before running it; do not place a Google-created Phantom wallet secret or recovery phrase in that environment. The browser interface never uses that key path.
+The repository still contains a separate Python command-line runner under `welp/`. It is not part of the deployed browser app and does not connect to Phantom. That legacy path can read `SOLANA_PRIVATE_KEY` from its local environment and sign from the machine running it. It reconciles token balances before each cycle, adopts holdings only when Jupiter returns a sell quote, excludes adopted positions from model training, and persists ambiguous swaps so they block later entries until resolved. It rejects classic mints with a live freeze authority and currently rejects all Token-2022 mints. Review [LIMITS.md](LIMITS.md) and the runner source before using it; do not place a Google-created Phantom wallet secret or recovery phrase in that environment. The browser interface never uses that key path.
 
 ## Licensing and service terms
 

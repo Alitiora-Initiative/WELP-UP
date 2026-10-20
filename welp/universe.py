@@ -1,50 +1,15 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from welp.charts import PoolView, token_top_pool, trending_memes
-from welp.config import STOCK_QUERIES
 from welp.jupiter import Jupiter
 
 
-def _is_stock(token: dict) -> bool:
-    name = str(token.get("name") or "")
-    symbol = str(token.get("symbol") or "")
-    text = f"{name} {symbol}".lower()
-    return "xstock" in text or "tokenized stock" in text or "prestocks" in text
-
-
 def resolve_stocks(jupiter: Jupiter, cache_path: Path) -> list[dict]:
-    if cache_path.exists():
-        try:
-            cached = json.loads(cache_path.read_text())
-            if isinstance(cached, list) and cached:
-                return cached
-        except json.JSONDecodeError:
-            pass
-    found: dict[str, dict] = {}
-    for query in STOCK_QUERIES:
-        try:
-            rows = jupiter.search_token(query)
-        except Exception:
-            continue
-        for row in rows:
-            if not _is_stock(row):
-                continue
-            mint = row.get("id") or row.get("address")
-            if not mint:
-                continue
-            found[mint] = {
-                "mint": mint,
-                "symbol": row.get("symbol") or query,
-                "name": row.get("name") or query,
-                "decimals": int(row.get("decimals") or 0),
-            }
-    cache_path.parent.mkdir(parents=True, exist_ok=True)
-    if found:
-        cache_path.write_text(json.dumps(list(found.values()), indent=2))
-    return list(found.values())
+    # No authoritative xStock issuer/mint list is configured. Ignore old cache
+    # files and search results until entries can be checked against one.
+    return []
 
 
 def load_universe(jupiter: Jupiter, data_dir: Path, meme_limit: int = 12) -> list[PoolView]:

@@ -7,11 +7,13 @@ from decimal import Decimal
 from welp.analyze import Analysis, Snapshot, analyze, in_trade_band
 from welp.brain import Brain
 from welp.charts import PoolView, fetch_candles
-from welp.config import SOL_MINT, Settings
+from welp.config import MAX_PRICE_IMPACT_PCT, SOL_MINT, Settings
 from welp.jupiter import Jupiter, impact_percent, quote_edge_percent
 from welp.ledger import Ledger
 from welp.risk import exit_reason, size_entry, sol_to_lamports
 from welp.rpc import RpcError, confirm, sol_lamports, stable_usd, token_raw
+from welp.reconcile import reconcile_pending_entries, reconcile_positions
+from welp.safety import ensure_mint_safe
 from welp.wallet import sign_swap
 
 COOLDOWN_LOSS_S = 2 * 3600
@@ -28,7 +30,7 @@ def _slippage(kind: str) -> int:
 
 
 def _hard_impact(kind: str) -> float:
-    return 0.8 if kind == "stock" else 2.5
+    return 0.8 if kind == "stock" else float(MAX_PRICE_IMPACT_PCT)
 
 
 def _poll_token(url: str, owner: str, mint: str, before: int, timeout: float = 25.0) -> int:
@@ -55,6 +57,13 @@ def _snapshot(view: PoolView, candles, impact: float | None, edge: float | None)
         price_impact_pct=impact,
         quote_edge_pct=edge,
     )
+
+
+def _reconcile_now(settings: Settings, jupiter: Jupiter, owner: str, ledger: Ledger, views: list[PoolView]) -> tuple[bool, str | None]:
+    try:
+        return reconcile_positions(settings.rpc_url, jupiter, owner, ledger, views)
+    except Exception as exc:
+        return False, f"reconciliation failed: {exc}"
 
 
 def _cooled(ledger: Ledger, mint: str) -> str | None:
@@ -87,18 +96,38 @@ def account_state(settings: Settings, jupiter: Jupiter, owner: str, ledger: Ledg
     marks: dict[int, float] = {}
     if positions:
         mints = [row["mint"] for row in positions]
-        prices = jupiter.prices(mints)
+        try:
+            prices = jupiter.prices(mints)
+        except Exception:
+            prices = {}
         for row in positions:
             px = prices.get(row["mint"])
-            if px is None or row["decimals"] <= 0:
+            if row["decimals"] <= 0:
                 continue
-            ui = Decimal(row["token_raw"]) / (Decimal(10) ** int(row["decimals"]))
-            value = ui * Decimal(str(px))
-            marked += value
             spent = Decimal(row["sol_spent_lamports"]) / Decimal(1_000_000_000)
-            if spent > 0 and sol_px > 0:
-                value_sol = value / sol_px
-                marks[int(row["id"])] = float((value_sol - spent) / spent * 100)
+            if px is not None:
+                ui = Decimal(row["token_raw"]) / (Decimal(10) ** int(row["decimals"]))
+                value = ui * Decimal(str(px))
+                marked += value
+                if spent > 0 and sol_px > 0:
+                    value_sol = value / sol_px
+                    marks[int(row["id"])] = float((value_sol - spent) / spent * 100)
+                continue
+            # Fall back to a current sell quote when the price API has no mark.
+            try:
+                order = jupiter.order(
+                    row["mint"],
+                    SOL_MINT,
+                    int(row["token_raw"]),
+                    slippage_bps=_slippage(str(row["kind"])),
+                )
+                value_sol = Decimal(int(order.get("outAmount") or 0)) / Decimal(1_000_000_000)
+            except Exception:
+                continue
+            if value_sol > 0 and sol_px > 0:
+                marked += value_sol * sol_px
+                if spent > 0:
+                    marks[int(row["id"])] = float((value_sol - spent) / spent * 100)
     equity = sol * sol_px + stables + marked
     return {
         "sol": sol,
@@ -150,46 +179,10 @@ def manage_exits(settings: Settings, jupiter: Jupiter, keypair, owner: str, ledg
             peak = max(peak, pnl)
             ledger.mark_peak(int(row["id"]), peak)
         age_hours = (time.time() - float(row["opened_at"])) / 3600.0
+        # Exit scores need a fresh, complete market snapshot. The legacy runner
+        # only has stale entry data here, so score-based exits are disabled until
+        # the same inputs can be fetched reliably; price and time exits remain.
         rescore = None
-        try:
-            candles = fetch_candles(row["pool"])
-            view = PoolView(
-                pool=row["pool"],
-                mint=row["mint"],
-                symbol=row["symbol"],
-                name=row["symbol"],
-                decimals=int(row["decimals"]),
-                kind=row["kind"],
-                liquidity_usd=0,
-                volume_h24=0,
-                change_m5=0,
-                change_h1=0,
-                age_hours=999,
-                buy_ratio=None,
-                quote_mint=SOL_MINT,
-            )
-            # Exit rescore uses the live candles. Liquidity fields are unknown here,
-            # so a collapse has to come from the chart itself, not a missing book.
-            if len(candles) >= 30:
-                # Keep the stored book from being scored as "thin" on the way out.
-                view = PoolView(
-                    pool=view.pool,
-                    mint=view.mint,
-                    symbol=view.symbol,
-                    name=view.name,
-                    decimals=view.decimals,
-                    kind=view.kind,
-                    liquidity_usd=250_000,
-                    volume_h24=50_000,
-                    change_m5=((candles[-1].close / candles[-2].close) - 1) * 100 if candles[-2].close else 0,
-                    change_h1=((candles[-1].close / candles[max(0, len(candles) - 12)].close) - 1) * 100,
-                    age_hours=48,
-                    buy_ratio=None,
-                    quote_mint=SOL_MINT,
-                )
-                rescore = analyze(_snapshot(view, candles, None, None)).rule_score
-        except Exception as exc:
-            log(f"EXIT-CHART {row['symbol']} skipped rescore: {exc}")
         if pnl is None:
             ledger.decide("hold", "no mark yet", row["mint"], row["symbol"])
             continue
@@ -248,9 +241,14 @@ def manage_exits(settings: Settings, jupiter: Jupiter, keypair, owner: str, ledg
         received = max(0, sol_after - sol_before)
         spent = int(row["sol_spent_lamports"])
         pnl_pct = ((received - spent) / spent * 100.0) if spent else 0.0
-        features = json.loads(row["features_json"])
-        error = brain.learn(features, pnl_pct)
-        brain.save(settings.data_dir / "brain.json")
+        adopted = bool(row["adopted"])
+        if adopted:
+            error_note = "adopted position; brain not trained"
+        else:
+            features = json.loads(row["features_json"])
+            error = brain.learn(features, pnl_pct)
+            brain.save(settings.data_dir / "brain.json")
+            error_note = f"learn_error {error:.3f}"
         sol_px = float(state["sol_price"])
         ledger.close_position(
             int(row["id"]),
@@ -261,7 +259,7 @@ def manage_exits(settings: Settings, jupiter: Jupiter, keypair, owner: str, ledg
             pnl_pct=pnl_pct,
             note=reason,
         )
-        ledger.decide("exit", f"{reason} realized {pnl_pct:.2f}% learn_error {error:.3f}", row["mint"], row["symbol"], rescore)
+        ledger.decide("exit", f"{reason} realized {pnl_pct:.2f}% {error_note}", row["mint"], row["symbol"], rescore)
         log(f"EXIT {row['symbol']} {reason} pnl={pnl_pct:.2f}% sig={result['signature']}")
 
 
@@ -320,6 +318,11 @@ def consider_entries(
         if len(ledger.open_positions()) >= settings.max_positions:
             return
         try:
+            ensure_mint_safe(settings.rpc_url, view.mint)
+        except Exception as exc:
+            ledger.decide("skip", f"mint safety refused: {exc}", view.mint, view.symbol)
+            continue
+        try:
             probe = jupiter.order(SOL_MINT, view.mint, probe_raw, slippage_bps=_slippage(view.kind))
         except Exception as exc:
             ledger.decide("skip", f"jupiter probe failed: {exc}", view.mint, view.symbol)
@@ -329,6 +332,9 @@ def consider_entries(
             continue
         impact = impact_percent(probe)
         edge = quote_edge_percent(probe)
+        if impact is None:
+            ledger.decide("skip", "Jupiter impact was unavailable", view.mint, view.symbol)
+            continue
         if impact > _hard_impact(view.kind):
             ledger.decide("skip", f"impact {impact:.3f}% over the hard cap", view.mint, view.symbol)
             continue
@@ -377,6 +383,9 @@ def consider_entries(
             continue
         live_impact = impact_percent(live)
         live_edge = quote_edge_percent(live)
+        if live_impact is None:
+            ledger.decide("skip", "live Jupiter impact was unavailable", view.mint, view.symbol)
+            continue
         final = analyze(_snapshot(view, candles, live_impact, live_edge))
         final_score, final_p = brain.blend(final.rule_score, final.features)
         ok, final_why = in_trade_band(final_score, float(settings.confidence_floor), float(settings.confidence_ceiling))
@@ -389,26 +398,56 @@ def consider_entries(
             continue
         try:
             signed = sign_swap(live["transaction"], keypair)
-            result = jupiter.execute(signed, live["requestId"])
         except Exception as exc:
             ledger.decide("entry-failed", str(exc), view.mint, view.symbol, final_score)
             log(f"ENTRY-FAILED {view.symbol} {exc}")
             continue
+        try:
+            result = jupiter.execute(signed, live["requestId"])
+        except Exception as exc:
+            request_id = str(live.get("requestId") or f"{view.mint}:{time.time_ns()}")
+            pending_key = f"execute-unknown:{request_id}"
+            ledger.add_pending_entry(pending_key, view.mint, view.symbol, final_score)
+            ledger.decide("entry-uncertain", f"execute response was ambiguous: {exc}", view.mint, view.symbol, final_score)
+            ok, note = _reconcile_now(settings, jupiter, owner, ledger, views)
+            log(f"ENTRY-UNCERTAIN {view.symbol}; reconciliation={'ok' if ok else note}")
+            return
         if str(result.get("status") or "") != "Success" or not result.get("signature"):
             ledger.decide("entry-failed", f"execute {result.get('status')} {result.get('error')}", view.mint, view.symbol, final_score)
             log(f"ENTRY-FAILED {view.symbol} status={result.get('status')}")
+            if result.get("signature") or str(result.get("status") or "") == "Success":
+                signature = result.get("signature")
+                if signature:
+                    pending_key = str(signature)
+                else:
+                    request_id = live.get("requestId") or f"{view.mint}:{time.time_ns()}"
+                    pending_key = f"execute-unknown:{request_id}"
+                ledger.add_pending_entry(pending_key, view.mint, view.symbol, final_score)
+                _reconcile_now(settings, jupiter, owner, ledger, views)
+                return
             continue
         try:
             confirm(settings.rpc_url, result["signature"])
         except RpcError as exc:
+            ledger.add_pending_entry(str(result["signature"]), view.mint, view.symbol, final_score)
             ledger.decide("unconfirmed", f"{exc}. Not opening a second order.", view.mint, view.symbol, final_score)
             log(f"UNCONFIRMED {view.symbol} {exc}")
-            continue
-        sol_after = sol_lamports(settings.rpc_url, owner)
-        token_after = _poll_token(settings.rpc_url, owner, view.mint, token_before)
+            ok, note = _reconcile_now(settings, jupiter, owner, ledger, views)
+            log(f"RECONCILE after unconfirmed: {'ok' if ok else note}")
+            return
+        try:
+            sol_after = sol_lamports(settings.rpc_url, owner)
+            token_after = _poll_token(settings.rpc_url, owner, view.mint, token_before)
+        except Exception as exc:
+            ledger.add_pending_entry(str(result["signature"]), view.mint, view.symbol, final_score)
+            ledger.decide("unconfirmed-balance", f"could not read post-swap balances: {exc}", view.mint, view.symbol, final_score)
+            ok, note = _reconcile_now(settings, jupiter, owner, ledger, views)
+            log(f"RECONCILE after balance error: {'ok' if ok else note}")
+            return
         got = token_after - token_before
         spent = sol_before - sol_after
         if got <= 0 or spent <= 0:
+            ledger.add_pending_entry(str(result["signature"]), view.mint, view.symbol, final_score)
             ledger.decide(
                 "unfilled",
                 f"signature {result['signature']} confirmed but balance delta sol={spent} token={got}",
@@ -417,7 +456,9 @@ def consider_entries(
                 final_score,
             )
             log(f"UNFILLED {view.symbol} sig={result['signature']}")
-            continue
+            ok, note = _reconcile_now(settings, jupiter, owner, ledger, views)
+            log(f"RECONCILE after unfilled: {'ok' if ok else note}")
+            return
         entry_usd = float(spent) / 1e9 * float(state["sol_price"])
         ledger.open_position(
             mint=view.mint,
@@ -443,6 +484,14 @@ def consider_entries(
 
 def cycle(settings: Settings, jupiter: Jupiter, keypair, ledger: Ledger, brain: Brain, views: list[PoolView]) -> None:
     owner = str(keypair.pubkey())
+    try:
+        reconciled, reconcile_note = reconcile_positions(settings.rpc_url, jupiter, owner, ledger, views)
+    except Exception as exc:
+        reconciled, reconcile_note = False, f"reconciliation failed: {exc}"
+    pending_ok, pending_note = reconcile_pending_entries(settings.rpc_url, jupiter, owner, ledger, views)
+    if not pending_ok:
+        reconciled = False
+        reconcile_note = "; ".join(filter(None, (reconcile_note, pending_note)))
     state = account_state(settings, jupiter, owner, ledger)
     log(
         f"MARK pubkey={owner} sol={state['sol']:.6f} "
@@ -452,4 +501,9 @@ def cycle(settings: Settings, jupiter: Jupiter, keypair, ledger: Ledger, brain: 
     manage_exits(settings, jupiter, keypair, owner, ledger, brain, state)
     # Refresh spendable SOL after any exit.
     state = account_state(settings, jupiter, owner, ledger)
+    if not reconciled:
+        note = reconcile_note or "on-chain balances could not be reconciled"
+        ledger.decide("halt-reconcile", note)
+        log(f"HALT reconciliation: {note}")
+        return
     consider_entries(settings, jupiter, keypair, owner, ledger, brain, state, views)

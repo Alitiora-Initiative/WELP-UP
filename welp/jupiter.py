@@ -126,18 +126,20 @@ class Jupiter:
         return payload
 
 
-def impact_percent(order: dict[str, Any]) -> float:
-    """Jupiter v2 returns priceImpact as percent (0.096 means 0.096%)."""
+def impact_percent(order: dict[str, Any]) -> float | None:
+    """Normalize Jupiter impact fields using their documented field units."""
     if order.get("priceImpact") is not None:
-        return abs(float(order["priceImpact"]))
-    raw = order.get("priceImpactPct")
-    if raw is None:
-        return 0.0
-    value = abs(float(raw))
-    # Older quotes used a fraction. A fraction above 1 would be absurd here.
-    if value <= 1:
-        return value * 100.0
-    return value
+        try:
+            return abs(float(order["priceImpact"]))
+        except (TypeError, ValueError):
+            return None
+    # Jupiter's legacy priceImpactPct field is a decimal ratio (0.01 = 1%).
+    if order.get("priceImpactPct") is not None:
+        try:
+            return abs(float(order["priceImpactPct"])) * 100.0
+        except (TypeError, ValueError):
+            return None
+    return None
 
 
 def quote_edge_percent(order: dict[str, Any]) -> float | None:

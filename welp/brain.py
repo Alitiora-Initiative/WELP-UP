@@ -37,6 +37,10 @@ class Brain:
 
     def blend(self, rule_score: float, features: list[float]) -> tuple[float, float]:
         p = self.probability(features)
+        # A model that is still near its neutral prediction should not pull a
+        # rule-based signal away from the entry band before it has learned.
+        if abs(p - 0.5) < 0.05:
+            return max(0.0, min(100.0, rule_score)), p
         learned = p * 100.0
         if self.closed_trades < 8:
             alpha = 0.12

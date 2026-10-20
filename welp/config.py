@@ -11,6 +11,11 @@ USDT_MINT = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
 
 MIN_TRADE_SOL = Decimal("0.001")
 MIN_ACCOUNT_USD = Decimal("0.50")
+MAX_TRADE_SOL = Decimal("0.02")
+FEE_RESERVE_SOL = Decimal("0.003")
+MAX_PRICE_IMPACT_PCT = Decimal("2.5")
+DEFAULT_PRIORITY_FEE_LAMPORTS = 1_000
+MAX_PRIORITY_FEE_LAMPORTS = 200_000
 CONFIDENCE_FLOOR = Decimal("80")
 CONFIDENCE_CEILING = Decimal("98")
 ARM_PHRASE = "TRADE-LIVE"
@@ -102,8 +107,8 @@ def load_settings(require_arm: bool, require_key: bool) -> Settings:
 
     min_trade = _dec("WELP_MIN_TRADE_SOL", "0.001")
     min_account = _dec("WELP_MIN_ACCOUNT_USD", "0.50")
-    max_trade = _dec("WELP_MAX_TRADE_SOL", "0.02")
-    reserve = _dec("WELP_FEE_RESERVE_SOL", "0.003")
+    max_trade = _dec("WELP_MAX_TRADE_SOL", str(MAX_TRADE_SOL))
+    reserve = _dec("WELP_FEE_RESERVE_SOL", str(FEE_RESERVE_SOL))
     if min_trade < MIN_TRADE_SOL:
         raise ConfigError("WELP_MIN_TRADE_SOL cannot be below 0.001")
     if min_account < MIN_ACCOUNT_USD:
@@ -116,7 +121,7 @@ def load_settings(require_arm: bool, require_key: bool) -> Settings:
     try:
         max_positions = int(os.environ.get("WELP_MAX_POSITIONS", "2"))
         loop_seconds = int(os.environ.get("WELP_LOOP_SECONDS", "45"))
-        priority = int(os.environ.get("WELP_PRIORITY_FEE_LAMPORTS", "0"))
+        priority = int(os.environ.get("WELP_PRIORITY_FEE_LAMPORTS", str(DEFAULT_PRIORITY_FEE_LAMPORTS)))
     except ValueError as exc:
         raise ConfigError("numeric WELP setting is invalid") from exc
     if max_positions < 1 or max_positions > 5:
@@ -125,6 +130,8 @@ def load_settings(require_arm: bool, require_key: bool) -> Settings:
         raise ConfigError("WELP_LOOP_SECONDS cannot be below 20")
     if priority < 0:
         raise ConfigError("priority fee cannot be negative")
+    if priority > MAX_PRIORITY_FEE_LAMPORTS:
+        raise ConfigError(f"priority fee cannot exceed {MAX_PRIORITY_FEE_LAMPORTS} lamports")
 
     data_dir = Path(os.environ.get("WELP_DATA_DIR", "data")).expanduser()
     return Settings(

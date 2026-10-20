@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS positions (
     confidence REAL NOT NULL,
     features_json TEXT NOT NULL,
     entry_signature TEXT NOT NULL,
+    adopted INTEGER NOT NULL DEFAULT 0,
     opened_at REAL NOT NULL,
     peak_pnl_pct REAL NOT NULL DEFAULT 0,
     status TEXT NOT NULL,
@@ -40,6 +41,13 @@ CREATE TABLE IF NOT EXISTS decisions (
     action TEXT NOT NULL,
     note TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS pending_entries (
+    request_id TEXT PRIMARY KEY,
+    mint TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    score REAL,
+    created_at REAL NOT NULL
+);
 """
 
 
@@ -49,6 +57,10 @@ class Ledger:
         self.conn = sqlite3.connect(path)
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(SCHEMA)
+        columns = {str(row[1]) for row in self.conn.execute("PRAGMA table_info(positions)")}
+        if "adopted" not in columns:
+            self.conn.execute("ALTER TABLE positions ADD COLUMN adopted INTEGER NOT NULL DEFAULT 0")
+            self.conn.commit()
 
     def close(self) -> None:
         self.conn.close()
@@ -74,13 +86,14 @@ class Ledger:
         confidence: float,
         features: list[float],
         signature: str,
+        adopted: bool = False,
     ) -> int:
         cur = self.conn.execute(
             """
             INSERT INTO positions (
                 mint, symbol, kind, pool, decimals, token_raw, sol_spent_lamports,
-                entry_usd, confidence, features_json, entry_signature, opened_at, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open')
+                entry_usd, confidence, features_json, entry_signature, adopted, opened_at, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open')
             """,
             (
                 mint,
@@ -94,6 +107,7 @@ class Ledger:
                 confidence,
                 json.dumps(features),
                 signature,
+                int(adopted),
                 time.time(),
             ),
         )
@@ -109,6 +123,20 @@ class Ledger:
             (mint,),
         ).fetchone()
         return row is not None
+
+    def add_pending_entry(self, request_id: str, mint: str, symbol: str, score: float | None) -> None:
+        self.conn.execute(
+            "INSERT OR IGNORE INTO pending_entries (request_id, mint, symbol, score, created_at) VALUES (?, ?, ?, ?, ?)",
+            (request_id, mint, symbol, score, time.time()),
+        )
+        self.conn.commit()
+
+    def pending_entries(self) -> list[sqlite3.Row]:
+        return list(self.conn.execute("SELECT * FROM pending_entries ORDER BY created_at"))
+
+    def resolve_pending_entry(self, request_id: str) -> None:
+        self.conn.execute("DELETE FROM pending_entries WHERE request_id = ?", (request_id,))
+        self.conn.commit()
 
     def last_close_ts(self, mint: str) -> float | None:
         row = self.conn.execute(

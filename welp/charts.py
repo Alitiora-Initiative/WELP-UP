@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
-from welp.config import QUOTE_MINTS, SOL_MINT
+from welp.config import QUOTE_MINTS, SOL_MINT, STOCK_QUERIES
 from welp.http import request_json
 from welp.indicators import Candle, parse_ohlcv
 
@@ -102,14 +102,13 @@ def parse_pool_row(
         return None
     name = str(meta.get("name") or "")
     symbol = str(meta.get("symbol") or "")
-    if kind_hint:
-        kind = kind_hint
-    elif "xstock" in name.lower() or symbol.lower().endswith("x") and "xstock" in name.lower():
-        kind = "stock"
-    else:
-        kind = "meme"
-    if "xstock" in name.lower():
-        kind = "stock"
+    # There is no trusted issuer/mint registry for tokenized stocks. Do not
+    # classify them as ordinary memes or grant them stock-specific risk limits.
+    stock_like_name = any(term in name.lower() for term in ("xstock", "tokenized stock", "prestocks"))
+    stock_like_symbol = symbol.lower() in {query.lower() for query in STOCK_QUERIES}
+    if kind_hint == "stock" or stock_like_name or stock_like_symbol:
+        return None
+    kind = "meme"
     pool = attr.get("address") or ""
     if not pool:
         return None

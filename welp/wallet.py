@@ -34,11 +34,11 @@ def sign_swap(transaction_b64: str, keypair: Keypair) -> str:
         raise WalletError("Jupiter returned no transaction")
     raw = base64.b64decode(transaction_b64)
     tx = VersionedTransaction.from_bytes(raw)
-    try:
-        signed = VersionedTransaction(tx.message, [keypair])
-    except TypeError:
-        from solders.message import to_bytes_versioned
-
-        signature = keypair.sign_message(to_bytes_versioned(tx.message))
-        signed = VersionedTransaction.populate(tx.message, [signature])
+    required = int(tx.message.header.num_required_signatures)
+    signers = list(tx.message.account_keys[:required])
+    if keypair.pubkey() not in signers:
+        raise WalletError("connected keypair is not a required signer for this transaction")
+    if signers != [keypair.pubkey()]:
+        raise WalletError("transactions requiring multiple signers are not supported")
+    signed = VersionedTransaction(tx.message, [keypair])
     return base64.b64encode(bytes(signed)).decode()
