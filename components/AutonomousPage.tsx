@@ -56,7 +56,7 @@ const STRATEGIES: StrategyConfig[] = [
 
 export function AutonomousPage() {
   const connected = useConnectedWallet(client);
-  const [botStatus, setBotStatus] = useState<BotStatus>({
+  const [botStatus] = useState<BotStatus>({
     running: false,
     uptime: '0h 0m',
     tradesExecuted: 0,
@@ -65,16 +65,8 @@ export function AutonomousPage() {
   });
   const [selectedStrategy, setSelectedStrategy] = useState<StrategyConfig | null>(null);
   const [allocation, setAllocation] = useState('0.1');
-  const [isStarting, setIsStarting] = useState(false);
-  const [isStopping, setIsStopping] = useState(false);
 
   const walletAddress = connected?.account.address ?? '';
-
-  const toggleBot = async () => {
-    // Gate 3+: mainnet autonomous trading stays disabled until vault
-    // program is on-chain with caps, audit, and consent (see ROADMAP.md).
-    return;
-  };
 
   const enableStrategy = (strategy: StrategyConfig) => {
     setSelectedStrategy(strategy);
@@ -162,7 +154,7 @@ export function AutonomousPage() {
                 </div>
               ) : (
                 <div className="strategy-list">
-                  {STRATEGIES.map((strategy, index) => (
+                  {STRATEGIES.map((strategy) => (
                     <article
                       key={strategy.name}
                       className={`strategy-card ${selectedStrategy?.name === strategy.name ? 'selected' : ''}`}
