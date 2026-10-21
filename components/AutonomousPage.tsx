@@ -50,7 +50,7 @@ const STRATEGIES: StrategyConfig[] = [
     riskLevel: 'Low',
     minAllocation: 0.5,
     maxAllocation: 2.0,
-    maxPositionSize: 0.025,
+    maxPositionSize: 0.02,
     enabled: false,
   },
 ];
@@ -72,21 +72,9 @@ export function AutonomousPage() {
   const walletAddress = connected?.account.address ?? '';
 
   const toggleBot = async () => {
-    if (botStatus.running) {
-      setIsStopping(true);
-      // Simulate stopping
-      setTimeout(() => {
-        setBotStatus((prev) => ({ ...prev, running: false }));
-        setIsStopping(false);
-      }, 2000);
-    } else {
-      setIsStarting(true);
-      // Simulate starting
-      setTimeout(() => {
-        setBotStatus((prev) => ({ ...prev, running: true, uptime: '0h 1m' }));
-        setIsStarting(false);
-      }, 2000);
-    }
+    // Gate 3+: mainnet autonomous trading stays disabled until vault
+    // program is on-chain with caps, audit, and consent (see ROADMAP.md).
+    return;
   };
 
   const enableStrategy = (strategy: StrategyConfig) => {
@@ -292,23 +280,15 @@ export function AutonomousPage() {
                   </div>
 
                   <button
-                    className={`primary-button ${botStatus.running ? 'stop-button' : ''}`}
-                    onClick={toggleBot}
-                    disabled={isStarting || isStopping || !walletAddress}
+                    className="primary-button"
+                    disabled
+                    title="Vault program not deployed. See ROADMAP gates 3–7."
                   >
-                    {isStarting ? (
-                      <><LoaderCircle className="spin" size={16} /> Starting bot…</>
-                    ) : isStopping ? (
-                      <><LoaderCircle className="spin" size={16} /> Stopping bot…</>
-                    ) : botStatus.running ? (
-                      <><Pause size={16} /> Stop Bot</>
-                    ) : (
-                      <><Play size={16} /> Start Autonomous Trading</>
-                    )}
+                    <Play size={16} /> Start (available after vault gates)
                   </button>
 
                   <p className="config-caption">
-                    <ShieldCheck size={13} /> Starting the bot requires a vault funding transaction. You can pause or withdraw at any time.
+                    <ShieldCheck size={13} /> Autonomous trading is UI-only until the on-chain vault is audited and enabled. No funds move from this page.
                   </p>
                 </div>
               )}
@@ -345,7 +325,7 @@ export function AutonomousPage() {
           <footer className="footer">
             <span>WELP UP · Autonomous Trading</span>
             <span>Inspired by Kucoin strategy trading · Vault-based execution</span>
-            <a href="/terms">Terms &amp; Conditions</a>
+            <a href="/terms">Terms & Conditions</a>
             <a href="https://github.com/Alitiora-Initiative/WELP-UP" target="_blank" rel="noreferrer">Source <ExternalLink size={12} /></a>
           </footer>
         </div>
