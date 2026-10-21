@@ -21,6 +21,8 @@ This roadmap distinguishes the product the user wants from features currently av
 - [x] CI workflow runs unit tests and Next.js lint/typecheck/build.
 - [x] LIMITS.md contract test against config constants.
 - [x] Vault Phase 1 threat model document (`docs/vault/THREAT_MODEL.md`).
+- [x] Vault architecture chosen and documented (`docs/vault/ARCHITECTURE.md`).
+- [x] Vault program scaffold (Anchor) under `programs/vault/` — mainnet still disabled.
 
 ## Autonomous trading — not implemented on-chain
 
@@ -40,7 +42,7 @@ The requested product is an AI agent that analyzes the market, selects suitable 
 ### Vault launch gates
 
 1. [x] Write and review a threat model and exact on-chain authority diagram. (`docs/vault/THREAT_MODEL.md`)
-2. [ ] Choose the program or smart-account architecture and document how the agent is authorized without custody of the user's normal wallet key.
+2. [x] Choose the program or smart-account architecture and document how the agent is authorized without custody of the user's normal wallet key. (`docs/vault/ARCHITECTURE.md`, `programs/vault/`)
 3. [ ] Implement and test on **devnet** with explicit total-cap, per-position, token/program allowlist, pause, revoke, and withdraw checks.
 4. [ ] Publish verified source and program addresses; complete an independent audit and resolve critical/high findings.
 5. [ ] Implement durable, wallet-scoped vault configuration and consent records without collecting private keys.
