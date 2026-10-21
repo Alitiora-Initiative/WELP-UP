@@ -101,7 +101,7 @@ export function AutonomousPage() {
             <div>
               <p className="eyebrow"><Bot size={14} /> AUTONOMOUS AI TRADING · COMING SOON</p>
               <h1>AI-Powered <em>Strategy.</em></h1>
-              <p className="welcome-copy">Configure autonomous trading strategies inspired by Kucoin's advanced trading bots. The AI will analyze markets, execute trades, and manage positions within your safety limits.</p>
+              <p className="welcome-copy">Configure autonomous trading strategies inspired by advanced Kucoin-style trading bots. The AI will analyze markets, execute trades, and manage positions within your safety limits.</p>
             </div>
             <div className="date-pill"><span className="date-dot" /> DEVNET · TESTING PHASE</div>
           </section>
