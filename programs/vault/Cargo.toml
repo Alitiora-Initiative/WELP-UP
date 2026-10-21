@@ -1,0 +1,21 @@
+[package]
+name = "welp-vault"
+version = "0.1.0"
+description = "WELP UP! per-user PDA vault (devnet scaffold — mainnet disabled)"
+edition = "2021"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "welp_vault"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+
+[dependencies]
+anchor-lang = "0.30.1"
+anchor-spl = "0.30.1"
