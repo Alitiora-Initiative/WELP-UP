@@ -101,7 +101,7 @@ export default function PrivacyPage() {
           <div className="terms-draft-banner">
             <strong>Privacy notice for the WELP UP! services.</strong>
             <span>
-              Contact: jaymnyon@gmail.com · jaymn2006@gmail.com. Submit a data subject access request via the link in section 12 if you need to exercise privacy rights.
+              Contact: jaymnyon@gmail.com · jaymn2006@gmail.com. To exercise privacy rights (access, correction, or deletion), email either address.
             </span>
           </div>
           <article className="panel terms-document">
