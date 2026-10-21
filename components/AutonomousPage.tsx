@@ -1,11 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Activity, ArrowDownUp, Bot, ChevronRight, CircleHelp, ExternalLink, LoaderCircle, Play, Pause, Settings, ShieldCheck, TrendingUp, Wallet, Zap } from 'lucide-react';
-import { useConnectedWallet, WalletReadyGate } from '@solana/kit-plugin-wallet/react';
+import { Activity, Bot, ChevronRight, CircleHelp, ExternalLink, Play, Settings, ShieldCheck, TrendingUp, Wallet, Zap } from 'lucide-react';
+import { useConnectedWallet } from '@solana/kit-plugin-wallet/react';
 import { client } from '@/components/Providers';
 import { AppSidebar } from '@/components/AppSidebar';
-import { WalletConnect } from '@/components/WalletConnect';
 
 type StrategyConfig = {
   name: string;
@@ -102,9 +101,6 @@ export function AutonomousPage() {
               <span className={`market-pip ${botStatus.running ? 'pulse' : ''}`} />
               {botStatus.running ? 'BOT ACTIVE' : 'BOT PAUSED'}
             </span>
-            <WalletReadyGate client={client} fallback={<button className="connect-button" disabled><LoaderCircle className="spin" size={16} /> Finding wallet…</button>}>
-              <WalletConnect />
-            </WalletReadyGate>
           </div>
         </header>
 
@@ -161,8 +157,8 @@ export function AutonomousPage() {
               {!walletAddress ? (
                 <div className="empty-state">
                   <div className="empty-icon"><Wallet size={20} /></div>
-                  <strong>Connect wallet to configure strategies</strong>
-                  <p>The autonomous bot requires a connected wallet to create a vault and manage trades.</p>
+                  <strong>Strategies stay locked</strong>
+                  <p>Vault setup stays off until the wallet session on this website is active.</p>
                 </div>
               ) : (
                 <div className="strategy-list">

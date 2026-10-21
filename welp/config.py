@@ -68,7 +68,6 @@ def _dec(name: str, default: str) -> Decimal:
 @dataclass(frozen=True)
 class Settings:
     rpc_url: str
-    private_key: str
     arm: str
     jupiter_api_key: str
     min_trade_sol: Decimal
@@ -87,12 +86,12 @@ class Settings:
         return self.arm == ARM_PHRASE
 
 
-def load_settings(require_arm: bool, require_key: bool) -> Settings:
+def load_settings(require_arm: bool) -> Settings:
+    if os.environ.get("SOLANA_PRIVATE_KEY", "").strip():
+        os.environ.pop("SOLANA_PRIVATE_KEY", None)
+        raise ConfigError("Private keys are not accepted. Actions run only after a wallet connects on the website.")
     rpc = os.environ.get("SOLANA_RPC_URL", "https://api.mainnet-beta.solana.com").strip()
-    key = os.environ.get("SOLANA_PRIVATE_KEY", "").strip()
     arm = os.environ.get("WELP_ARM", "").strip()
-    if require_key and not key:
-        raise ConfigError("SOLANA_PRIVATE_KEY is empty")
     if require_arm and arm != ARM_PHRASE:
         raise ConfigError(
             "WELP_ARM must be TRADE-LIVE. WELP UP! has no simulation mode."
@@ -129,7 +128,6 @@ def load_settings(require_arm: bool, require_key: bool) -> Settings:
     data_dir = Path(os.environ.get("WELP_DATA_DIR", "data")).expanduser()
     return Settings(
         rpc_url=rpc,
-        private_key=key,
         arm=arm,
         jupiter_api_key=os.environ.get("JUPITER_API_KEY", "").strip(),
         min_trade_sol=min_trade,

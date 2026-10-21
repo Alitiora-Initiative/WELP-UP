@@ -19,10 +19,9 @@ import {
 } from 'lucide-react';
 import { address, getTransactionDecoder, getTransactionEncoder } from '@solana/kit';
 import { useClient } from '@solana/react';
-import { useConnectedWallet, WalletReadyGate } from '@solana/kit-plugin-wallet/react';
-import { client, type AppClient } from '@/components/Providers';
+import { useConnectedWallet } from '@solana/kit-plugin-wallet/react';
+import { type AppClient } from '@/components/Providers';
 import { AppSidebar } from '@/components/AppSidebar';
-import { WalletConnect } from '@/components/WalletConnect';
 import { SOL_MINT } from '@/lib/constants';
 import { addWalletEvent } from '@/lib/activity';
 import { currentTime } from '@/lib/time';
@@ -226,7 +225,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
     setTradeError('');
     setSignature('');
     if (!connected || !activeToken) {
-      setTradeError('Connect a wallet and choose a token first.');
+      setTradeError('The site wallet session is not active, or no token is selected.');
       return;
     }
     if (direction === 'buy' && (!activeSummary || activeSummary.equityUsd < 0.5)) {
@@ -303,7 +302,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
     try {
       const signer = connected.signer;
       if (!signer || !('modifyAndSignTransactions' in signer)) {
-        throw new Error('This wallet cannot sign Jupiter swap transactions. Connect Phantom or another Solana transaction-signing wallet.');
+        throw new Error('This wallet cannot sign Jupiter swap transactions.');
       }
       if (!connected.supportedTransactionVersions.has(0)) {
         throw new Error('This wallet cannot sign the transaction version returned by Jupiter. Update Phantom or choose another wallet.');
@@ -354,9 +353,6 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
           <div className="breadcrumb"><span>WORKSPACE</span><span className="crumb-slash">/</span><strong>{view === 'signals' ? 'Live signals' : view === 'swap' ? 'Swap' : 'Overview'}</strong></div>
           <div className="topbar-right">
             <span className="market-open"><span className="market-pip" /> LIVE MARKET</span>
-            <WalletReadyGate client={client} fallback={<button className="connect-button" disabled><LoaderCircle className="spin" size={16} /> Finding wallet…</button>}>
-              <WalletConnect />
-            </WalletReadyGate>
           </div>
         </header>
 
@@ -380,7 +376,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
             <article className="stat-card">
               <div className="stat-top"><span>WALLET EQUITY</span><Wallet size={16} /></div>
               <div className="stat-value">{activeSummary ? `$${activeSummary.equityUsd.toFixed(2)}` : '—'}</div>
-              <div className="stat-foot">{activeSummary ? `${(activeSolBalance ?? activeSummary.sol).toFixed(4)} SOL · SOL $${activeSummary.solPrice.toFixed(2)}` : walletAddress ? 'Reading wallet…' : 'Connect your wallet'}</div>
+              <div className="stat-foot">{activeSummary ? `${(activeSolBalance ?? activeSummary.sol).toFixed(4)} SOL · SOL $${activeSummary.solPrice.toFixed(2)}` : walletAddress ? 'Reading wallet…' : 'Waiting for site wallet'}</div>
             </article>
             <article className="stat-card">
               <div className="stat-top"><span>ELIGIBLE SIGNALS</span><Activity size={16} /></div>
@@ -402,7 +398,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
               </div>
               <div className="signal-legend"><span>ASSET</span><span>5M / 1H</span><span>RULE SCORE</span><span>STATUS</span></div>
               {!walletAddress ? (
-                <div className="empty-state"><div className="empty-icon"><Wallet size={20} /></div><strong>Connect to start scanning</strong><p>WELP requests a wallet address to build swap quotes. No signature is requested until you choose to trade.</p></div>
+                <div className="empty-state"><div className="empty-icon"><Wallet size={20} /></div><strong>Waiting for the site wallet</strong><p>Signals and quotes stay off until the wallet session on this website is active. No signature is requested until you choose a swap.</p></div>
               ) : signalsError ? (
                 <div className="empty-state error-state"><strong>Could not load signals</strong><p>{signalsError}</p><button className="text-button" onClick={() => void refreshSignals()}>Try again</button></div>
               ) : currentSignals.length === 0 && signalsLoading ? (
@@ -468,7 +464,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
                   {pending === 'quote' ? <><LoaderCircle className="spin" size={16} /> Getting Jupiter quote…</> : <><ArrowDownUp size={16} /> Get quote</>}
                 </button>
               )}
-              <p className="swap-caption"><LockKeyhole size={13} /> WELP cannot access your private key or sign without your approval.</p>
+              <p className="swap-caption"><LockKeyhole size={13} /> Quotes and swaps stay off until the site wallet session is active, and each swap still needs your approval.</p>
             </section> : null}
           </div>
 

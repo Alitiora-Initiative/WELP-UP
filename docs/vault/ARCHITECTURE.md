@@ -77,12 +77,12 @@ The executor **never** becomes the owner of the vault and cannot change the owne
    Then CPIs into the approved swap path (Jupiter). On success, updates `spent_lamports` for buys.
 7. **`withdraw`** — Owner withdraws SOL and/or SPL tokens held by the vault PDA. No executor involvement required.
 
-## Agent authorization model (no custody of user key)
+## Agent authorization model
 
-- The Python CLI agent (`welp`) continues to load a **dedicated** `SOLANA_PRIVATE_KEY` when `WELP_ARM=TRADE-LIVE`.
-- That key is intended to be the **executor**, not the user’s everyday Phantom wallet.
-- For vault mode (future): the agent signs only `execute_swap` transactions that the program will accept if the executor matches and caps pass.
-- Browser path remains non-custodial: user signs fund / revoke / withdraw with their own wallet. The `/autonomous` page stays UI-only until gates 3–7 complete.
+- No process in this repository loads a wallet secret.
+- The Python CLI agent (`welp`) can analyze and record decisions, but it cannot sign.
+- Swaps, funding, revoke, and withdraw run only after a wallet connects on the website.
+- The `/autonomous` page stays UI-only until gates 3–7 complete.
 
 ## Devnet vs mainnet
 

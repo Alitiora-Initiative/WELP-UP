@@ -2,7 +2,7 @@
 
 WELP UP! is a Solana market-analysis and wallet trading interface. It reviews selected live token pools, shows the signals and limits it sees, and lets a user prepare a Jupiter swap for individual approval in Phantom or another compatible wallet.
 
-The deployed browser app does **not** trade unattended. A signal is analysis, not an order. Every current swap must be reviewed and signed in the user's wallet. The app does not ask for a seed phrase or private key.
+The deployed browser app does **not** trade unattended. A signal is analysis, not an order. Every current swap must be reviewed and signed by the wallet session on the website. Balances, quotes, and swaps stay locked until that session is active.
 
 ## Product flow
 
@@ -47,7 +47,7 @@ Autonomous trading is a planned feature and is **not enabled on mainnet**. Archi
 
 The intended design is an isolated on-chain vault funded with an amount of SOL the user explicitly chooses and confirms. The agent analyzes the market and chooses candidates; the program enforces the user's total funding cap and a 0.02 SOL per-position ceiling. The user can revoke trading authority and withdraw available funds at any time.
 
-Devnet implementation, audit, consent flow, and mainnet enablement remain open (see [ROADMAP.md](ROADMAP.md) gates 3–7). Do not send SOL to the current website expecting it to manage funds. Never provide WELP with your Phantom private key.
+Devnet implementation, audit, consent flow, and mainnet enablement remain open (see [ROADMAP.md](ROADMAP.md) gates 3–7). Do not send SOL to the current website expecting it to manage funds. Signing happens only in the wallet session on the website.
 
 ## Run locally
 
@@ -76,7 +76,7 @@ npm run build
 
 ## Legacy command-line agent
 
-The repository still contains a separate Python command-line runner under `welp/`. It is not part of the deployed browser app and does not connect to Phantom. That legacy path can read `SOLANA_PRIVATE_KEY` from its local environment and sign from the machine running it. Review its source and its separate documentation before running it; do not place a Google-created Phantom wallet secret or recovery phrase in that environment. The browser interface never uses that key path.
+The repository still contains a separate Python command-line runner under `welp/`. It can scan markets and print status, but it cannot sign or submit swaps. Live swaps run only after a wallet connects on the website.
 
 ## Operator and licensing
 

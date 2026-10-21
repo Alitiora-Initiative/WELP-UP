@@ -32,7 +32,7 @@ The requested product is an AI agent that analyzes the market, selects suitable 
 - [ ] Before the agent can trade, the user chooses a SOL allocation and explicitly confirms a transaction that funds the isolated vault.
 - [ ] The vault enforces the user's total allocation cap on-chain. The browser or a database value alone is not sufficient.
 - [ ] Each new position is limited to at most 0.02 SOL, subject to the user choosing a smaller size.
-- [ ] The trade executor can act only through the vault's narrowly scoped authority; it never receives or stores the user's Phantom private key or seed phrase.
+- [ ] The trade executor can act only through the vault's narrowly scoped authority, and only after the website wallet session approves that authority.
 - [ ] The agent monitors only the user's opted-in vault positions and attempts configured take-profit, loss-limit, or exit actions. The UI must show the policy and explain that execution and target prices are not guaranteed.
 - [ ] The user can pause or revoke the agent's authority and withdraw available vault assets to their wallet at any time. Withdrawal behavior for open token positions must be explicit and verified.
 - [ ] Every user has a separate vault and wallet-scoped history; one user's permissions, limits, and activity must never leak into another user's view.
@@ -45,11 +45,11 @@ The requested product is an AI agent that analyzes the market, selects suitable 
 2. [x] Choose the program or smart-account architecture and document how the agent is authorized without custody of the user's normal wallet key. (`docs/vault/ARCHITECTURE.md`, `programs/vault/`)
 3. [ ] Implement and test on **devnet** with explicit total-cap, per-position, token/program allowlist, pause, revoke, and withdraw checks.
 4. [ ] Publish verified source and program addresses; complete an independent audit and resolve critical/high findings.
-5. [ ] Implement durable, wallet-scoped vault configuration and consent records without collecting private keys.
+5. [ ] Implement durable, wallet-scoped vault configuration and consent records tied to the website wallet session.
 6. [ ] Complete Kenyan legal and privacy review, update the Terms, and obtain new user consent.
 7. [ ] Launch only after the user-facing limits match the deployed enforcement and withdrawals have been verified.
 
-**Mainnet autonomous vault remains disabled.** The browser `/autonomous` page is UI-only. The Python CLI agent remains a separate path that uses a local key when armed with `WELP_ARM=TRADE-LIVE`.
+**Mainnet autonomous vault remains disabled.** The browser `/autonomous` page is UI-only. The Python CLI cannot sign; swaps run only after a wallet connects on the website.
 
 ## Legal and publishing follow-up
 

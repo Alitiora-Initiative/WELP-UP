@@ -45,7 +45,7 @@ export function AppSidebar({ active, signalCount = '—', status = 'Ready when w
       </nav>
       <div className="sidebar-bottom">
         <div className="agent-status"><span className="status-pip" /><div><strong>Signal engine</strong><small>{status}</small></div></div>
-        <div className="sidebar-note"><LockKeyhole size={15} /><span>Keys stay inside your wallet. WELP never asks for a seed phrase.</span></div>
+        <div className="sidebar-note"><LockKeyhole size={15} /><span>Actions stay locked until the wallet session on this website is active.</span></div>
         <div className="build-label">WELP UP <span>v1.0</span></div>
       </div>
     </aside>

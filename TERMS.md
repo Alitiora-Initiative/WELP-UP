@@ -25,7 +25,7 @@ WELP UP! is a **non-custodial** Solana market-analysis and wallet trading interf
 - reviews selected live token pools and displays rule-based signals and limits;
 - lets you prepare a Jupiter swap for **individual approval** in Phantom or another compatible self-custody wallet;
 - does **not** trade unattended in the current release;
-- does **not** ask for or store a seed phrase or private key;
+- signs only through the wallet session on the website;
 - does **not** hold, custody, or control your digital assets.
 
 A signal is analysis, not an order. Every current swap must be reviewed and signed in your wallet. The Operator does not match orders for third parties, hold client assets, or operate a licensed virtual-asset exchange or broker under Kenya’s Virtual Asset Service Providers Act, 2025, or the Virtual Asset Service Providers Regulations, 2026.
@@ -92,13 +92,13 @@ The Service is software. It is not an investment adviser, broker, dealer, exchan
 
 Digital assets are volatile and can lose all value. Prices, liquidity, pool data, and charts may be wrong, delayed, manipulated, or incomplete. Tokens may be fraudulent, frozen, or unsellable. Solana transactions are generally irreversible after finalization. Failed routes, congestion, slippage, exploits, and wallet compromise can cause permanent loss. Only risk amounts you can afford to lose entirely. Past performance or a model score does not predict future results.
 
-## 9. Wallet connection and private keys
+## 9. Website wallet session
 
-The browser connects through the wallet’s normal flow and may read your public address and public balances. It does not need or request a seed phrase or private key for current browser swaps. **Never** paste secrets into WELP, support messages, or forms. Project personnel will never ask for them.
+The browser may read the public address and public balances of the wallet session on the website. Quotes, history, and swaps stay unavailable until that session is active. **Never** paste wallet secrets into WELP, support messages, or forms.
 
-You are responsible for wallet choice, device security, reviewing every transaction prompt, and network selection. Disconnecting does not erase blockchain records.
+You are responsible for wallet choice, device security, reviewing every transaction prompt, and network selection. Ending the session does not erase blockchain records.
 
-Legacy command-line code under `welp/` in the repository can use a locally configured private key. It is **not** part of the deployed browser app. Do not run it unless you understand it; never send that key to the Operator.
+Command-line code under `welp/` cannot sign swaps. Live swaps run only on the website after the wallet session is active.
 
 ## 10. Your responsibility for each swap
 
@@ -118,7 +118,7 @@ Activity and portfolio views may show local browser snapshots and public RPC his
 
 ## 14. No custody
 
-In the current product you retain control of your wallet and sign each swap. The Operator does not take custody of assets or private keys. Do not send assets to addresses merely because they appear in an imitation of the Service. The Operator cannot reverse finalized transactions or recover assets sent to the wrong address.
+In the current product you retain control of your wallet and sign each swap on the website. The Operator does not take custody of assets. Do not send assets to addresses merely because they appear in an imitation of the Service. The Operator cannot reverse finalized transactions or recover assets sent to the wrong address.
 
 ## 15. Autonomous vault — not available
 
@@ -142,7 +142,7 @@ You must not:
 - violate law, sanctions, or third-party terms;  
 - use the Service to defraud, manipulate markets, launder funds, or facilitate prohibited activity;  
 - exploit, overload, or gain unauthorized access to the Service, wallets, or RPCs;  
-- solicit seed phrases or credentials;  
+- solicit wallet secrets or credentials;  
 - reverse-engineer or bypass security except as mandatory law allows;  
 - misrepresent assets, the Operator, or Alitiora Initiative.
 
