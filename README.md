@@ -23,6 +23,7 @@ The swap amount opens at **0.001 SOL** and is editable. Current browser buy limi
 - `/activity` — wallet-value snapshots, strategy scan events, and swaps recorded by this browser.
 - `/profile` — connected wallet, public balance summary, and paginated on-chain transaction history (10, 25, 50, or 100 per page).
 - `/terms` — draft Terms and Conditions.
+- `/privacy` — Privacy Policy.
 
 Activity snapshots and the activity feed are stored locally in the browser under the connected public wallet address. Profile transaction history is fetched from Solana RPC for the connected address. Neither page is an authenticated account service, complete portfolio ledger, tax report, or profit-and-loss statement. Local activity does not sync between devices.
 
@@ -34,7 +35,7 @@ Activity snapshots and the activity feed are stored locally in the browser under
 - The interface blocks buys below 0.001 SOL or above 0.02 SOL and blocks quoted price impact above 2.5%.
 - The wallet signs every current swap. Quotes can expire or change. Transactions use real mainnet assets and can lose all value.
 
-These are application checks, not guarantees of safety. See [LIMITS.md](LIMITS.md), [ROADMAP.md](ROADMAP.md), and [TERMS.md](TERMS.md).
+These are application checks, not guarantees of safety. See [LIMITS.md](LIMITS.md), [ROADMAP.md](ROADMAP.md), [TERMS.md](TERMS.md), and [PRIVACY.md](PRIVACY.md).
 
 ## Autonomous vault status
 
@@ -73,7 +74,7 @@ The repository still contains a separate Python command-line runner under `welp/
 
 ## Licensing and service terms
 
-Repository source code is distributed under the [MIT License](LICENSE). MIT is the software license; it does not replace or govern the service's Terms and Conditions, privacy disclosures, third-party services, or on-chain permissions. [TERMS.md](TERMS.md) is a separate draft service document and needs Kenyan legal review and an implemented acceptance flow before it is treated as final. Third-party packages and services retain their own licenses and terms.
+Repository source code is distributed under the [MIT License](LICENSE). MIT is the software license; it does not replace or govern the service's Terms and Conditions, privacy disclosures, third-party services, or on-chain permissions. [TERMS.md](TERMS.md) is a separate draft service document and needs Kenyan legal review and an implemented acceptance flow before it is treated as final. [PRIVACY.md](PRIVACY.md) describes how personal information is processed. Third-party packages and services retain their own licenses and terms.
 
 ## Risks
 
