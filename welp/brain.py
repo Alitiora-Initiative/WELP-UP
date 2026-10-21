@@ -36,12 +36,15 @@ class Brain:
         return _sigmoid(total)
 
     def blend(self, rule_score: float, features: list[float]) -> tuple[float, float]:
+        """Blend rule score with model. Untrained / neutral model does not drag the band."""
         p = self.probability(features)
+        # Issue #8/#9: while the model is untrained it sits at ~0.5 and was
+        # pulling valid 80+ rule scores below the floor. Keep pure rule score
+        # until the model has a meaningful opinion.
+        if abs(p - 0.5) < 0.05 or self.closed_trades < 8:
+            return max(0.0, min(100.0, rule_score)), p
         learned = p * 100.0
-        if self.closed_trades < 8:
-            alpha = 0.12
-        else:
-            alpha = min(0.45, 0.12 + (self.closed_trades - 8) * 0.01)
+        alpha = min(0.45, 0.12 + (self.closed_trades - 8) * 0.01)
         blended = (1.0 - alpha) * rule_score + alpha * learned
         return max(0.0, min(100.0, blended)), p
 
