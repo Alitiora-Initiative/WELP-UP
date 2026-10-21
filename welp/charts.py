@@ -71,6 +71,17 @@ def _included_map(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return found
 
 
+def classify_kind(name: str, symbol: str) -> str:
+    """Explicit kind classifier — no operator-precedence traps (issue #4)."""
+    n = (name or "").lower().strip()
+    s = (symbol or "").lower().strip()
+    if "xstock" in n or "xstock" in s:
+        return "stock"
+    if "tokenized stock" in n or "prestocks" in n:
+        return "stock"
+    return "meme"
+
+
 def parse_pool_row(
     row: dict[str, Any],
     included: dict[str, dict[str, Any]],
@@ -89,7 +100,6 @@ def parse_pool_row(
     quote_mint = quote_attr.get("address") or ""
     if not base_mint or not quote_mint:
         return None
-    # Trade the non-quote side. Skip pools that are not against SOL or a stable.
     if quote_mint in QUOTE_MINTS and base_mint not in QUOTE_MINTS:
         mint, meta = base_mint, base_attr
         other = quote_mint
@@ -104,12 +114,8 @@ def parse_pool_row(
     symbol = str(meta.get("symbol") or "")
     if kind_hint:
         kind = kind_hint
-    elif "xstock" in name.lower() or symbol.lower().endswith("x") and "xstock" in name.lower():
-        kind = "stock"
     else:
-        kind = "meme"
-    if "xstock" in name.lower():
-        kind = "stock"
+        kind = classify_kind(name, symbol)
     pool = attr.get("address") or ""
     if not pool:
         return None
