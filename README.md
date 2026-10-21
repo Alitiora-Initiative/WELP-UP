@@ -22,7 +22,7 @@ The swap amount opens at **0.001 SOL** and is editable. Current browser buy limi
 - `/safety` — current rules, risks, and future vault requirements.
 - `/activity` — wallet-value snapshots, strategy scan events, and swaps recorded by this browser.
 - `/profile` — connected wallet, public balance summary, and paginated on-chain transaction history (10, 25, 50, or 100 per page).
-- `/terms` — draft Terms and Conditions.
+- `/terms` — Terms and Conditions (v1.0).
 - `/privacy` — Privacy Policy.
 
 Activity snapshots and the activity feed are stored locally in the browser under the connected public wallet address. Profile transaction history is fetched from Solana RPC for the connected address. Neither page is an authenticated account service, complete portfolio ledger, tax report, or profit-and-loss statement. Local activity does not sync between devices.
@@ -72,9 +72,11 @@ npm run build
 
 The repository still contains a separate Python command-line runner under `welp/`. It is not part of the deployed browser app and does not connect to Phantom. That legacy path can read `SOLANA_PRIVATE_KEY` from its local environment and sign from the machine running it. Review its source and its separate documentation before running it; do not place a Google-created Phantom wallet secret or recovery phrase in that environment. The browser interface never uses that key path.
 
-## Licensing and service terms
+## Operator and licensing
 
-Repository source code is distributed under the [MIT License](LICENSE). MIT is the software license; it does not replace or govern the service's Terms and Conditions, privacy disclosures, third-party services, or on-chain permissions. [TERMS.md](TERMS.md) is a separate draft service document and needs Kenyan legal review and an implemented acceptance flow before it is treated as final. [PRIVACY.md](PRIVACY.md) describes how personal information is processed. Third-party packages and services retain their own licenses and terms.
+**Operator:** Joseph Mushelle Nyingeh, Kenya, publishing under the free-tier GitHub organization [Alitiora Initiative](https://github.com/Alitiora-Initiative). Studio site: [alitiora-initiative.vercel.app](https://alitiora-initiative.vercel.app).
+
+Repository source code is distributed under the [MIT License](LICENSE). MIT is the software license; it does not replace or govern the service's Terms and Conditions, privacy disclosures, third-party services, or on-chain permissions. [TERMS.md](TERMS.md) (v1.0, effective 21 October 2026) are the published service terms for the non-custodial interface. [PRIVACY.md](PRIVACY.md) describes how personal information is processed. Independent Kenyan legal review is still recommended for formal reliance. Third-party packages and services retain their own licenses and terms.
 
 ## Risks
 
