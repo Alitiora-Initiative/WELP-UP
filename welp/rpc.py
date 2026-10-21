@@ -81,3 +81,23 @@ def confirm(url: str, signature: str, timeout: float = 50.0) -> str:
                 return status
         time.sleep(1.2)
     raise RpcError(f"transaction {signature} not confirmed ({last})")
+
+
+def dynamic_priority_fee(url: str, floor: int = 1_000, ceiling: int = 200_000) -> int:
+    """p75 of recent prioritization fees, floored and capped (issue #5)."""
+    try:
+        result = _rpc(url, "getRecentPrioritizationFees", [[]])
+    except Exception:
+        return floor
+    fees: list[int] = []
+    for row in result or []:
+        try:
+            fees.append(int(row.get("prioritizationFee") or 0))
+        except (TypeError, ValueError):
+            continue
+    if not fees:
+        return floor
+    fees.sort()
+    idx = max(0, min(len(fees) - 1, int(len(fees) * 0.75) - 1))
+    value = fees[idx]
+    return max(floor, min(ceiling, value if value > 0 else floor))

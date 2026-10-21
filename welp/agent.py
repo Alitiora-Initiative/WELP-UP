@@ -10,8 +10,10 @@ from welp.charts import PoolView, fetch_candles
 from welp.config import SOL_MINT, Settings
 from welp.jupiter import Jupiter, impact_percent, quote_edge_percent
 from welp.ledger import Ledger
+from welp.reconcile import adopt_orphan, find_orphans
 from welp.risk import exit_reason, size_entry, sol_to_lamports
-from welp.rpc import RpcError, confirm, sol_lamports, stable_usd, token_raw
+from welp.rpc import RpcError, confirm, dynamic_priority_fee, sol_lamports, stable_usd, token_raw
+from welp.safety import mint_risk
 from welp.wallet import sign_swap
 
 COOLDOWN_LOSS_S = 2 * 3600
@@ -29,6 +31,12 @@ def _slippage(kind: str) -> int:
 
 def _hard_impact(kind: str) -> float:
     return 0.8 if kind == "stock" else 2.5
+
+
+def _priority_fee(settings: Settings) -> int:
+    if settings.priority_fee_lamports > 0:
+        return settings.priority_fee_lamports
+    return dynamic_priority_fee(settings.rpc_url)
 
 
 def _poll_token(url: str, owner: str, mint: str, before: int, timeout: float = 25.0) -> int:
@@ -109,6 +117,38 @@ def account_state(settings: Settings, jupiter: Jupiter, owner: str, ledger: Ledg
     }
 
 
+def reconcile(settings: Settings, owner: str, ledger: Ledger, views: list[PoolView]) -> None:
+    """Adopt on-chain balances with no ledger row so exits can manage them (issue #2)."""
+    candidates = [
+        {
+            "mint": v.mint,
+            "symbol": v.symbol,
+            "kind": v.kind,
+            "pool": v.pool,
+            "decimals": v.decimals,
+        }
+        for v in views
+    ]
+    orphans = find_orphans(settings.rpc_url, owner, ledger, candidates)
+    for item in orphans:
+        pos_id = adopt_orphan(
+            ledger,
+            mint=item["mint"],
+            symbol=item["symbol"],
+            kind=item.get("kind") or "meme",
+            pool=item.get("pool") or "",
+            decimals=int(item.get("decimals") or 0),
+            token_raw=int(item["token_raw"]),
+        )
+        ledger.decide(
+            "adopt",
+            f"orphan on-chain balance adopted id={pos_id}; not a trained entry",
+            item["mint"],
+            item["symbol"],
+        )
+        log(f"ADOPT {item['symbol']} mint={item['mint']} raw={item['token_raw']}")
+
+
 def _swap(
     settings: Settings,
     jupiter: Jupiter,
@@ -125,7 +165,7 @@ def _swap(
         amount_raw,
         taker=owner,
         slippage_bps=slippage_bps,
-        priority_fee_lamports=settings.priority_fee_lamports,
+        priority_fee_lamports=_priority_fee(settings),
     )
     if not order.get("transaction") or not order.get("requestId"):
         raise RuntimeError(f"Jupiter did not return a signable order: {order.get('errorMessage') or 'no transaction'}")
@@ -168,10 +208,7 @@ def manage_exits(settings: Settings, jupiter: Jupiter, keypair, owner: str, ledg
                 buy_ratio=None,
                 quote_mint=SOL_MINT,
             )
-            # Exit rescore uses the live candles. Liquidity fields are unknown here,
-            # so a collapse has to come from the chart itself, not a missing book.
             if len(candles) >= 30:
-                # Keep the stored book from being scored as "thin" on the way out.
                 view = PoolView(
                     pool=view.pool,
                     mint=view.mint,
@@ -190,18 +227,23 @@ def manage_exits(settings: Settings, jupiter: Jupiter, keypair, owner: str, ledg
                 rescore = analyze(_snapshot(view, candles, None, None)).rule_score
         except Exception as exc:
             log(f"EXIT-CHART {row['symbol']} skipped rescore: {exc}")
-        if pnl is None:
+        if pnl is None and int(row["sol_spent_lamports"] or 0) == 0:
+            pass
+        elif pnl is None:
             ledger.decide("hold", "no mark yet", row["mint"], row["symbol"])
             continue
         reason = exit_reason(
             kind=row["kind"],
-            pnl_pct=pnl,
+            pnl_pct=pnl if pnl is not None else 0.0,
             peak_pnl_pct=peak,
             age_hours=age_hours,
             rescore=rescore,
         )
+        if reason is None and int(row["sol_spent_lamports"] or 0) == 0 and age_hours >= 48:
+            reason = "max hold adopted orphan"
         if reason is None:
-            ledger.decide("hold", f"mark {pnl:.2f}% peak {peak:.2f}%", row["mint"], row["symbol"], rescore)
+            if pnl is not None:
+                ledger.decide("hold", f"mark {pnl:.2f}% peak {peak:.2f}%", row["mint"], row["symbol"], rescore)
             continue
         chain = token_raw(settings.rpc_url, owner, row["mint"])
         recorded = int(row["token_raw"])
@@ -218,7 +260,7 @@ def manage_exits(settings: Settings, jupiter: Jupiter, keypair, owner: str, ledg
             ledger.decide("missing", reason, row["mint"], row["symbol"], rescore)
             log(f"MISSING {row['symbol']} balance is zero. Not teaching the brain.")
             continue
-        if recorded <= 0 or abs(chain - recorded) / recorded > 0.02:
+        if recorded <= 0 or abs(chain - recorded) / max(recorded, 1) > 0.02:
             ledger.decide(
                 "halt-exit",
                 f"balance mismatch chain={chain} ledger={recorded}. Dedicated wallet required.",
@@ -249,8 +291,11 @@ def manage_exits(settings: Settings, jupiter: Jupiter, keypair, owner: str, ledg
         spent = int(row["sol_spent_lamports"])
         pnl_pct = ((received - spent) / spent * 100.0) if spent else 0.0
         features = json.loads(row["features_json"])
-        error = brain.learn(features, pnl_pct)
-        brain.save(settings.data_dir / "brain.json")
+        if spent > 0:
+            error = brain.learn(features, pnl_pct)
+            brain.save(settings.data_dir / "brain.json")
+        else:
+            error = 0.0
         sol_px = float(state["sol_price"])
         ledger.close_position(
             int(row["id"]),
@@ -258,7 +303,7 @@ def manage_exits(settings: Settings, jupiter: Jupiter, keypair, owner: str, ledg
             signature=result["signature"],
             sol_received_lamports=received,
             exit_usd=received / 1e9 * sol_px,
-            pnl_pct=pnl_pct,
+            pnl_pct=pnl_pct if spent else None,
             note=reason,
         )
         ledger.decide("exit", f"{reason} realized {pnl_pct:.2f}% learn_error {error:.3f}", row["mint"], row["symbol"], rescore)
@@ -289,6 +334,11 @@ def consider_entries(
             continue
         if view.decimals <= 0:
             ledger.decide("skip", "missing decimals", view.mint, view.symbol)
+            continue
+        risk = mint_risk(settings.rpc_url, view.mint)
+        if risk:
+            ledger.decide("skip", risk, view.mint, view.symbol)
+            log(f"SKIP {view.symbol} {risk}")
             continue
         cooled = _cooled(ledger, view.mint)
         if cooled:
@@ -370,7 +420,7 @@ def consider_entries(
                 raw,
                 taker=owner,
                 slippage_bps=_slippage(view.kind),
-                priority_fee_lamports=settings.priority_fee_lamports,
+                priority_fee_lamports=_priority_fee(settings),
             )
         except Exception as exc:
             ledger.decide("skip", f"live order failed: {exc}", view.mint, view.symbol, blended)
@@ -443,6 +493,7 @@ def consider_entries(
 
 def cycle(settings: Settings, jupiter: Jupiter, keypair, ledger: Ledger, brain: Brain, views: list[PoolView]) -> None:
     owner = str(keypair.pubkey())
+    reconcile(settings, owner, ledger, views)
     state = account_state(settings, jupiter, owner, ledger)
     log(
         f"MARK pubkey={owner} sol={state['sol']:.6f} "
@@ -450,6 +501,5 @@ def cycle(settings: Settings, jupiter: Jupiter, keypair, ledger: Ledger, brain: 
         f"open={len(ledger.open_positions())} brain={brain.closed_trades}"
     )
     manage_exits(settings, jupiter, keypair, owner, ledger, brain, state)
-    # Refresh spendable SOL after any exit.
     state = account_state(settings, jupiter, owner, ledger)
     consider_entries(settings, jupiter, keypair, owner, ledger, brain, state, views)

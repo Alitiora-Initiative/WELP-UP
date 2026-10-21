@@ -14,3 +14,10 @@ data/
 *.sqlite
 *.sqlite3
 .welp.lock
+
+# Anchor / Solana
+target/
+.anchor/
+test-ledger/
+**/*.rs.bk
+programs/**/target/

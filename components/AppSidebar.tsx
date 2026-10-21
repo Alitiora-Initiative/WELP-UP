@@ -1,8 +1,8 @@
 import Link from 'next/link';
-import { Activity, ArrowDownUp, Bot, FileText, Home, LayoutDashboard, LineChart, LockKeyhole, ShieldCheck, UserRound } from 'lucide-react';
+import { Activity, ArrowDownUp, Bot, FileText, Home, LayoutDashboard, LineChart, LockKeyhole, Shield, ShieldCheck, UserRound } from 'lucide-react';
 
 type AppSidebarProps = {
-  active: 'home' | 'console' | 'signals' | 'autonomous' | 'swap' | 'safety' | 'profile' | 'activity' | 'terms';
+  active: 'home' | 'console' | 'signals' | 'autonomous' | 'swap' | 'safety' | 'profile' | 'activity' | 'terms' | 'privacy';
   signalCount?: number | string;
   status?: string;
 };
@@ -38,6 +38,9 @@ export function AppSidebar({ active, signalCount = '—', status = 'Ready when w
         </Link>
         <Link className={`nav-item${active === 'terms' ? ' active' : ''}`} href="/terms" aria-current={active === 'terms' ? 'page' : undefined}>
           <FileText size={17} /> Terms &amp; Conditions
+        </Link>
+        <Link className={`nav-item${active === 'privacy' ? ' active' : ''}`} href="/privacy" aria-current={active === 'privacy' ? 'page' : undefined}>
+          <Shield size={17} /> Privacy Policy
         </Link>
       </nav>
       <div className="sidebar-bottom">

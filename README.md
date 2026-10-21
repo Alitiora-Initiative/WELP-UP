@@ -22,7 +22,8 @@ The swap amount opens at **0.001 SOL** and is editable. Current browser buy limi
 - `/safety` — current rules, risks, and future vault requirements.
 - `/activity` — wallet-value snapshots, strategy scan events, and swaps recorded by this browser.
 - `/profile` — connected wallet, public balance summary, and paginated on-chain transaction history (10, 25, 50, or 100 per page).
-- `/terms` — draft Terms and Conditions.
+- `/terms` — Terms and Conditions (v1.0).
+- `/privacy` — Privacy Policy.
 
 Activity snapshots and the activity feed are stored locally in the browser under the connected public wallet address. Profile transaction history is fetched from Solana RPC for the connected address. Neither page is an authenticated account service, complete portfolio ledger, tax report, or profit-and-loss statement. Local activity does not sync between devices.
 
@@ -34,13 +35,19 @@ Activity snapshots and the activity feed are stored locally in the browser under
 - The interface blocks buys below 0.001 SOL or above 0.02 SOL and blocks quoted price impact above 2.5%.
 - The wallet signs every current swap. Quotes can expire or change. Transactions use real mainnet assets and can lose all value.
 
-These are application checks, not guarantees of safety. See [LIMITS.md](LIMITS.md), [ROADMAP.md](ROADMAP.md), and [TERMS.md](TERMS.md).
+These are application checks, not guarantees of safety. See [LIMITS.md](LIMITS.md), [ROADMAP.md](ROADMAP.md), [TERMS.md](TERMS.md), and [PRIVACY.md](PRIVACY.md).
 
 ## Autonomous vault status
 
-Autonomous trading is a planned feature and is **not enabled**. The intended design is an isolated on-chain vault funded with an amount of SOL the user explicitly chooses and confirms. The planned agent should analyze the market and choose candidates, while an on-chain program enforces the user's total funding cap and a 0.02 SOL per-position ceiling. The user should be able to revoke trading authority and withdraw available funds to their wallet at any time.
+Autonomous trading is a planned feature and is **not enabled on mainnet**. Architecture and a threat model are published:
 
-The vault program, automated trade executor, take-profit/exit service, durable consent record, and security audit have not been implemented. Do not send SOL to the current website expecting it to manage funds. Never provide WELP with your Phantom private key. Review [ROADMAP.md](ROADMAP.md) for the remaining work.
+- [docs/vault/THREAT_MODEL.md](docs/vault/THREAT_MODEL.md)
+- [docs/vault/ARCHITECTURE.md](docs/vault/ARCHITECTURE.md)
+- Scaffold Anchor program: [programs/vault/](programs/vault/)
+
+The intended design is an isolated on-chain vault funded with an amount of SOL the user explicitly chooses and confirms. The agent analyzes the market and chooses candidates; the program enforces the user's total funding cap and a 0.02 SOL per-position ceiling. The user can revoke trading authority and withdraw available funds at any time.
+
+Devnet implementation, audit, consent flow, and mainnet enablement remain open (see [ROADMAP.md](ROADMAP.md) gates 3–7). Do not send SOL to the current website expecting it to manage funds. Never provide WELP with your Phantom private key.
 
 ## Run locally
 
@@ -71,9 +78,11 @@ npm run build
 
 The repository still contains a separate Python command-line runner under `welp/`. It is not part of the deployed browser app and does not connect to Phantom. That legacy path can read `SOLANA_PRIVATE_KEY` from its local environment and sign from the machine running it. Review its source and its separate documentation before running it; do not place a Google-created Phantom wallet secret or recovery phrase in that environment. The browser interface never uses that key path.
 
-## Licensing and service terms
+## Operator and licensing
 
-Repository source code is distributed under the [MIT License](LICENSE). MIT is the software license; it does not replace or govern the service's Terms and Conditions, privacy disclosures, third-party services, or on-chain permissions. [TERMS.md](TERMS.md) is a separate draft service document and needs Kenyan legal review and an implemented acceptance flow before it is treated as final. Third-party packages and services retain their own licenses and terms.
+**Operator:** Joseph Mushelle Nyingeh, Kenya, publishing under the free-tier GitHub organization [Alitiora Initiative](https://github.com/Alitiora-Initiative). Studio site: [alitiora-initiative.vercel.app](https://alitiora-initiative.vercel.app).
+
+Repository source code is distributed under the [MIT License](LICENSE). MIT is the software license; it does not replace or govern the service's Terms and Conditions, privacy disclosures, third-party services, or on-chain permissions. [TERMS.md](TERMS.md) (v1.0, effective 21 October 2026) are the published service terms for the non-custodial interface. [PRIVACY.md](PRIVACY.md) describes how personal information is processed. Independent Kenyan legal review is still recommended for formal reliance. Third-party packages and services retain their own licenses and terms.
 
 ## Risks
 
