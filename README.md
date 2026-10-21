@@ -39,9 +39,15 @@ These are application checks, not guarantees of safety. See [LIMITS.md](LIMITS.m
 
 ## Autonomous vault status
 
-Autonomous trading is a planned feature and is **not enabled**. The intended design is an isolated on-chain vault funded with an amount of SOL the user explicitly chooses and confirms. The planned agent should analyze the market and choose candidates, while an on-chain program enforces the user's total funding cap and a 0.02 SOL per-position ceiling. The user should be able to revoke trading authority and withdraw available funds to their wallet at any time.
+Autonomous trading is a planned feature and is **not enabled on mainnet**. Architecture and a threat model are published:
 
-The vault program, automated trade executor, take-profit/exit service, durable consent record, and security audit have not been implemented. Do not send SOL to the current website expecting it to manage funds. Never provide WELP with your Phantom private key. Review [ROADMAP.md](ROADMAP.md) for the remaining work.
+- [docs/vault/THREAT_MODEL.md](docs/vault/THREAT_MODEL.md)
+- [docs/vault/ARCHITECTURE.md](docs/vault/ARCHITECTURE.md)
+- Scaffold Anchor program: [programs/vault/](programs/vault/)
+
+The intended design is an isolated on-chain vault funded with an amount of SOL the user explicitly chooses and confirms. The agent analyzes the market and chooses candidates; the program enforces the user's total funding cap and a 0.02 SOL per-position ceiling. The user can revoke trading authority and withdraw available funds at any time.
+
+Devnet implementation, audit, consent flow, and mainnet enablement remain open (see [ROADMAP.md](ROADMAP.md) gates 3–7). Do not send SOL to the current website expecting it to manage funds. Never provide WELP with your Phantom private key.
 
 ## Run locally
 
