@@ -30,7 +30,7 @@ This summary provides key points from our Privacy Notice, but you can find out m
 
 **What are your rights?** Depending on where you are located geographically, the applicable privacy law may mean you have certain rights regarding your personal information. Learn more about your privacy rights.
 
-**How do you exercise your rights?** The easiest way to exercise your rights is by submitting a [data subject access request](https://app.termly.io/dsar/6360b244-a982-43af-a3d9-9f7d2f5c2777), or by contacting us. We will consider and act upon any request in accordance with applicable data protection laws.
+**How do you exercise your rights?** The easiest way to exercise your rights is by contacting us at [jaymnyon@gmail.com](mailto:jaymnyon@gmail.com) or [jaymn2006@gmail.com](mailto:jaymn2006@gmail.com). We will consider and act upon any request in accordance with applicable data protection laws.
 
 Want to learn more about what we do with any information we collect? Review the Privacy Notice in full.
 
@@ -157,7 +157,7 @@ Kenya
 
 ## 12. HOW CAN YOU REVIEW, UPDATE, OR DELETE THE DATA WE COLLECT FROM YOU?
 
-Based on the applicable laws of your country, you may have the right to request access to the personal information we collect from you, details about how we have processed it, correct inaccuracies, or delete your personal information. You may also have the right to withdraw your consent to our processing of your personal information. These rights may be limited in some circumstances by applicable law. To request to review, update, or delete your personal information, please fill out and submit a [data subject access request](https://app.termly.io/dsar/6360b244-a982-43af-a3d9-9f7d2f5c2777).
+Based on the applicable laws of your country, you may have the right to request access to the personal information we collect from you, details about how we have processed it, correct inaccuracies, or delete your personal information. You may also have the right to withdraw your consent to our processing of your personal information. These rights may be limited in some circumstances by applicable law. To request to review, update, or delete your personal information, please contact us at [jaymnyon@gmail.com](mailto:jaymnyon@gmail.com) or [jaymn2006@gmail.com](mailto:jaymn2006@gmail.com).
 
 ---
 
