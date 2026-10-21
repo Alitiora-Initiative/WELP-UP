@@ -9,6 +9,12 @@ Per-user PDA vault (Anchor). See:
 
 **Mainnet is disabled.** Program ID in source is a placeholder until `anchor keys list` / first deploy.
 
+Host-side limit tests (no validator):
+
+```bash
+cargo test --manifest-path programs/vault-checks/Cargo.toml
+```
+
 ### Build (requires Solana CLI + Anchor 0.30+)
 
 ```bash

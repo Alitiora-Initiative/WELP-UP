@@ -1,0 +1,11 @@
+[package]
+name = "welp-vault-checks"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Host-side vault limit checks. No Solana runtime."
+publish = false
+
+[lib]
+name = "welp_vault_checks"
+path = "src/lib.rs"
