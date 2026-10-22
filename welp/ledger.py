@@ -29,7 +29,8 @@ CREATE TABLE IF NOT EXISTS positions (
     exit_usd REAL,
     pnl_pct REAL,
     closed_at REAL,
-    close_note TEXT
+    close_note TEXT,
+    adopted INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS decisions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -74,13 +75,14 @@ class Ledger:
         confidence: float,
         features: list[float],
         signature: str,
+        adopted: int = 0,
     ) -> int:
         cur = self.conn.execute(
             """
             INSERT INTO positions (
                 mint, symbol, kind, pool, decimals, token_raw, sol_spent_lamports,
-                entry_usd, confidence, features_json, entry_signature, opened_at, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open')
+                entry_usd, confidence, features_json, entry_signature, opened_at, status, adopted
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?)
             """,
             (
                 mint,
@@ -95,6 +97,7 @@ class Ledger:
                 json.dumps(features),
                 signature,
                 time.time(),
+                adopted,
             ),
         )
         self.conn.commit()

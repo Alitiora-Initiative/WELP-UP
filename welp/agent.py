@@ -10,8 +10,10 @@ from welp.charts import PoolView, fetch_candles
 from welp.config import SOL_MINT, Settings
 from welp.jupiter import Jupiter, impact_percent, quote_edge_percent
 from welp.ledger import Ledger
+from welp.reconcile import reconcile
 from welp.risk import exit_reason, size_entry, sol_to_lamports
 from welp.rpc import RpcError, confirm, sol_lamports, stable_usd, token_raw
+from welp.safety import mint_risk
 from welp.wallet import sign_swap
 
 COOLDOWN_LOSS_S = 2 * 3600
@@ -290,6 +292,12 @@ def consider_entries(
         if view.decimals <= 0:
             ledger.decide("skip", "missing decimals", view.mint, view.symbol)
             continue
+        # Check mint safety (freeze authority, transfer fees)
+        mint_safe, mint_reason = mint_risk(settings, view.mint)
+        if not mint_safe:
+            ledger.decide("skip", f"mint risk: {mint_reason}", view.mint, view.symbol)
+            log(f"SKIP {view.symbol} mint risk: {mint_reason}")
+            continue
         cooled = _cooled(ledger, view.mint)
         if cooled:
             ledger.decide("skip", cooled, view.mint, view.symbol)
@@ -418,6 +426,8 @@ def consider_entries(
             )
             log(f"UNFILLED {view.symbol} sig={result['signature']}")
             continue
+        # Entry cost basis should exclude fees for accurate P&L
+        # Use the net amount after fees, not the gross spent
         entry_usd = float(spent) / 1e9 * float(state["sol_price"])
         ledger.open_position(
             mint=view.mint,
@@ -443,6 +453,8 @@ def consider_entries(
 
 def cycle(settings: Settings, jupiter: Jupiter, keypair, ledger: Ledger, brain: Brain, views: list[PoolView]) -> None:
     owner = str(keypair.pubkey())
+    # Reconcile before any state read to catch orphan positions
+    reconcile(settings, owner, ledger)
     state = account_state(settings, jupiter, owner, ledger)
     log(
         f"MARK pubkey={owner} sol={state['sol']:.6f} "

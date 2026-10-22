@@ -30,7 +30,7 @@ const STRATEGIES: StrategyConfig[] = [
     name: 'Momentum Hunter',
     description: 'Identifies tokens with strong upward momentum and enters during pullbacks',
     riskLevel: 'Medium',
-    minAllocation: 0.1,
+    minAllocation: 0.002,
     maxAllocation: 1.0,
     maxPositionSize: 0.02,
     enabled: false,
@@ -39,7 +39,7 @@ const STRATEGIES: StrategyConfig[] = [
     name: 'Liquidity Sniper',
     description: 'Targets newly launched tokens with increasing liquidity and volume',
     riskLevel: 'High',
-    minAllocation: 0.05,
+    minAllocation: 0.002,
     maxAllocation: 0.5,
     maxPositionSize: 0.015,
     enabled: false,
@@ -48,7 +48,7 @@ const STRATEGIES: StrategyConfig[] = [
     name: 'Conservative Builder',
     description: 'Slow accumulation of established tokens with strong fundamentals',
     riskLevel: 'Low',
-    minAllocation: 0.5,
+    minAllocation: 0.002,
     maxAllocation: 2.0,
     maxPositionSize: 0.025,
     enabled: false,
@@ -65,7 +65,7 @@ export function AutonomousPage() {
     activePositions: 0,
   });
   const [selectedStrategy, setSelectedStrategy] = useState<StrategyConfig | null>(null);
-  const [allocation, setAllocation] = useState('0.1');
+  const [allocation, setAllocation] = useState('0.002');
   const [isStarting, setIsStarting] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 
 from welp.charts import PoolView, token_top_pool, trending_memes
@@ -16,12 +17,16 @@ def _is_stock(token: dict) -> bool:
 
 
 def resolve_stocks(jupiter: Jupiter, cache_path: Path) -> list[dict]:
+    # Cache expires after 24 hours
+    cache_max_age = 24 * 3600
     if cache_path.exists():
         try:
-            cached = json.loads(cache_path.read_text())
-            if isinstance(cached, list) and cached:
-                return cached
-        except json.JSONDecodeError:
+            file_age = time.time() - cache_path.stat().st_mtime
+            if file_age < cache_max_age:
+                cached = json.loads(cache_path.read_text())
+                if isinstance(cached, list) and cached:
+                    return cached
+        except (json.JSONDecodeError, OSError):
             pass
     found: dict[str, dict] = {}
     for query in STOCK_QUERIES:

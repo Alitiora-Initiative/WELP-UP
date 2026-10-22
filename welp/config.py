@@ -116,7 +116,7 @@ def load_settings(require_arm: bool, require_key: bool) -> Settings:
     try:
         max_positions = int(os.environ.get("WELP_MAX_POSITIONS", "2"))
         loop_seconds = int(os.environ.get("WELP_LOOP_SECONDS", "45"))
-        priority = int(os.environ.get("WELP_PRIORITY_FEE_LAMPORTS", "0"))
+        priority = int(os.environ.get("WELP_PRIORITY_FEE_LAMPORTS", "1000"))  # Default to 1000 lamports (0.000001 SOL)
     except ValueError as exc:
         raise ConfigError("numeric WELP setting is invalid") from exc
     if max_positions < 1 or max_positions > 5:

@@ -32,6 +32,9 @@ def load_keypair(secret: str) -> Keypair:
 def sign_swap(transaction_b64: str, keypair: Keypair) -> str:
     if not transaction_b64:
         raise WalletError("Jupiter returned no transaction")
+    # Validate that the keypair is valid and not empty
+    if not keypair.pubkey():
+        raise WalletError("Invalid keypair: no public key")
     raw = base64.b64decode(transaction_b64)
     tx = VersionedTransaction.from_bytes(raw)
     try:
