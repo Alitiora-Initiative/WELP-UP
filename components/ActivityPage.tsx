@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Activity, ArrowDownLeft, ArrowUpRight, ExternalLink, LoaderCircle, RefreshCw, ShieldCheck, Sparkles, Wallet } from 'lucide-react';
 import { useConnectedWallet } from '@solana/kit-plugin-wallet/react';
 import { AppSidebar } from '@/components/AppSidebar';
+import { WalletConnectionControl } from '@/components/WalletConnectionControl';
 import { client } from '@/components/Providers';
 import { getWalletHistory, recordEquityPoint, recordSignalScan, type EquityPoint, type WalletHistory } from '@/lib/activity';
 import { currentTime } from '@/lib/time';
@@ -110,6 +111,7 @@ export function ActivityPage() {
           <div className="breadcrumb"><span>PORTFOLIO</span><span className="crumb-slash">/</span><strong>Activity</strong></div>
           <div className="topbar-right">
             <span className="market-open"><span className="market-pip" /> WALLET ACTIVITY</span>
+            <WalletConnectionControl />
           </div>
         </header>
 

@@ -6,6 +6,7 @@ import { useConnectedWallet } from '@solana/kit-plugin-wallet/react';
 import { AppSidebar } from '@/components/AppSidebar';
 import { client } from '@/components/Providers';
 import { TransactionHistory } from '@/components/TransactionHistory';
+import { WalletConnectionControl } from '@/components/WalletConnectionControl';
 
 type WalletProfile = {
   owner: string;
@@ -67,6 +68,7 @@ export function ProfilePage() {
           <div className="breadcrumb"><span>ACCOUNT</span><span className="crumb-slash">/</span><strong>Profile</strong></div>
           <div className="topbar-right">
             <span className="market-open"><span className="market-pip" /> WALLET SETTINGS</span>
+            <WalletConnectionControl />
           </div>
         </header>
 

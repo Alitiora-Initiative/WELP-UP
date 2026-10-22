@@ -10,7 +10,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use welp_vault_checks::{
-    authorize_spend, check_initialize, check_withdraw, settle_exposure, CheckError,
+    check_initialize, check_withdraw, settle_exposure, CheckError,
 };
 
 declare_id!("US517G5965aydkZ46HS38QLi7UQiSojurfbQfKCELFx"); // undeployed placeholder; replace after `anchor keys list`
@@ -96,33 +96,15 @@ pub mod welp_vault {
         Ok(())
     }
 
-    /// Executor-only path for size-checked spends.
-    /// `route_program` must be the zero pubkey (accounting only) or Jupiter v6.
-    /// Full Jupiter CPI wiring still waits on a devnet deploy.
+    /// Trading stays disabled until the approved Jupiter CPI path is implemented.
+    /// Keeping this instruction fail-closed prevents an executor from consuming
+    /// the user's cap by recording a pretend swap.
     pub fn execute_swap(
-        ctx: Context<ExecuteSwap>,
-        amount_lamports: u64,
-        route_program: [u8; 32],
+        _ctx: Context<ExecuteSwap>,
+        _amount_lamports: u64,
+        _route_program: [u8; 32],
     ) -> Result<()> {
-        let vault = &mut ctx.accounts.vault;
-        let executor_ok = vault.executor == ctx.accounts.executor.key();
-        let next_spent = authorize_spend(
-            vault.paused,
-            executor_ok,
-            amount_lamports,
-            vault.per_position_max_lamports,
-            vault.spent_lamports,
-            vault.total_cap_lamports,
-            &route_program,
-        )
-        .map_err(map_err)?;
-        let next_open = vault
-            .open_exposure_lamports
-            .checked_add(amount_lamports)
-            .ok_or(VaultError::Overflow)?;
-        vault.spent_lamports = next_spent;
-        vault.open_exposure_lamports = next_open;
-        Ok(())
+        err!(VaultError::TradingDisabled)
     }
 
     /// Owner or executor records a closed position. Lifetime spend is not refunded.
@@ -278,4 +260,6 @@ pub enum VaultError {
     RouteNotAllowed,
     #[msg("Exit amount exceeds open exposure")]
     ExposureUnderflow,
+    #[msg("Trading is disabled until a reviewed Jupiter CPI implementation is deployed")]
+    TradingDisabled,
 }

@@ -2,9 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
   pull_request:
-    branches: [main]
 
 jobs:
   python-tests:
@@ -33,3 +31,13 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build
+
+  rust-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile vault limit checks
+        run: cargo check --manifest-path programs/vault-checks/Cargo.toml
+      - name: Compile Anchor vault program for host
+        run: cargo check --manifest-path programs/vault/Cargo.toml

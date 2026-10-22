@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowDownUp, ArrowRight, Activity, BookOpenCheck, Bot, ChartNoAxesCombined, CircleDollarSign, ExternalLink, LockKeyhole, ShieldCheck, Sparkles, Wallet } from 'lucide-react';
+import { ArrowDownUp, ArrowRight, Activity, BookOpenCheck, Bot, ChartNoAxesCombined, CircleDollarSign, ExternalLink, LockKeyhole, ShieldCheck, Sparkles, Vault, Wallet } from 'lucide-react';
 import { AppSidebar } from '@/components/AppSidebar';
+import { WalletConnectionControl } from '@/components/WalletConnectionControl';
 
 const steps = [
   { number: '01', icon: Wallet, title: 'Site wallet session', copy: 'Balances, signals, and swaps stay locked until the wallet session on this website is active.' },
@@ -13,6 +14,7 @@ const steps = [
 const destinations = [
   { href: '/signals', icon: Activity, title: 'Live signals', copy: 'Review candidates, price movement, score and entry status.' },
   { href: '/autonomous', icon: Bot, title: 'Autonomous AI', copy: 'Configure AI-powered trading strategies (coming soon).' },
+  { href: '/vault', icon: Vault, title: 'Devnet vault', copy: 'Set up and recover a test-only vault after deployment.' },
   { href: '/swap', icon: ArrowDownUp, title: 'Swap', copy: 'Prepare a quote and approve one transaction in your wallet.' },
   { href: '/activity', icon: ChartNoAxesCombined, title: 'Portfolio activity', copy: 'See recorded wallet snapshots, scans and approved swaps.' },
   { href: '/safety', icon: ShieldCheck, title: 'Safety rules', copy: 'Read the current limits and what the app does not do yet.' },
@@ -27,6 +29,7 @@ export function HomePage() {
           <div className="breadcrumb"><span>WELCOME</span><span className="crumb-slash">/</span><strong>WELP UP</strong></div>
           <div className="topbar-right">
             <span className="market-open"><span className="market-pip" /> SOLANA MAINNET</span>
+            <WalletConnectionControl />
           </div>
         </header>
 
@@ -76,8 +79,8 @@ export function HomePage() {
 
           <section className="home-vault-card">
             <span className="home-vault-icon"><ShieldCheck size={19} /></span>
-            <div><p className="eyebrow">PLANNED NEXT · REVOCABLE VAULT</p><h2>You choose the allocation. You stay in control.</h2><p>The planned AI trader will use only the SOL you explicitly allocate to a separate on-chain vault, within your total cap and a 0.02 SOL per-position limit. The design includes user-controlled withdrawal and revocation. It is not enabled in this release.</p></div>
-            <Link className="home-vault-link" href="/safety">View safety roadmap <ArrowRight size={14} /></Link>
+            <div><p className="eyebrow">DEVNET SETUP · TRADING DISABLED</p><h2>Test owner controls before any automation.</h2><p>The Devnet vault page can derive your per-wallet address and manage test SOL once a deployed program is configured. Swaps remain disabled; this is not an autonomous trading launch.</p></div>
+            <Link className="home-vault-link" href="/vault">Open Devnet vault <ArrowRight size={14} /></Link>
           </section>
 
           <div className="home-minimum-note"><BookOpenCheck size={16} /><span>Current swap form starts at 0.001 SOL. You can adjust it from that minimum up to 0.02 SOL per buy.</span><Link href="/terms">Read Terms &amp; Conditions</Link></div>
