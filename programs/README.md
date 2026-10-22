@@ -36,6 +36,13 @@ Devnet deployment and transaction-level verification are **Gate 3**. Do not
 fund a vault until a successful Devnet deployment is confirmed and the program
 ID is published. Never fund a mainnet address from this scaffold.
 
+The website's `/vault` route uses a separate Devnet wallet client and the
+`NEXT_PUBLIC_WELP_VAULT_PROGRAM_ID` setting. Leave that setting unset while
+the source ID is a placeholder. After deployment, set it to the final program
+ID that matches `declare_id!` and the Devnet deployment, then rebuild the site.
+The route checks that the program account is executable before deriving a PDA.
+This check confirms deployment presence, not source verification or an audit.
+
 For a fresh Devnet deployment, generate the program keypair locally with the
 Anchor/Solana tooling, run `anchor keys sync`, rebuild, then deploy with the
 Devnet provider. Keep that keypair out of Git and never share it. After a

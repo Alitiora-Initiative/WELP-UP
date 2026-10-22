@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import Link from 'next/link';
 import { AppSidebar } from '@/components/AppSidebar';
+import { WalletConnectionControl } from '@/components/WalletConnectionControl';
 
 type Block =
   | { kind: 'heading'; text: string; level: number }
@@ -94,6 +95,7 @@ export default function TermsPage() {
             <span className="crumb-slash">/</span>
             <strong>Terms &amp; Conditions</strong>
           </div>
+          <div className="topbar-right"><WalletConnectionControl /></div>
         </header>
         <div className="page-content terms-page">
           <section className="welcome-row">

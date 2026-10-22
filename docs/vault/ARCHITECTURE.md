@@ -122,6 +122,19 @@ docs/vault/
 
 ## Next step (Gate 3)
 
+The website now has a Devnet-only `/vault` owner console for initializing a
+per-wallet PDA, SOL funding and withdrawal, pause, and executor revocation.
+It uses a separate Devnet wallet/RPC client; the existing swap interface stays
+on Mainnet. The console requires `NEXT_PUBLIC_WELP_VAULT_PROGRAM_ID` and checks
+that the address is executable on Devnet before deriving a PDA. Keep the value
+unset until the matching program has been deployed. Executable-account checks
+do not verify source or establish an audit. Each owner action is submitted only
+after the user clicks its review button and signs in their wallet.
+
+This is a partial Gate 3 implementation only. The program is still undeployed,
+`execute_swap` still fails closed, SPL-token withdrawals are absent, and no
+Devnet transaction-level validation has been completed.
+
 Implement and test on **devnet**:
 
 - Initialize, fund, set_executor, execute_swap (mock or real Jupiter devnet route), pause, revoke, withdraw.

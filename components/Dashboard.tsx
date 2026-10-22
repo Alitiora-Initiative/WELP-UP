@@ -22,6 +22,7 @@ import { useClient } from '@solana/react';
 import { useConnectedWallet } from '@solana/kit-plugin-wallet/react';
 import { type AppClient } from '@/components/Providers';
 import { AppSidebar } from '@/components/AppSidebar';
+import { WalletConnectionControl } from '@/components/WalletConnectionControl';
 import { SOL_MINT } from '@/lib/constants';
 import { addWalletEvent } from '@/lib/activity';
 import { currentTime } from '@/lib/time';
@@ -353,6 +354,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
           <div className="breadcrumb"><span>WORKSPACE</span><span className="crumb-slash">/</span><strong>{view === 'signals' ? 'Live signals' : view === 'swap' ? 'Swap' : 'Overview'}</strong></div>
           <div className="topbar-right">
             <span className="market-open"><span className="market-pip" /> LIVE MARKET</span>
+            <WalletConnectionControl />
           </div>
         </header>
 

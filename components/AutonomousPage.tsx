@@ -5,6 +5,7 @@ import { Activity, Bot, ChevronRight, CircleHelp, ExternalLink, Play, Settings, 
 import { useConnectedWallet } from '@solana/kit-plugin-wallet/react';
 import { client } from '@/components/Providers';
 import { AppSidebar } from '@/components/AppSidebar';
+import { WalletConnectionControl } from '@/components/WalletConnectionControl';
 
 type StrategyConfig = {
   name: string;
@@ -93,6 +94,7 @@ export function AutonomousPage() {
               <span className={`market-pip ${botStatus.running ? 'pulse' : ''}`} />
               {botStatus.running ? 'BOT ACTIVE' : 'BOT PAUSED'}
             </span>
+            <WalletConnectionControl />
           </div>
         </header>
 
