@@ -9,6 +9,12 @@ Per-user PDA vault (Anchor). See:
 
 **Mainnet is disabled.** Program ID in source is a placeholder until `anchor keys list` / first deploy.
 
+The `execute_swap` instruction currently fails closed with `TradingDisabled`. The
+program does not yet invoke Jupiter, validate swap accounts, or manage token
+positions. Do not set an executor or fund a PDA derived from the placeholder
+program ID. A usable vault address exists only after the program is deployed to
+Devnet under its final program ID and the PDA is derived from the user's wallet.
+
 Host-side limit tests (no validator):
 
 ```bash
@@ -26,4 +32,13 @@ solana config set --url devnet
 anchor build -p welp-vault
 ```
 
-Deploy and integration tests are **Gate 3**. Do not fund mainnet addresses from this scaffold.
+Devnet deployment and transaction-level verification are **Gate 3**. Do not
+fund a vault until a successful Devnet deployment is confirmed and the program
+ID is published. Never fund a mainnet address from this scaffold.
+
+For a fresh Devnet deployment, generate the program keypair locally with the
+Anchor/Solana tooling, run `anchor keys sync`, rebuild, then deploy with the
+Devnet provider. Keep that keypair out of Git and never share it. After a
+successful deploy, verify the executable program account on Devnet and derive
+the user's vault PDA from the final program ID and their public wallet address.
+The user-specific PDA is derived at runtime; it is not a standalone keypair.

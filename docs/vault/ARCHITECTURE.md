@@ -43,7 +43,7 @@ Fields (conceptual):
 - `bump: u8`
 - `created_at: i64`
 
-Token balances live in associated token accounts **owned by the vault PDA**, not by the user’s main wallet.
+The target design stores token balances in associated token accounts **owned by the vault PDA**, not by the user’s main wallet. The current scaffold does not create those token accounts or implement token withdrawals.
 
 ### Authority flow
 
@@ -69,13 +69,11 @@ The executor **never** becomes the owner of the vault and cannot change the owne
 3. **`set_executor`** — Owner sets or rotates the executor pubkey.
 4. **`revoke_executor`** — Owner clears executor (sets to default). Immediate.
 5. **`pause` / `unpause`** — Owner only.
-6. **`execute_swap`** — Executor only. Validates:
-   - not paused
-   - amount ≤ `per_position_max_lamports`
-   - `spent_lamports + amount ≤ total_cap_lamports`
-   - destination program is on the allowlist (when enabled)
-   Then CPIs into the approved swap path (Jupiter). On success, updates `spent_lamports` for buys.
-7. **`withdraw`** — Owner withdraws SOL and/or SPL tokens held by the vault PDA. No executor involvement required.
+6. **`execute_swap`** — Reserved for the future executor path. The current
+   scaffold returns `TradingDisabled` and does not change vault state. Jupiter
+   CPI, swap-account validation, and token-position accounting are not
+   implemented. Do not set an executor or describe this instruction as trading.
+7. **`withdraw`** — Owner withdraws SOL held by the vault PDA. No executor involvement is required. SPL token withdrawals are not implemented in the current scaffold.
 
 ## Agent authorization model
 
@@ -92,6 +90,12 @@ The executor **never** becomes the owner of the vault and cannot change the owne
 | Devnet program deploy | Gate 3 (next) |
 | Independent audit | Gate 4 |
 | Mainnet funds enabled | Disabled until gates 4–7 |
+
+The program ID in `programs/vault/src/lib.rs` is an undeployed placeholder. No
+vault PDA derived from it is ready to receive funds. After a Devnet deployment
+uses a final program ID, the website can derive each user's PDA from that ID and
+the connected public wallet address; a separate address does not need to be
+copied into source code.
 
 **Do not send real mainnet SOL into any vault address until the roadmap explicitly opens that gate.**
 
