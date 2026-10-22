@@ -2,10 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Activity, ArrowDownLeft, ArrowUpRight, ExternalLink, LoaderCircle, RefreshCw, ShieldCheck, Sparkles, Wallet } from 'lucide-react';
-import { useConnectedWallet, WalletReadyGate } from '@solana/kit-plugin-wallet/react';
+import { useConnectedWallet } from '@solana/kit-plugin-wallet/react';
 import { AppSidebar } from '@/components/AppSidebar';
 import { client } from '@/components/Providers';
-import { WalletConnect } from '@/components/WalletConnect';
 import { getWalletHistory, recordEquityPoint, recordSignalScan, type EquityPoint, type WalletHistory } from '@/lib/activity';
 import { currentTime } from '@/lib/time';
 
@@ -111,7 +110,6 @@ export function ActivityPage() {
           <div className="breadcrumb"><span>PORTFOLIO</span><span className="crumb-slash">/</span><strong>Activity</strong></div>
           <div className="topbar-right">
             <span className="market-open"><span className="market-pip" /> WALLET ACTIVITY</span>
-            <WalletReadyGate client={client} fallback={<button className="connect-button" disabled>Finding wallet…</button>}><WalletConnect /></WalletReadyGate>
           </div>
         </header>
 
@@ -135,8 +133,8 @@ export function ActivityPage() {
           {!walletAddress ? (
             <section className="panel activity-connect">
               <div className="empty-icon"><Wallet size={20} /></div>
-              <h2>Connect a wallet to view its portfolio</h2>
-              <p>History is kept separately for each public wallet address in this browser. WELP never requests a seed phrase or private key.</p>
+              <h2>Portfolio stays locked</h2>
+              <p>History is kept separately for each public wallet address in this browser, and only after the site wallet session is active.</p>
             </section>
           ) : (
             <>

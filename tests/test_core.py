@@ -216,46 +216,33 @@ class ExitTests(unittest.TestCase):
 
 
 class WalletTests(unittest.TestCase):
-    def test_signs_a_versioned_transaction_locally(self):
-        import base64
-        import json
+    def test_local_signing_is_refused(self):
+        from welp.wallet import WalletError, load_keypair, sign_swap
 
-        from solders.hash import Hash
-        from solders.keypair import Keypair
-        from solders.message import MessageV0
-        from solders.signature import Signature
-        from solders.system_program import TransferParams, transfer
-        from solders.transaction import VersionedTransaction
+        with self.assertRaises(WalletError):
+            load_keypair("not-a-wallet-secret")
+        with self.assertRaises(WalletError):
+            sign_swap("dHhu")
 
-        from welp.wallet import load_keypair, sign_swap
-
-        kp = Keypair()
-        self.assertEqual(str(load_keypair(str(kp)).pubkey()), str(kp.pubkey()))
-        self.assertEqual(str(load_keypair(json.dumps(list(bytes(kp)))).pubkey()), str(kp.pubkey()))
-        ix = transfer(TransferParams(from_pubkey=kp.pubkey(), to_pubkey=kp.pubkey(), lamports=1))
-        msg = MessageV0.try_compile(kp.pubkey(), [ix], [], Hash.default())
-        unsigned = VersionedTransaction.populate(msg, [Signature.default()])
-        signed = VersionedTransaction.from_bytes(
-            base64.b64decode(sign_swap(base64.b64encode(bytes(unsigned)).decode(), kp))
-        )
-        self.assertNotEqual(bytes(signed.signatures[0]), bytes(Signature.default()))
     def test_floors_cannot_be_lowered(self):
         import os
 
         os.environ["WELP_MIN_TRADE_SOL"] = "0.0001"
         os.environ["WELP_ARM"] = "TRADE-LIVE"
-        os.environ["SOLANA_PRIVATE_KEY"] = "not-used"
         with self.assertRaises(ConfigError):
-            load_settings(require_arm=True, require_key=True)
+            load_settings(require_arm=True)
         os.environ["WELP_MIN_TRADE_SOL"] = "0.001"
         os.environ["WELP_MIN_ACCOUNT_USD"] = "0.10"
         with self.assertRaises(ConfigError):
-            load_settings(require_arm=True, require_key=True)
+            load_settings(require_arm=True)
         os.environ["WELP_MIN_ACCOUNT_USD"] = "0.50"
         os.environ["WELP_SIMULATE"] = "1"
         with self.assertRaises(ConfigError):
-            load_settings(require_arm=True, require_key=True)
+            load_settings(require_arm=True)
         os.environ.pop("WELP_SIMULATE", None)
+        os.environ["SOLANA_PRIVATE_KEY"] = "not-used"
+        with self.assertRaises(ConfigError):
+            load_settings(require_arm=True)
         os.environ.pop("WELP_MIN_TRADE_SOL", None)
         os.environ.pop("WELP_MIN_ACCOUNT_USD", None)
         os.environ.pop("WELP_ARM", None)

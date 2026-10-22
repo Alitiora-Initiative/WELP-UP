@@ -27,7 +27,6 @@ class Jupiter:
     def prices(self, mints: list[str]) -> dict[str, float]:
         if not mints:
             return {}
-        # Price v3 accepts a comma list. Chunk to stay under URL limits.
         out: dict[str, float] = {}
         for i in range(0, len(mints), 50):
             chunk = mints[i : i + 50]
@@ -127,17 +126,20 @@ class Jupiter:
 
 
 def impact_percent(order: dict[str, Any]) -> float:
-    """Jupiter v2 returns priceImpact as percent (0.096 means 0.096%)."""
+    """Return price impact as a percent number (0.5 means 0.5%).
+
+    Issue #10 A6: detect unit by field name, not magnitude.
+    - priceImpact / priceImpactPct from Jupiter v2 are already percent.
+    - Only scale when the key is an explicit fraction field.
+    """
     if order.get("priceImpact") is not None:
         return abs(float(order["priceImpact"]))
-    raw = order.get("priceImpactPct")
-    if raw is None:
-        return 0.0
-    value = abs(float(raw))
-    # Older quotes used a fraction. A fraction above 1 would be absurd here.
-    if value <= 1:
-        return value * 100.0
-    return value
+    if order.get("priceImpactPct") is not None:
+        return abs(float(order["priceImpactPct"]))
+    raw = order.get("priceImpactFraction")
+    if raw is not None:
+        return abs(float(raw)) * 100.0
+    return 0.0
 
 
 def quote_edge_percent(order: dict[str, Any]) -> float | None:

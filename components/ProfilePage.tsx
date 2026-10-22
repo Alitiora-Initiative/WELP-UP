@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { Check, Copy, LockKeyhole, ShieldCheck, UserRound, Wallet } from 'lucide-react';
-import { useConnectedWallet, WalletReadyGate } from '@solana/kit-plugin-wallet/react';
+import { useConnectedWallet } from '@solana/kit-plugin-wallet/react';
 import { AppSidebar } from '@/components/AppSidebar';
 import { client } from '@/components/Providers';
-import { WalletConnect } from '@/components/WalletConnect';
 import { TransactionHistory } from '@/components/TransactionHistory';
 
 type WalletProfile = {
@@ -62,15 +61,12 @@ export function ProfilePage() {
 
   return (
     <main className="app-shell">
-      <AppSidebar active="profile" status={walletAddress ? 'Wallet connected' : 'Ready when wallet connects'} />
+      <AppSidebar active="profile" status={walletAddress ? 'Wallet session active' : 'Waiting for site wallet'} />
       <section className="workspace" id="top">
         <header className="topbar">
           <div className="breadcrumb"><span>ACCOUNT</span><span className="crumb-slash">/</span><strong>Profile</strong></div>
           <div className="topbar-right">
             <span className="market-open"><span className="market-pip" /> WALLET SETTINGS</span>
-            <WalletReadyGate client={client} fallback={<button className="connect-button" disabled>Finding wallet…</button>}>
-              <WalletConnect />
-            </WalletReadyGate>
           </div>
         </header>
 
@@ -106,8 +102,8 @@ export function ProfilePage() {
               ) : (
                 <div className="profile-empty">
                   <div className="empty-icon"><Wallet size={20} /></div>
-                  <strong>Connect a wallet to view your profile</strong>
-                  <p>Use Phantom’s normal connection flow. WELP reads your public address and balances; it never asks for a private key or seed phrase.</p>
+                  <strong>Profile stays locked</strong>
+                  <p>Public balances load only after the wallet session on this website is active.</p>
                 </div>
               )}
             </article>
@@ -130,14 +126,14 @@ export function ProfilePage() {
                   <div className="profile-load-state">Loading public balances for {shortAddress(walletAddress)}…</div>
                 )
               ) : (
-                <div className="profile-load-state">Connect your wallet to load the balance snapshot.</div>
+                <div className="profile-load-state">Balance snapshot stays hidden until the site wallet session is active.</div>
               )}
             </article>
           </section>
 
           <section className="profile-privacy panel">
             <span className="profile-privacy-icon"><LockKeyhole size={18} /></span>
-            <div><p className="eyebrow">YOUR WALLET, YOUR APPROVAL</p><strong>Keys stay in Phantom.</strong><p>WELP only requests a wallet connection to read public account data. Each swap still needs its own approval in your wallet.</p></div>
+            <div><p className="eyebrow">YOUR WALLET, YOUR APPROVAL</p><strong>This site only reads the connected session.</strong><p>Balances and history load only after the website wallet session is active. Each swap still needs its own approval.</p></div>
           </section>
 
           <section className="profile-privacy panel vault-plan-card">

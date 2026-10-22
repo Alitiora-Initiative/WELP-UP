@@ -7,7 +7,7 @@ This Privacy Notice for WELP UP! ("**we**," "**us**," or "**our**") describes ho
 - Visit our website at [https://welpup.fun](https://welpup.fun) or any website of ours that links to this Privacy Notice
 - Use WELP UP!. WELP UP! is a Solana market-analysis and wallet trading interface. It reviews selected live token pools, shows the signals and limits it sees, and lets a user prepare a Jupiter swap for individual approval in Phantom or another compatible wallet.
 
-  The deployed browser app does not trade unattended. A signal is analysis, not an order. Every current swap must be reviewed and signed in the user's wallet. The app does not ask for a seed phrase or private key.
+  The deployed browser app does not trade unattended. A signal is analysis, not an order. Every current swap must be reviewed and signed by the wallet session on the website. Quotes and swaps stay locked until that session is active.
 - Engage with us in other related ways, including any marketing or events
 
 **Questions or concerns?** Reading this Privacy Notice will help you understand your privacy rights and choices. We are responsible for making decisions about how your personal information is processed. If you do not agree with our policies and practices, please do not use our Services. If you still have any questions or concerns, please contact us at [jaymnyon@gmail.com](mailto:jaymnyon@gmail.com).

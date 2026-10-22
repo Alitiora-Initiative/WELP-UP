@@ -9,7 +9,7 @@ Isolated per-user vault that:
 - Is funded only by an explicit user-signed transfer of SOL the user chooses.
 - Enforces a total allocation cap and a per-position ceiling (design default 0.02 SOL) **on-chain**.
 - Lets a narrowly scoped executor trade only through the vault authority.
-- Never receives the user’s Phantom private key or seed phrase.
+- Does not accept wallet secrets. Actions run only after a wallet connects on the website.
 - Allows the user to pause, revoke, and withdraw available assets without the agent’s cooperation.
 
 ## Actors

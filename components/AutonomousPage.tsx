@@ -1,11 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Activity, ArrowDownUp, Bot, ChevronRight, CircleHelp, ExternalLink, LoaderCircle, Play, Pause, Settings, ShieldCheck, TrendingUp, Wallet, Zap } from 'lucide-react';
-import { useConnectedWallet, WalletReadyGate } from '@solana/kit-plugin-wallet/react';
+import { Activity, Bot, ChevronRight, CircleHelp, ExternalLink, Play, Settings, ShieldCheck, TrendingUp, Wallet, Zap } from 'lucide-react';
+import { useConnectedWallet } from '@solana/kit-plugin-wallet/react';
 import { client } from '@/components/Providers';
 import { AppSidebar } from '@/components/AppSidebar';
-import { WalletConnect } from '@/components/WalletConnect';
 
 type StrategyConfig = {
   name: string;
@@ -57,7 +56,7 @@ const STRATEGIES: StrategyConfig[] = [
 
 export function AutonomousPage() {
   const connected = useConnectedWallet(client);
-  const [botStatus, setBotStatus] = useState<BotStatus>({
+  const [botStatus] = useState<BotStatus>({
     running: false,
     uptime: '0h 0m',
     tradesExecuted: 0,
@@ -66,16 +65,8 @@ export function AutonomousPage() {
   });
   const [selectedStrategy, setSelectedStrategy] = useState<StrategyConfig | null>(null);
   const [allocation, setAllocation] = useState('0.1');
-  const [isStarting, setIsStarting] = useState(false);
-  const [isStopping, setIsStopping] = useState(false);
 
   const walletAddress = connected?.account.address ?? '';
-
-  const toggleBot = async () => {
-    // Gate 3+: mainnet autonomous trading stays disabled until vault
-    // program is on-chain with caps, audit, and consent (see ROADMAP.md).
-    return;
-  };
 
   const enableStrategy = (strategy: StrategyConfig) => {
     setSelectedStrategy(strategy);
@@ -102,9 +93,6 @@ export function AutonomousPage() {
               <span className={`market-pip ${botStatus.running ? 'pulse' : ''}`} />
               {botStatus.running ? 'BOT ACTIVE' : 'BOT PAUSED'}
             </span>
-            <WalletReadyGate client={client} fallback={<button className="connect-button" disabled><LoaderCircle className="spin" size={16} /> Finding wallet…</button>}>
-              <WalletConnect />
-            </WalletReadyGate>
           </div>
         </header>
 
@@ -113,7 +101,7 @@ export function AutonomousPage() {
             <div>
               <p className="eyebrow"><Bot size={14} /> AUTONOMOUS AI TRADING · COMING SOON</p>
               <h1>AI-Powered <em>Strategy.</em></h1>
-              <p className="welcome-copy">Configure autonomous trading strategies inspired by Kucoin's advanced trading bots. The AI will analyze markets, execute trades, and manage positions within your safety limits.</p>
+              <p className="welcome-copy">Configure autonomous trading strategies inspired by advanced Kucoin-style trading bots. The AI will analyze markets, execute trades, and manage positions within your safety limits.</p>
             </div>
             <div className="date-pill"><span className="date-dot" /> DEVNET · TESTING PHASE</div>
           </section>
@@ -161,12 +149,12 @@ export function AutonomousPage() {
               {!walletAddress ? (
                 <div className="empty-state">
                   <div className="empty-icon"><Wallet size={20} /></div>
-                  <strong>Connect wallet to configure strategies</strong>
-                  <p>The autonomous bot requires a connected wallet to create a vault and manage trades.</p>
+                  <strong>Strategies stay locked</strong>
+                  <p>Vault setup stays off until the wallet session on this website is active.</p>
                 </div>
               ) : (
                 <div className="strategy-list">
-                  {STRATEGIES.map((strategy, index) => (
+                  {STRATEGIES.map((strategy) => (
                     <article
                       key={strategy.name}
                       className={`strategy-card ${selectedStrategy?.name === strategy.name ? 'selected' : ''}`}

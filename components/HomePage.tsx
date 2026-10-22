@@ -2,13 +2,10 @@
 
 import Link from 'next/link';
 import { ArrowDownUp, ArrowRight, Activity, BookOpenCheck, Bot, ChartNoAxesCombined, CircleDollarSign, ExternalLink, LockKeyhole, ShieldCheck, Sparkles, Wallet } from 'lucide-react';
-import { WalletReadyGate } from '@solana/kit-plugin-wallet/react';
 import { AppSidebar } from '@/components/AppSidebar';
-import { client } from '@/components/Providers';
-import { WalletConnect } from '@/components/WalletConnect';
 
 const steps = [
-  { number: '01', icon: Wallet, title: 'Connect your wallet', copy: 'WELP reads a public address and balance. Your seed phrase and private key stay in your wallet.' },
+  { number: '01', icon: Wallet, title: 'Site wallet session', copy: 'Balances, signals, and swaps stay locked until the wallet session on this website is active.' },
   { number: '02', icon: Activity, title: 'Review the market', copy: 'The current rule engine checks live Solana pools and surfaces candidates with the reasons behind each score.' },
   { number: '03', icon: ArrowDownUp, title: 'Choose and approve', copy: 'Set an amount, inspect the route, then sign each individual swap in Phantom. The opening amount is 0.001 SOL and remains editable.' },
 ];
@@ -30,7 +27,6 @@ export function HomePage() {
           <div className="breadcrumb"><span>WELCOME</span><span className="crumb-slash">/</span><strong>WELP UP</strong></div>
           <div className="topbar-right">
             <span className="market-open"><span className="market-pip" /> SOLANA MAINNET</span>
-            <WalletReadyGate client={client} fallback={<button className="connect-button" disabled>Finding wallet…</button>}><WalletConnect /></WalletReadyGate>
           </div>
         </header>
 
@@ -46,7 +42,7 @@ export function HomePage() {
             <div className="home-preview-card" aria-label="Illustrative WELP portfolio interface preview">
               <div className="preview-topline"><span><i /> WALLET OVERVIEW</span><span className="preview-badge">INTERFACE PREVIEW</span></div>
               <div className="preview-balance-label">Estimated wallet value</div>
-              <div className="preview-balance">Connect to view <span>live</span></div>
+              <div className="preview-balance">Session required <span>live</span></div>
               <div className="preview-chart-wrap">
                 <div className="preview-chart-labels"><span>Portfolio snapshots</span><span>History begins after connect</span></div>
                 <svg viewBox="0 0 580 170" className="preview-chart" role="img" aria-label="Decorative chart preview with no account data">
@@ -55,7 +51,7 @@ export function HomePage() {
                   <path d="M5 118 C38 100 58 124 89 105 S140 93 171 107 S226 70 257 83 S304 104 335 74 S385 96 414 70 S466 55 494 82 S543 49 575 41 L575 160 L5 160Z" fill="url(#preview-fill)" />
                   <path d="M5 118 C38 100 58 124 89 105 S140 93 171 107 S226 70 257 83 S304 104 335 74 S385 96 414 70 S466 55 494 82 S543 49 575 41" fill="none" stroke="#b9f36d" strokeWidth="2.5" strokeLinecap="round" />
                 </svg>
-                <div className="preview-chart-times"><span>Connect a wallet</span><span>To start your own history</span></div>
+                <div className="preview-chart-times"><span>Site wallet</span><span>History starts after the session</span></div>
               </div>
               <div className="preview-activity-row"><span className="preview-activity-icon"><Activity size={15} /></span><span><strong>Market scan</strong><small>Signals appear here as they update</small></span><span className="preview-waiting">WAITING</span></div>
               <div className="preview-caption">Illustrative product view · no user balances or returns shown</div>

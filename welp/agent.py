@@ -12,9 +12,9 @@ from welp.jupiter import Jupiter, impact_percent, quote_edge_percent
 from welp.ledger import Ledger
 from welp.reconcile import adopt_orphan, find_orphans
 from welp.risk import exit_reason, size_entry, sol_to_lamports
-from welp.rpc import RpcError, confirm, dynamic_priority_fee, sol_lamports, stable_usd, token_raw
+from welp.rpc import dynamic_priority_fee, sol_lamports, stable_usd, token_raw
 from welp.safety import mint_risk
-from welp.wallet import sign_swap
+from welp.wallet import WalletError
 
 COOLDOWN_LOSS_S = 2 * 3600
 COOLDOWN_WIN_S = 30 * 60
@@ -152,37 +152,17 @@ def reconcile(settings: Settings, owner: str, ledger: Ledger, views: list[PoolVi
 def _swap(
     settings: Settings,
     jupiter: Jupiter,
-    keypair,
     owner: str,
     input_mint: str,
     output_mint: str,
     amount_raw: int,
     slippage_bps: int,
 ) -> dict:
-    order = jupiter.order(
-        input_mint,
-        output_mint,
-        amount_raw,
-        taker=owner,
-        slippage_bps=slippage_bps,
-        priority_fee_lamports=_priority_fee(settings),
-    )
-    if not order.get("transaction") or not order.get("requestId"):
-        raise RuntimeError(f"Jupiter did not return a signable order: {order.get('errorMessage') or 'no transaction'}")
-    signed = sign_swap(order["transaction"], keypair)
-    result = jupiter.execute(signed, order["requestId"])
-    status = str(result.get("status") or "")
-    if status != "Success":
-        raise RuntimeError(f"Jupiter execute {status or 'failed'}: {result.get('error') or result.get('code')}")
-    signature = result.get("signature")
-    if not signature:
-        raise RuntimeError("Jupiter execute returned no signature")
-    confirm(settings.rpc_url, signature)
-    result["order"] = order
-    return result
+    del settings, jupiter, owner, input_mint, output_mint, amount_raw, slippage_bps
+    raise WalletError("Swaps are signed only by the wallet connected on the website.")
 
 
-def manage_exits(settings: Settings, jupiter: Jupiter, keypair, owner: str, ledger: Ledger, brain: Brain, state: dict) -> None:
+def manage_exits(settings: Settings, jupiter: Jupiter, owner: str, ledger: Ledger, brain: Brain, state: dict) -> None:
     for row in ledger.open_positions():
         pnl = state["marks"].get(int(row["id"]))
         peak = float(row["peak_pnl_pct"] or 0)
@@ -275,7 +255,6 @@ def manage_exits(settings: Settings, jupiter: Jupiter, keypair, owner: str, ledg
             result = _swap(
                 settings,
                 jupiter,
-                keypair,
                 owner,
                 row["mint"],
                 SOL_MINT,
@@ -313,7 +292,6 @@ def manage_exits(settings: Settings, jupiter: Jupiter, keypair, owner: str, ledg
 def consider_entries(
     settings: Settings,
     jupiter: Jupiter,
-    keypair,
     owner: str,
     ledger: Ledger,
     brain: Brain,
@@ -437,62 +415,18 @@ def consider_entries(
         if not live.get("transaction"):
             ledger.decide("skip", "order had no transaction", view.mint, view.symbol, final_score)
             continue
-        try:
-            signed = sign_swap(live["transaction"], keypair)
-            result = jupiter.execute(signed, live["requestId"])
-        except Exception as exc:
-            ledger.decide("entry-failed", str(exc), view.mint, view.symbol, final_score)
-            log(f"ENTRY-FAILED {view.symbol} {exc}")
-            continue
-        if str(result.get("status") or "") != "Success" or not result.get("signature"):
-            ledger.decide("entry-failed", f"execute {result.get('status')} {result.get('error')}", view.mint, view.symbol, final_score)
-            log(f"ENTRY-FAILED {view.symbol} status={result.get('status')}")
-            continue
-        try:
-            confirm(settings.rpc_url, result["signature"])
-        except RpcError as exc:
-            ledger.decide("unconfirmed", f"{exc}. Not opening a second order.", view.mint, view.symbol, final_score)
-            log(f"UNCONFIRMED {view.symbol} {exc}")
-            continue
-        sol_after = sol_lamports(settings.rpc_url, owner)
-        token_after = _poll_token(settings.rpc_url, owner, view.mint, token_before)
-        got = token_after - token_before
-        spent = sol_before - sol_after
-        if got <= 0 or spent <= 0:
-            ledger.decide(
-                "unfilled",
-                f"signature {result['signature']} confirmed but balance delta sol={spent} token={got}",
-                view.mint,
-                view.symbol,
-                final_score,
-            )
-            log(f"UNFILLED {view.symbol} sig={result['signature']}")
-            continue
-        entry_usd = float(spent) / 1e9 * float(state["sol_price"])
-        ledger.open_position(
-            mint=view.mint,
-            symbol=view.symbol,
-            kind=view.kind,
-            pool=view.pool,
-            decimals=view.decimals,
-            token_raw=got,
-            sol_spent_lamports=spent,
-            entry_usd=entry_usd,
-            confidence=float(final_score),
-            features=final.features,
-            signature=result["signature"],
+        ledger.decide(
+            "entry-failed",
+            "Swaps are signed only by the wallet connected on the website.",
+            view.mint,
+            view.symbol,
+            final_score,
         )
-        ledger.decide("enter", f"{final_why}; size {size} SOL; p {final_p:.2f}", view.mint, view.symbol, final_score)
-        log(
-            f"ENTER {view.symbol} kind={view.kind} score={final_score:.2f} "
-            f"size={size} SOL sig={result['signature']}"
-        )
-        state["sol"] = Decimal(sol_after) / Decimal(1_000_000_000)
-        return
+        log(f"ENTRY-FAILED {view.symbol} website wallet required")
+        continue
 
 
-def cycle(settings: Settings, jupiter: Jupiter, keypair, ledger: Ledger, brain: Brain, views: list[PoolView]) -> None:
-    owner = str(keypair.pubkey())
+def cycle(settings: Settings, jupiter: Jupiter, owner: str, ledger: Ledger, brain: Brain, views: list[PoolView]) -> None:
     reconcile(settings, owner, ledger, views)
     state = account_state(settings, jupiter, owner, ledger)
     log(
@@ -500,6 +434,6 @@ def cycle(settings: Settings, jupiter: Jupiter, keypair, ledger: Ledger, brain: 
         f"px={state['sol_price']:.4f} equity=${state['equity']:.4f} "
         f"open={len(ledger.open_positions())} brain={brain.closed_trades}"
     )
-    manage_exits(settings, jupiter, keypair, owner, ledger, brain, state)
+    manage_exits(settings, jupiter, owner, ledger, brain, state)
     state = account_state(settings, jupiter, owner, ledger)
-    consider_entries(settings, jupiter, keypair, owner, ledger, brain, state, views)
+    consider_entries(settings, jupiter, owner, ledger, brain, state, views)

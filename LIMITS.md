@@ -26,7 +26,7 @@ The buy amount is editable between the enforced minimum and maximum. Quotes are 
 
 ## Wallet and user history
 
-- The web interface connects through the wallet's supported signing flow and never requests the user's private key or seed phrase.
+- The web interface signs only through the wallet session on the website. Quotes and swaps stay locked until that session is active.
 - Profile transaction history reads signatures for the connected public address from Solana RPC, in selectable pages of 10, 25, 50, or 100.
 - Portfolio snapshots and displayed strategy events are stored locally in the current browser, keyed by public wallet address. They are not synchronized and are not a complete ledger.
 - Public wallet addresses and on-chain transactions are visible on Solana.
@@ -36,7 +36,7 @@ The buy amount is editable between the enforced minimum and maximum. Quotes are 
 These controls are user-approved design goals only. The vault is not implemented or available:
 
 - The user chooses and explicitly confirms the SOL allocation.
-- The vault is isolated and funded by the user; the agent never receives the user's wallet private key.
+- The vault is isolated and funded by the user through the website wallet session.
 - The user sets a total funding cap; a verified on-chain program enforces it.
 - Maximum position size is 0.02 SOL unless the user later explicitly chooses a lower limit.
 - The user can stop or revoke the agent's authority and withdraw available vault assets to their wallet at any time.
@@ -47,4 +47,4 @@ An interface setting by itself is not a secure on-chain limit. A withdrawal may 
 
 ## Separate legacy runner
 
-The Python CLI under `welp/` is a separate legacy path, not the browser product. It can read `SOLANA_PRIVATE_KEY` locally and is not covered by the browser wallet-signing statements above. See the README before running it.
+The Python CLI under `welp/` is a separate scanner path, not the browser product. It does not sign swaps. Live swaps run only after a wallet connects on the website.

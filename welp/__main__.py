@@ -1,20 +1,26 @@
 from __future__ import annotations
 
 import argparse
-import fcntl
 import os
 import sys
-import time
 from pathlib import Path
 
 from welp import NAME, __version__
-from welp.agent import account_state, cycle, log
 from welp.brain import Brain
 from welp.config import ConfigError, load_settings
 from welp.jupiter import Jupiter
 from welp.ledger import Ledger
 from welp.universe import load_universe
-from welp.wallet import WalletError, load_keypair
+
+
+_IGNORED_ENV = {
+    "SOLANA_PRIVATE_KEY",
+    "PRIVATE_KEY",
+    "SECRET_KEY",
+    "WALLET_PRIVATE_KEY",
+    "SEED_PHRASE",
+    "MNEMONIC",
+}
 
 
 def load_env_file(path: Path) -> None:
@@ -25,7 +31,10 @@ def load_env_file(path: Path) -> None:
         if not text or text.startswith("#") or "=" not in text:
             continue
         key, value = text.split("=", 1)
-        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+        name = key.strip()
+        if name in _IGNORED_ENV:
+            continue
+        os.environ.setdefault(name, value.strip().strip('"').strip("'"))
 
 
 def _brain_and_ledger(data_dir: Path) -> tuple[Brain, Ledger]:
@@ -39,14 +48,6 @@ def cmd_status(settings) -> int:
     print(f"{NAME} {__version__}")
     print(f"armed={settings.armed} closed={summary['closed_count']} brain_trades={brain.closed_trades}")
     print(f"avg_closed_pnl_pct={summary['avg_closed_pnl_pct']}")
-    if settings.private_key:
-        try:
-            owner = str(load_keypair(settings.private_key).pubkey())
-            state = account_state(settings, Jupiter(settings.jupiter_api_key), owner, ledger)
-            print(f"pubkey={owner}")
-            print(f"sol={state['sol']:.6f} equity_usd={state['equity']:.4f} sol_usd={state['sol_price']:.4f}")
-        except Exception as exc:
-            print(f"balance unavailable: {exc}")
     for row in summary["open"]:
         print(
             f"OPEN {row['symbol']} {row['kind']} mint={row['mint']} "
@@ -73,45 +74,9 @@ def cmd_universe(settings) -> int:
     return 0
 
 
-def _lock(settings):
-    settings.data_dir.mkdir(parents=True, exist_ok=True)
-    handle = open(settings.data_dir / "welp.lock", "w")
-    try:
-        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except BlockingIOError:
-        raise SystemExit("another WELP UP! process holds data/welp.lock")
-    return handle
-
-
 def cmd_trade(settings, once: bool) -> int:
-    if not settings.armed:
-        raise SystemExit("refusing to trade: WELP_ARM is not TRADE-LIVE")
-    try:
-        keypair = load_keypair(settings.private_key)
-    except WalletError as exc:
-        raise SystemExit(str(exc))
-    lock = _lock(settings)
-    jupiter = Jupiter(settings.jupiter_api_key)
-    brain, ledger = _brain_and_ledger(settings.data_dir)
-    log(f"{NAME} {__version__} pubkey={keypair.pubkey()} min={settings.min_trade_sol} SOL floor=${settings.min_account_usd}")
-    try:
-        while True:
-            try:
-                views = load_universe(jupiter, settings.data_dir)
-                cycle(settings, jupiter, keypair, ledger, brain, views)
-            except KeyboardInterrupt:
-                log("stopped")
-                return 0
-            except Exception as exc:
-                log(f"CYCLE-ERROR {exc}")
-                ledger.decide("cycle-error", str(exc))
-            if once:
-                return 0
-            time.sleep(settings.loop_seconds)
-    finally:
-        ledger.close()
-        fcntl.flock(lock, fcntl.LOCK_UN)
-        lock.close()
+    del settings, once
+    raise SystemExit("Trading from this process is disabled. Swaps run only after a wallet connects on the website.")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -121,7 +86,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     trading = args.command in ("run", "once")
     try:
-        settings = load_settings(require_arm=trading, require_key=trading or args.command == "status" and bool(os.environ.get("SOLANA_PRIVATE_KEY")))
+        settings = load_settings(require_arm=trading)
     except ConfigError as exc:
         print(str(exc), file=sys.stderr)
         return 2
