@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
+    "test:paper": "node --experimental-strip-types --test tests/paper-bots.test.mjs",
     "indexnow": "node --env-file=.env.local scripts/indexnow.mjs"
   },
   "dependencies": {

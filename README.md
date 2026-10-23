@@ -18,6 +18,7 @@ The swap amount opens at **0.001 SOL** and is editable. Current browser buy limi
 - `/` — product overview and how the current flow works.
 - `/dashboard` — trading console overview.
 - `/signals` — live market scanner and rule scores.
+- `/autonomous` — AI Bot Studio for creating local paper bots, manually simulating prices, and reviewing simulated grid metrics. It does not place orders.
 - `/swap` — token search, Jupiter quote, and wallet-approved swap.
 - `/safety` — current rules, risks, and future vault requirements.
 - `/activity` — wallet-value snapshots, strategy scan events, and swaps recorded by this browser.
@@ -37,17 +38,23 @@ Activity snapshots and the activity feed are stored locally in the browser under
 
 These are application checks, not guarantees of safety. See [LIMITS.md](LIMITS.md), [ROADMAP.md](ROADMAP.md), [TERMS.md](TERMS.md), and [PRIVACY.md](PRIVACY.md).
 
-## Autonomous vault status
+## AI Bot Studio and vault status
 
-Autonomous trading is a planned feature and is **not enabled on mainnet**. Architecture and a threat model are published:
+The `/autonomous` page now provides a **paper-only strategy builder**. It supports AI Grid, Momentum, and DCA presets; market symbol, Long/Short/Neutral direction, investment, price range, grid quantity, TP/SL, start/stop conditions, runtime, status, and manually entered paper-price ticks. Bot settings are saved in the current browser only. Paper fills and P&L are illustrative calculations from those manual prices; they do not use a live market feed.
+
+The Studio includes the existing wallet connection control in its top bar. Connecting a wallet does not enable bot execution: the Studio sends no exchange or on-chain trade orders, requires no wallet signature for paper runs, and has no AI provider connection. Leverage is not offered. No user losses, liquidations, or balances are routed to an operator treasury.
+
+**Live autonomous trading is not enabled on mainnet.** Architecture and a threat model are published:
 
 - [docs/vault/THREAT_MODEL.md](docs/vault/THREAT_MODEL.md)
 - [docs/vault/ARCHITECTURE.md](docs/vault/ARCHITECTURE.md)
 - Scaffold Anchor program: [programs/vault/](programs/vault/)
 
-The intended design is an isolated on-chain vault funded with an amount of SOL the user explicitly chooses and confirms. The agent analyzes the market and chooses candidates; the program enforces the user's total funding cap and a 0.02 SOL per-position ceiling. The user can revoke trading authority and withdraw available funds at any time.
+The intended design is an isolated on-chain vault funded only with an amount the user explicitly chooses and confirms. A future agent must act within user-approved on-chain limits; owners must retain unilateral pause, revocation, and withdrawal controls. Losses or liquidations belong to the user and are not a source of app revenue. Any future fee must be transparent, separately accounted for, and explicitly approved.
 
-The program ID currently in source is an undeployed placeholder, and its `execute_swap` instruction is deliberately disabled until a reviewed Jupiter CPI is implemented. The new `/vault` route is Devnet-only and provides PDA setup, funding, owner pause/revoke controls, and SOL withdrawal **only after** a configured program address is found executable on Devnet. Set `NEXT_PUBLIC_WELP_VAULT_PROGRAM_ID` only to the address of the matching deployed source. If it is missing or not executable, the app refuses to derive a fundable address. Token withdrawals, autonomous trading, Devnet transaction verification, audit, consent flow, and mainnet enablement remain open (see [ROADMAP.md](ROADMAP.md) gates 3–7). The visible Connect wallet control is explicit; no wallet popup starts until clicked. The trading pages remain on Mainnet and their swaps still require wallet approval.
+The program ID currently in source is an undeployed placeholder, and its `execute_swap` instruction is deliberately disabled until a reviewed Jupiter CPI is implemented. The `/vault` route is Devnet-only and provides PDA setup, funding, owner pause/revoke controls, and SOL withdrawal only after a configured program address is found executable on Devnet. Set `NEXT_PUBLIC_WELP_VAULT_PROGRAM_ID` only to the address of matching deployed source. If it is missing or not executable, the app refuses to derive a fundable address. Token withdrawals, autonomous trading, Devnet transaction verification, audit, consent flow, and mainnet enablement remain open (see [ROADMAP.md](ROADMAP.md) launch gates). The shared wallet control opens a wallet prompt only after a click and an installed compatible wallet is available; connecting it never opts a user into bot trading.
+
+Product expansion work is tracked in [ROADMAP.md](ROADMAP.md). Fiat on/off-ramp, TradingView charts and broad market listings, perpetual futures, affiliate rewards, and any live bot execution are **planned only** and have no active integration.
 
 ## Run locally
 
@@ -71,6 +78,7 @@ Before committing or deploying changes, run:
 ```bash
 npm run lint
 npm run typecheck
+npm run test:paper
 npm run build
 ```
 

@@ -5,7 +5,7 @@ type AppSidebarProps = {
   active: 'home' | 'console' | 'signals' | 'autonomous' | 'swap' | 'vault' | 'safety' | 'profile' | 'activity' | 'terms' | 'privacy';
   signalCount?: number | string;
   status?: string;
-  network?: 'mainnet' | 'devnet';
+  network?: 'mainnet' | 'devnet' | 'paper';
 };
 
 export function AppSidebar({ active, signalCount = '—', status = 'Ready when wallet connects', network = 'mainnet' }: AppSidebarProps) {
@@ -15,7 +15,7 @@ export function AppSidebar({ active, signalCount = '—', status = 'Ready when w
         <span className="brand-mark">W</span>
         <span><strong>WELP UP</strong><small>AGENT CONSOLE</small></span>
       </Link>
-      <div className="network-chip"><span className="network-pip" /> SOLANA {network.toUpperCase()}</div>
+      <div className={'network-chip' + (network === 'paper' ? ' network-paper' : '')}><span className="network-pip" /> {network === 'paper' ? 'PAPER MODE' : 'SOLANA ' + network.toUpperCase()}</div>
       <nav className="side-nav" aria-label="Main navigation">
         <Link className={`nav-item${active === 'home' ? ' active' : ''}`} href="/" aria-current={active === 'home' ? 'page' : undefined}>
           <Home size={17} /> Home
@@ -27,7 +27,7 @@ export function AppSidebar({ active, signalCount = '—', status = 'Ready when w
           <Activity size={17} /> Live signals <span className="nav-count">{signalCount || '—'}</span>
         </Link>
         <Link className={`nav-item${active === 'autonomous' ? ' active' : ''}`} href="/autonomous" aria-current={active === 'autonomous' ? 'page' : undefined}>
-          <Bot size={17} /> Autonomous AI
+          <Bot size={17} /> AI bot studio
         </Link>
         <Link className={`nav-item${active === 'vault' ? ' active' : ''}`} href="/vault" aria-current={active === 'vault' ? 'page' : undefined}>
           <Vault size={17} /> Devnet vault
