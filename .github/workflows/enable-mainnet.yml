@@ -1,0 +1,214 @@
+name: 🚀 Enable Mainnet Trading
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TWO TRIGGERS:
+#
+# 1. AUTOMATIC — when the issue labelled "mainnet-gate" is CLOSED.
+#    You close it → CI runs → Vercel flips NEXT_PUBLIC_MAINNET_TRADING_ENABLED
+#    to true → production redeploys → mainnet is live.
+#
+# 2. MANUAL — "Run workflow" button in the GitHub Actions tab, as a backup.
+#
+# HOW TO USE (automatic path):
+#   - GitHub issue #<N> labelled "mainnet-gate" is your gate.
+#   - When STRIDE clears you, close that issue.
+#   - Everything else is automatic.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  issues:
+    types: [closed]
+
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type ENABLE to confirm STRIDE clearance"
+        required: true
+        type: string
+
+jobs:
+  # ── Guard: only run when the closed issue has the mainnet-gate label ────────
+  check-trigger:
+    name: Check trigger
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.decide.outputs.should_run }}
+    steps:
+      - name: Decide whether to proceed
+        id: decide
+        run: |
+          # Manual trigger — always proceed if ENABLE was typed
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ github.event.inputs.confirm }}" = "ENABLE" ]; then
+              echo "should_run=true" >> $GITHUB_OUTPUT
+              echo "✅ Manual trigger confirmed"
+            else
+              echo "should_run=false" >> $GITHUB_OUTPUT
+              echo "❌ Manual trigger: must type ENABLE"
+            fi
+            exit 0
+          fi
+
+          # Issue close trigger — check for mainnet-gate label
+          LABELS='${{ toJson(github.event.issue.labels.*.name) }}'
+          echo "Issue labels: $LABELS"
+          if echo "$LABELS" | grep -q "mainnet-gate"; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "✅ Issue #${{ github.event.issue.number }} closed with mainnet-gate label"
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ Issue closed but no mainnet-gate label — skipping"
+          fi
+
+  # ── Full CI preflight — all checks must pass ────────────────────────────────
+  ci-preflight:
+    name: CI preflight
+    needs: check-trigger
+    if: needs.check-trigger.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:paper
+      - run: npm run test:notifications
+      - run: npm run test:vault-client
+      - run: npm run test:charts
+      - run: npm run test:security
+      - run: npm run build
+      - run: npm audit --audit-level=high
+
+  rust-preflight:
+    name: Rust preflight
+    needs: check-trigger
+    if: needs.check-trigger.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - run: cargo fmt --check --manifest-path programs/vault-checks/Cargo.toml
+      - run: cargo fmt --check --manifest-path programs/vault/Cargo.toml
+      - run: cargo clippy --manifest-path programs/vault-checks/Cargo.toml -- -D warnings
+      - run: cargo clippy --manifest-path programs/vault/Cargo.toml -- -D warnings
+      - run: cargo test --manifest-path programs/vault-checks/Cargo.toml
+
+  python-preflight:
+    name: Python preflight
+    needs: check-trigger
+    if: needs.check-trigger.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -r requirements.txt
+      - run: python -m unittest discover -s tests -v
+
+  # ── Flip the flag and deploy ─────────────────────────────────────────────────
+  enable-mainnet:
+    name: Enable mainnet on Vercel
+    needs: [ci-preflight, rust-preflight, python-preflight]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Set env var in Vercel production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          # Remove existing value if present, then set to true
+          vercel env rm NEXT_PUBLIC_MAINNET_TRADING_ENABLED production \
+            --token "$VERCEL_TOKEN" --yes 2>/dev/null || true
+          echo "true" | vercel env add NEXT_PUBLIC_MAINNET_TRADING_ENABLED production \
+            --token "$VERCEL_TOKEN" --yes
+          echo "✅ NEXT_PUBLIC_MAINNET_TRADING_ENABLED=true set in Vercel production"
+
+      - name: Deploy to Vercel production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          vercel --prod --token "$VERCEL_TOKEN" --yes
+          echo "✅ Vercel production redeployed with mainnet enabled"
+
+      - name: Create Git tag
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "mainnet-live-$DATE" \
+            -m "Mainnet trading enabled — triggered by issue close"
+          git push origin "mainnet-live-$DATE"
+          echo "TAG=mainnet-live-$DATE" >> $GITHUB_ENV
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          gh release create "${{ env.TAG }}" \
+            --title "🚀 Mainnet Trading Live — $DATE" \
+            --notes "## WELP UP! Mainnet Trading Enabled
+
+          **Date:** $DATE
+          **Triggered by:** @${{ github.actor }}
+
+          ### What happened
+          - Issue labelled \`mainnet-gate\` was closed — gate condition met
+          - All CI checks passed (lint, typecheck, tests, build, Rust, Python)
+          - \`NEXT_PUBLIC_MAINNET_TRADING_ENABLED=true\` set in Vercel production
+          - Vercel production redeployed
+
+          Live bot execution is now available for funded, active vaults on Solana Mainnet-Beta." \
+            --latest
+
+      - name: Post comment on the trigger issue
+        if: github.event_name == 'issues'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment ${{ github.event.issue.number }} \
+            --body "🚀 **Mainnet trading is now live.**
+
+          All CI checks passed and Vercel has been redeployed with \`NEXT_PUBLIC_MAINNET_TRADING_ENABLED=true\`.
+
+          Release tag: \`${{ env.TAG }}\`"
+
+      - name: Summary
+        run: |
+          echo "## 🚀 Mainnet is LIVE" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| All CI checks | ✅ passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Vercel env var | ✅ NEXT_PUBLIC_MAINNET_TRADING_ENABLED=true |" >> $GITHUB_STEP_SUMMARY
+          echo "| Production deploy | ✅ live |" >> $GITHUB_STEP_SUMMARY
+          echo "| Git tag | ✅ ${{ env.TAG }} |" >> $GITHUB_STEP_SUMMARY
