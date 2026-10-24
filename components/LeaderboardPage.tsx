@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AppSidebar } from '@/components/AppSidebar';
 import { Trophy, AlertTriangle, X, Users, Layers } from 'lucide-react';
 
@@ -47,22 +47,27 @@ export function LeaderboardPage() {
   const [selectedBot, setSelectedBot] = useState<BotEntry | null>(null);
   const [disclaimer, setDisclaimer] = useState('');
 
-  const fetchLeaderboard = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetch('/api/leaderboard', { cache: 'no-store' });
-      const data = await res.json() as { bots: BotEntry[]; disclaimer: string };
-      setBots(data.bots ?? []);
-      setDisclaimer(data.disclaimer ?? '');
-    } catch {
-      setError('Failed to load leaderboard. Please try again.');
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      setError('');
+      try {
+        const res = await fetch('/api/leaderboard', { cache: 'no-store' });
+        const data = await res.json() as { bots: BotEntry[]; disclaimer: string };
+        if (!cancelled) {
+          setBots(data.bots ?? []);
+          setDisclaimer(data.disclaimer ?? '');
+        }
+      } catch {
+        if (!cancelled) setError('Failed to load leaderboard. Please try again.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
+    void load();
+    return () => { cancelled = true; };
   }, []);
-
-  useEffect(() => { void fetchLeaderboard(); }, [fetchLeaderboard]);
 
   const roiField: Record<TimeWindow, SortField> = { '7d': 'roi7d', '30d': 'roi30d', 'all': 'roiAllTime' };
   const roiKey = roiField[timeWindow];

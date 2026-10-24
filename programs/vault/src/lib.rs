@@ -12,8 +12,8 @@ use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use pyth_solana_receiver_sdk::price_update::{get_feed_id_from_hex, PriceUpdateV2};
 use welp_vault_checks::{
-    check_initialize, check_withdraw, compute_redeem, compute_shares, settle_exposure,
-    split_fee, usd_cents_to_lamports_rounded5, validate_pyth_price, CheckError,
+    check_initialize, check_withdraw, compute_redeem, compute_shares, settle_exposure, split_fee,
+    usd_cents_to_lamports_rounded5, validate_pyth_price, CheckError,
 };
 
 declare_id!("US517G5965aydkZ46HS38QLi7UQiSojurfbQfKCELFx"); // undeployed placeholder; replace after `anchor keys list`
@@ -489,6 +489,67 @@ pub mod welp_vault {
         **owner_info.try_borrow_mut_lamports()? += amount;
         Ok(())
     }
+
+    /// Charges a $0.10 creation fee in SOL via Pyth oracle price, split 40/60.
+    pub fn charge_creation_fee(ctx: Context<ChargeCreationFee>, _bot_nonce: u64) -> Result<()> {
+        // Read SOL/USD price from Pyth
+        let sol_usd_feed_id = get_feed_id_from_hex(
+            "ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
+        )
+        .map_err(|_| VaultError::InvalidPrice)?;
+
+        let price_data = ctx
+            .accounts
+            .price_update
+            .get_price_no_older_than(&Clock::get()?, 30, &sol_usd_feed_id)
+            .map_err(|_| VaultError::StaleFeed)?;
+
+        let lamports_per_dollar =
+            validate_pyth_price(price_data.price, price_data.conf, price_data.exponent)
+                .map_err(map_check_err)?;
+
+        // $0.10 = 10 cents
+        let fee_lamports =
+            usd_cents_to_lamports_rounded5(10, lamports_per_dollar).map_err(map_check_err)?;
+
+        // Verify payer has enough above rent
+        let rent = Rent::get()?;
+        let min_rent = rent.minimum_balance(0);
+        let available = ctx.accounts.payer.lamports().saturating_sub(min_rent);
+        require!(available >= fee_lamports, VaultError::InsufficientFunds);
+
+        let (recipient_lamports, treasury_lamports) =
+            split_fee(fee_lamports).map_err(map_check_err)?;
+
+        // Transfer 40% to fee_recipient
+        let cpi_to_recipient = CpiContext::new(
+            ctx.accounts.system_program.to_account_info(),
+            system_program::Transfer {
+                from: ctx.accounts.payer.to_account_info(),
+                to: ctx.accounts.fee_recipient_account.to_account_info(),
+            },
+        );
+        system_program::transfer(cpi_to_recipient, recipient_lamports)?;
+
+        // Transfer 60% to treasury
+        let cpi_to_treasury = CpiContext::new(
+            ctx.accounts.system_program.to_account_info(),
+            system_program::Transfer {
+                from: ctx.accounts.payer.to_account_info(),
+                to: ctx.accounts.treasury.to_account_info(),
+            },
+        );
+        system_program::transfer(cpi_to_treasury, treasury_lamports)?;
+
+        ctx.accounts.treasury.accumulated_lamports = ctx
+            .accounts
+            .treasury
+            .accumulated_lamports
+            .checked_add(treasury_lamports)
+            .ok_or(VaultError::Overflow)?;
+
+        Ok(())
+    }
 }
 
 // ── Accounts ──────────────────────────────────────────────────────────────
@@ -817,6 +878,30 @@ pub struct LegacyWithdraw<'info> {
     pub vault: Account<'info, Vault>,
 }
 
+#[derive(Accounts)]
+#[instruction(bot_nonce: u64)]
+pub struct ChargeCreationFee<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    pub global_config: Account<'info, GlobalConfig>,
+    /// CHECK: validated as fee_recipient from global_config
+    #[account(
+        mut,
+        constraint = fee_recipient_account.key() == global_config.fee_recipient @ VaultError::UnauthorizedOwner
+    )]
+    pub fee_recipient_account: AccountInfo<'info>,
+    #[account(
+        init_if_needed,
+        payer = payer,
+        space = Treasury::SPACE,
+        seeds = [b"website-treasury"],
+        bump
+    )]
+    pub treasury: Account<'info, Treasury>,
+    pub price_update: Account<'info, PriceUpdateV2>,
+    pub system_program: Program<'info, System>,
+}
+
 // ── Errors ────────────────────────────────────────────────────────────────
 
 #[error_code]
@@ -857,4 +942,10 @@ pub enum VaultError {
     AggregateCap,
     #[msg("Creator fee basis points exceeds maximum 3000 (30%)")]
     FeeTooHigh,
+    #[msg("Invalid or non-positive oracle price")]
+    InvalidPrice,
+    #[msg("Oracle confidence too wide (>2% of price)")]
+    OverConfidence,
+    #[msg("Oracle price feed is stale (>30s)")]
+    StaleFeed,
 }
