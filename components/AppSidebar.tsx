@@ -1,8 +1,8 @@
 import Link from 'next/link';
-import { Activity, ArrowDownUp, Bot, FileText, Home, LayoutDashboard, LineChart, LockKeyhole, Shield, ShieldCheck, UserRound, Vault } from 'lucide-react';
+import { Activity, ArrowDownUp, Bot, FileText, Home, LayoutDashboard, LineChart, LockKeyhole, Settings, Shield, ShieldCheck, Trophy, UserRound, Vault } from 'lucide-react';
 
 type AppSidebarProps = {
-  active: 'home' | 'console' | 'signals' | 'autonomous' | 'swap' | 'vault' | 'safety' | 'profile' | 'activity' | 'terms' | 'privacy';
+  active: 'home' | 'console' | 'signals' | 'autonomous' | 'swap' | 'vault' | 'safety' | 'profile' | 'activity' | 'terms' | 'privacy' | 'settings' | 'leaderboard';
   signalCount?: number | string;
   status?: string;
   network?: 'mainnet' | 'devnet' | 'paper';
@@ -29,6 +29,9 @@ export function AppSidebar({ active, signalCount = '—', status = 'Ready when w
         <Link className={`nav-item${active === 'autonomous' ? ' active' : ''}`} href="/autonomous" aria-current={active === 'autonomous' ? 'page' : undefined}>
           <Bot size={17} /> AI bot studio
         </Link>
+        <Link className={`nav-item${active === 'leaderboard' ? ' active' : ''}`} href="/leaderboard" aria-current={active === 'leaderboard' ? 'page' : undefined}>
+          <Trophy size={17} /> Leaderboard
+        </Link>
         <Link className={`nav-item${active === 'vault' ? ' active' : ''}`} href="/vault" aria-current={active === 'vault' ? 'page' : undefined}>
           <Vault size={17} /> Devnet vault
         </Link>
@@ -45,6 +48,9 @@ export function AppSidebar({ active, signalCount = '—', status = 'Ready when w
         </Link>
         <Link className={`nav-item${active === 'privacy' ? ' active' : ''}`} href="/privacy" aria-current={active === 'privacy' ? 'page' : undefined}>
           <Shield size={17} /> Privacy Policy
+        </Link>
+        <Link className={`nav-item${active === 'settings' ? ' active' : ''}`} href="/settings" aria-current={active === 'settings' ? 'page' : undefined}>
+          <Settings size={17} /> Settings
         </Link>
       </nav>
       <div className="sidebar-bottom">
