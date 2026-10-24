@@ -20,6 +20,10 @@ The swap amount opens at **0.001 SOL** and is editable. Current browser buy limi
 - `/signals` — live market scanner and rule scores.
 - `/autonomous` — AI Bot Studio for creating local paper bots, manually simulating prices, and reviewing simulated grid metrics. It does not place orders.
 - `/swap` — token search, Jupiter quote, and wallet-approved swap.
+- `/leaderboard` — bot performance leaderboard with 7D/30D/All-time ROI, TVL, and copier count. Demo data until on-chain settlement records are available.
+- `/notifications` — in-app feed of public repository releases and commits; refreshes while open. No push delivery.
+- `/settings` — theme (`system` / `light` / `dark`) and text scale (`Compact` / `Normal` / `Large`) preferences, persisted locally.
+- `/vault` — Devnet-only vault PDA setup, funding, owner pause/revoke, and SOL withdrawal.
 - `/safety` — current rules, risks, and future vault requirements.
 - `/activity` — wallet-value snapshots, strategy scan events, and swaps recorded by this browser.
 - `/profile` — connected wallet, public balance summary, and paginated on-chain transaction history (10, 25, 50, or 100 per page).
@@ -73,13 +77,23 @@ Optional environment variables:
 
 The app falls back to public Solana RPC endpoints and Jupiter's unauthenticated limits if keys are not configured. See `.env.example` for variable names.
 
-Before committing or deploying changes, run:
+Before committing or deploying changes, run all checks:
 
 ```bash
 npm run lint
 npm run typecheck
 npm run test:paper
+npm run test:notifications
+npm run test:vault-client
+npm run test:charts
+npm run test:security
 npm run build
+```
+
+Rust host-side checks (requires WSL with Rust toolchain):
+
+```bash
+wsl -d Ubuntu-26.04 -- bash -lc "cd /mnt/c/Users/mishy/projects/WELP-UP && cargo fmt --check --manifest-path programs/vault/Cargo.toml && cargo clippy --manifest-path programs/vault-checks/Cargo.toml -- -D warnings && cargo test --manifest-path programs/vault-checks/Cargo.toml"
 ```
 
 ## Legacy command-line agent

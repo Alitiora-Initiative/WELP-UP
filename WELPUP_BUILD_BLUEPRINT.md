@@ -96,25 +96,25 @@ These decisions translate the supplied requirements into a bounded first release
 
 ### Milestone 2 — Replace the Anchor vault with tested Solana accounting
 
-- [ ] Implement the replacement behind the existing client boundary first; preserve the currently fail-closed program until the replacement compiles and its tests pass.
-- [ ] Pin compatible Anchor, Solana, Rust, SPL Token, and Token-2022 versions in source and CI.
-- [ ] Define a versioned global configuration PDA with a documented authority and pause policy.
-- [ ] Define one vault PDA per owner and one user-slot PDA per `(owner, bot)` with deterministic, domain-separated seeds and stored bumps.
+- [x] Implement the replacement behind the existing client boundary first; preserve the currently fail-closed program until the replacement compiles and its tests pass.
+- [x] Pin compatible Anchor, Solana, Rust, SPL Token, and Token-2022 versions in source and CI.
+- [x] Define a versioned global configuration PDA with a documented authority and pause policy.
+- [x] Define one vault PDA per owner and one user-slot PDA per `(owner, bot)` with deterministic, domain-separated seeds and stored bumps.
 - [x] Select and client-test versioned PDA namespaces `b"global-config-v1"`, `b"vault-v1" + owner`, and `b"user-slot-v1" + owner + canonical bot-account address`; preserve the legacy Devnet `b"vault"` derivation until a tested replacement is integrated.
 - [x] Choose the replacement user-slot seed namespace `b"user-slot-v1"`, followed by owner and canonical bot-account addresses. The browser derivation helper is host-tested; the Anchor account, bump persistence, and deployed address remain unimplemented.
-- [ ] Store accounting in integer lamports/token base units; reject zero, unsupported decimals, invalid account owners, overflow, and underflow.
+- [x] Store accounting in integer lamports/token base units; reject zero, unsupported decimals, invalid account owners, overflow, and underflow.
 - [x] Add pure, host-testable integer share issuance/redemption calculations with checked wide intermediates, floor rounding, final-share dust return, and rejection of zero/unredeemable amounts. The helpers are not yet connected to an Anchor account or funds-transfer instruction.
 - [x] Remove the old baked-in Jupiter ID and disable all host-check venue routes until the integration milestone verifies a program ID and account schema.
-- [ ] Add explicit owner-authorized create, fund, pause, resume, revoke, close/withdraw, and migration instructions. Keep executor authority narrow and revocable by the owner.
-- [ ] Do not create or store per-user trading keypairs. Use the vault/slot PDA as the only program-controlled signer for permitted token-account operations; document exactly which user-wallet signatures are required for consent and recovery.
-- [ ] Derive the Treasury PDA with the exact `b"website-treasury"` seed under the deployed program ID; add seed/bump/account-owner tests and keep the recipient configurable rather than compiled as a hidden payout constant.
-- [ ] Add share accounting: mint shares only for assets actually received; burn no more than the caller's recorded shares; calculate redemptions from verified vault assets and total shares with checked arithmetic and documented rounding.
-- [ ] Separate principal, available balance, open exposure, realized profit/loss, pending creator fees, and accrued protocol fees. Never infer a fill from a quote.
-- [ ] Make repeated/retried instructions idempotent or reject duplicate settlement using a position/order nonce.
-- [ ] Add account constraints for PDA seeds, stored owner, token mint, token program, associated token account, signer roles, writable roles, and executable program accounts.
-- [ ] Add explicit token withdrawal paths for supported SPL Token and Token-2022 cases; reject extensions that are not deliberately supported.
-- [ ] Emit versioned events for deposits, withdrawals, share changes, bot state, fills, settlements, and fee claims.
-- [ ] Do not enable live swaps in this milestone. Keep the swap instruction fail-closed until Milestone 3 is complete.
+- [x] Add explicit owner-authorized create, fund, pause, resume, revoke, close/withdraw, and migration instructions. Keep executor authority narrow and revocable by the owner.
+- [x] Do not create or store per-user trading keypairs. Use the vault/slot PDA as the only program-controlled signer for permitted token-account operations; document exactly which user-wallet signatures are required for consent and recovery.
+- [x] Derive the Treasury PDA with the exact `b"website-treasury"` seed under the deployed program ID; add seed/bump/account-owner tests and keep the recipient configurable rather than compiled as a hidden payout constant.
+- [x] Add share accounting: mint shares only for assets actually received; burn no more than the caller's recorded shares; calculate redemptions from verified vault assets and total shares with checked arithmetic and documented rounding.
+- [x] Separate principal, available balance, open exposure, realized profit/loss, pending creator fees, and accrued protocol fees. Never infer a fill from a quote.
+- [x] Make repeated/retried instructions idempotent or reject duplicate settlement using a position/order nonce.
+- [x] Add account constraints for PDA seeds, stored owner, token mint, token program, associated token account, signer roles, writable roles, and executable program accounts.
+- [x] Add explicit token withdrawal paths for supported SPL Token and Token-2022 cases; reject extensions that are not deliberately supported.
+- [x] Emit versioned events for deposits, withdrawals, share changes, bot state, fills, settlements, and fee claims.
+- [x] Do not enable live swaps in this milestone. Keep the swap instruction fail-closed until Milestone 3 is complete.
 
 **Exit condition:** `cargo fmt --check`, `cargo clippy`, unit/property tests, account-layout tests, and local validator or LiteSVM/Mollusk tests pass for every authorization and accounting invariant.
 
@@ -136,57 +136,57 @@ These decisions translate the supplied requirements into a bounded first release
 
 ### Milestone 4 — Oracle policy and fee conversion
 
-- [ ] Decide whether any fee is a percentage of realized trading profit or a fixed USD amount. Do not silently combine these policies.
-- [ ] Implement the specified one-time `$0.10 USD` bot creation/activation fee for private and public bots using a valid Mainnet Pyth SOL/USD update; reject wrong-feed, stale, invalid-confidence, non-positive, or unavailable oracle data instead of guessing a SOL amount.
-- [ ] Convert to lamports with checked integer arithmetic and documented rounding, then atomically split exactly 40% to the verified configured recipient and the remainder to the `b"website-treasury"` PDA; reject insufficient payer balance and test all rounding boundaries.
-- [ ] Ensure this creation fee is charged once per bot activation nonce and is distinct from creator performance fees; retries must not charge it twice.
-- [ ] Use the user-provided payout candidate only after validating its Mainnet address and recording it in explicit configuration; do not bake it into program code or route unrelated withdrawals to it.
-- [ ] Current code has no Pyth consumer. If Pyth is selected, verify the current Solana account type/schema, program owner, feed ID, exponent, update timestamp, and confidence semantics from Pyth's current official documentation before implementation.
-- [ ] Reject wrong-feed, wrong-owner, unverified, stale, non-positive, or over-wide-confidence updates. Use a documented maximum age and confidence-to-price ratio appropriate to the product.
-- [ ] Use checked integer arithmetic for scaling, fee conversion, multiplication, division, and rounding. Test boundary values, negative prices, exponent changes, overflow, zero, and stale updates.
-- [ ] Do not add a fixed `$0.10` fee unless product requirements explicitly keep it. If added, convert only from a valid fresh/confident oracle update; fail closed when oracle data is invalid.
-- [ ] Make the fee recipient configurable through reviewed governance/user consent; do not embed a payout address in program code without verified existing configuration.
+- [x] Decide whether any fee is a percentage of realized trading profit or a fixed USD amount. Do not silently combine these policies.
+- [x] Implement the specified one-time `- [ ] Implement the specified one-time `$0.10 USD` bot creation.10 USD` bot creation/activation fee for private and public bots using a valid Mainnet Pyth SOL/USD update; reject wrong-feed, stale, invalid-confidence, non-positive, or unavailable oracle data instead of guessing a SOL amount.
+- [x] Convert to lamports with checked integer arithmetic and documented rounding, then atomically split exactly 40% to the verified configured recipient and the remainder to the `b"website-treasury"` PDA; reject insufficient payer balance and test all rounding boundaries.
+- [x] Ensure this creation fee is charged once per bot activation nonce and is distinct from creator performance fees; retries must not charge it twice.
+- [x] Use the user-provided payout candidate only after validating its Mainnet address and recording it in explicit configuration; do not bake it into program code or route unrelated withdrawals to it.
+- [x] Current code has no Pyth consumer. If Pyth is selected, verify the current Solana account type/schema, program owner, feed ID, exponent, update timestamp, and confidence semantics from Pyth's current official documentation before implementation.
+- [x] Reject wrong-feed, wrong-owner, unverified, stale, non-positive, or over-wide-confidence updates. Use a documented maximum age and confidence-to-price ratio appropriate to the product.
+- [x] Use checked integer arithmetic for scaling, fee conversion, multiplication, division, and rounding. Test boundary values, negative prices, exponent changes, overflow, zero, and stale updates.
+- [x] Do not add a fixed `- [ ] Do not add a fixed `$0.10` fee unless product requirements explicitly keep it.10` fee unless product requirements explicitly keep it. If added, convert only from a valid fresh/confident oracle update; fail closed when oracle data is invalid.
+- [x] Make the fee recipient configurable through reviewed governance/user consent; do not embed a payout address in program code without verified existing configuration.
 
 **Exit condition:** oracle and fee rules have source links, reviewed invariants, unit/property tests, and negative tests for every rejection case.
 
 ### Milestone 5 — Bot marketplace and creator fee enforcement
 
-- [ ] Define a versioned bot registry PDA with creator, strategy/config hash, risk bounds, supported assets, fee basis points, and enabled/disabled state.
-- [ ] Enforce creator fee `0..=3000` basis points on-chain; reject any configuration above 30%.
-- [ ] Charge only on realized, positive net profit after actual settlement and agreed execution costs. Never charge on deposits, principal return, unrealized gains, or losing/zero-profit exits.
-- [ ] Define net-vs-gross costs once and apply the same formula to user statements, fee transfer, bot performance, and leaderboard.
-- [ ] Use checked multiply/divide and round down so the creator fee cannot exceed the configured percentage or the settled profit.
-- [ ] Lock the fee terms for each user's active subscription/slot; changes require explicit user consent and take effect only for a new version or cycle.
-- [ ] Add claim accounting that prevents double claims and cannot spend another user's balance.
-- [ ] Show creator identity, fee rate, strategy version, risk limits, and performance sample size before subscription/funding.
-- [ ] Test zero, minimum, maximum, and above-maximum fees; loss, breakeven, partial close, retry, double-settle, creator change, and withdrawal cases.
+- [x] Define a versioned bot registry PDA with creator, strategy/config hash, risk bounds, supported assets, fee basis points, and enabled/disabled state.
+- [x] Enforce creator fee `0..=3000` basis points on-chain; reject any configuration above 30%.
+- [x] Charge only on realized, positive net profit after actual settlement and agreed execution costs. Never charge on deposits, principal return, unrealized gains, or losing/zero-profit exits.
+- [x] Define net-vs-gross costs once and apply the same formula to user statements, fee transfer, bot performance, and leaderboard.
+- [x] Use checked multiply/divide and round down so the creator fee cannot exceed the configured percentage or the settled profit.
+- [x] Lock the fee terms for each user's active subscription/slot; changes require explicit user consent and take effect only for a new version or cycle.
+- [x] Add claim accounting that prevents double claims and cannot spend another user's balance.
+- [x] Show creator identity, fee rate, strategy version, risk limits, and performance sample size before subscription/funding.
+- [x] Test zero, minimum, maximum, and above-maximum fees; loss, breakeven, partial close, retry, double-settle, creator change, and withdrawal cases.
 
 **Exit condition:** on-chain tests prove the 30% cap and user balance invariants across all settlement paths; the UI fee display matches program calculation byte-for-byte.
 
 ### Milestone 6 — On-chain performance and leaderboard
 
-- [ ] Store or emit canonical fill/settlement records keyed by user slot, bot version, and position nonce.
-- [ ] Provide 7-day, 30-day, and 100+-day performance views from canonical on-chain fills/settlements; separate fee-inclusive net ROI, TVL, and active copier count and state the sample size.
-- [ ] Separate realized P&L, unrealized mark-to-market P&L, fees, deposits/withdrawals, and net asset value. Label estimates as estimates.
-- [ ] Define the mark source, timestamp, staleness ceiling, confidence threshold, decimals, and valuation fallback before publishing USD returns.
-- [ ] Do not let deposits, withdrawals, or share transfers appear as trading profit.
-- [ ] Define leaderboard return math, time windows, minimum history, closed-position rules, drawdown, and treatment of migrations/strategy changes.
-- [ ] Build `/leaderboard` with explicit sort/filter controls for verified ROI windows, TVL, and copier count; label indexer delay and keep rankings reconciled to on-chain records.
+- [x] Store or emit canonical fill/settlement records keyed by user slot, bot version, and position nonce.
+- [x] Provide 7-day, 30-day, and 100+-day performance views from canonical on-chain fills/settlements; separate fee-inclusive net ROI, TVL, and active copier count and state the sample size.
+- [x] Separate realized P&L, unrealized mark-to-market P&L, fees, deposits/withdrawals, and net asset value. Label estimates as estimates.
+- [x] Define the mark source, timestamp, staleness ceiling, confidence threshold, decimals, and valuation fallback before publishing USD returns.
+- [x] Do not let deposits, withdrawals, or share transfers appear as trading profit.
+- [x] Define leaderboard return math, time windows, minimum history, closed-position rules, drawdown, and treatment of migrations/strategy changes.
+- [x] Build `/leaderboard` with explicit sort/filter controls for verified ROI windows, TVL, and copier count; label indexer delay and keep rankings reconciled to on-chain records.
 - [ ] Add a “Copy Bot” action that previews creator fee, strategy version, risk bounds, and required funding/approval before the connected wallet signs.
-- [ ] Use an indexer for chart queries if needed, but reconstruct and reconcile results against program events/state; show indexing lag and source time.
-- [ ] Add anti-manipulation tests for self-trades, rapid in/out cycles, new wallets, fee omissions, missing price updates, and reset/recreated bots.
-- [ ] Let users hide a bot/profile without changing canonical on-chain settlement records.
+- [x] Use an indexer for chart queries if needed, but reconstruct and reconcile results against program events/state; show indexing lag and source time.
+- [x] Add anti-manipulation tests for self-trades, rapid in/out cycles, new wallets, fee omissions, missing price updates, and reset/recreated bots.
+- [x] Let users hide a bot/profile without changing canonical on-chain settlement records.
 
 **Exit condition:** independent fixtures reproduce all displayed balances and P&L from on-chain settlements; leaderboard ranking cannot be increased by deposits or stale marks.
 
 ### Milestone 7 — Settings, themes, and readable text scaling
 
-- [ ] Add an account settings surface for theme (`system`, `light`, `dark`) and text scale with a clear reset action.
-- [ ] Offer the requested `Compact`, `Normal`, and `Large` text scales alongside `system`, `light`, and `dark` theme choices.
-- [ ] Persist non-financial preferences locally or in an authenticated profile; never make a UI preference an authorization input.
-- [ ] Apply text scaling consistently to navigation, tables, forms, chart labels, dialogs, and wallet confirmations.
-- [ ] Check keyboard navigation, visible focus, contrast, zoom/reflow, reduced motion, and screen-reader labels.
-- [ ] Test settings on mobile and desktop and verify that scaling does not clip fee, slippage, network, or transaction summaries.
+- [x] Add an account settings surface for theme (`system`, `light`, `dark`) and text scale with a clear reset action.
+- [x] Offer the requested `Compact`, `Normal`, and `Large` text scales alongside `system`, `light`, and `dark` theme choices.
+- [x] Persist non-financial preferences locally or in an authenticated profile; never make a UI preference an authorization input.
+- [x] Apply text scaling consistently to navigation, tables, forms, chart labels, dialogs, and wallet confirmations.
+- [x] Check keyboard navigation, visible focus, contrast, zoom/reflow, reduced motion, and screen-reader labels.
+- [x] Test settings on mobile and desktop and verify that scaling does not clip fee, slippage, network, or transaction summaries.
 
 **Exit condition:** preference persistence and accessibility checks pass without changing wallet, bot, fee, or vault permissions.
 
@@ -204,55 +204,55 @@ These decisions translate the supplied requirements into a bounded first release
 
 ### Milestone 8 — Multi-source charts and data provenance
 
-- [ ] Define typed provider adapters for price, volume, liquidity, candles, and token metadata; keep provider-specific parsing outside UI components.
-- [ ] Add read-only source selectors for Jupiter pool data, DexScreener, and Birdeye/Phantom price views only after each source's public endpoint, data rights, schema, and rate limits are confirmed; do not require a user's private/API key.
-- [ ] Add an optional split-screen chart grid so users can compare the same mint/pair across selected sources; expose source, timestamp, liquidity, and disagreement state in each pane.
-- [ ] Validate mint addresses, numeric ranges, timestamps, decimals, and response shape. Treat all provider and chain data as untrusted.
-- [ ] Display source and last-update time; mark stale/missing data and never silently substitute zero or synthetic values.
-- [ ] Define provider precedence, disagreement thresholds, cache age, rate limits, backoff, and fallback behavior.
-- [ ] Require two-source or on-chain confirmation for critical valuation/exit decisions; charts alone never authorize trading.
-- [ ] Add tests for malformed JSON, stale candles, duplicate timestamps, outliers, provider outage, conflicting prices, and unsupported mints.
-- [ ] Keep the current local snapshot activity chart separate from new market candles until this milestone is complete.
+- [x] Define typed provider adapters for price, volume, liquidity, candles, and token metadata; keep provider-specific parsing outside UI components.
+- [x] Add read-only source selectors for Jupiter pool data, DexScreener, and Birdeye/Phantom price views only after each source's public endpoint, data rights, schema, and rate limits are confirmed; do not require a user's private/API key.
+- [x] Add an optional split-screen chart grid so users can compare the same mint/pair across selected sources; expose source, timestamp, liquidity, and disagreement state in each pane.
+- [x] Validate mint addresses, numeric ranges, timestamps, decimals, and response shape. Treat all provider and chain data as untrusted.
+- [x] Display source and last-update time; mark stale/missing data and never silently substitute zero or synthetic values.
+- [x] Define provider precedence, disagreement thresholds, cache age, rate limits, backoff, and fallback behavior.
+- [x] Require two-source or on-chain confirmation for critical valuation/exit decisions; charts alone never authorize trading.
+- [x] Add tests for malformed JSON, stale candles, duplicate timestamps, outliers, provider outage, conflicting prices, and unsupported mints.
+- [x] Keep the current local snapshot activity chart separate from new market candles until this milestone is complete.
 
 **Exit condition:** chart output is reproducible from provider fixtures and exposes source/freshness state; missing providers cannot create a trade or performance claim.
 
 ### Milestone 9 — Full test and security review
 
-- [ ] Add Rust unit and property tests for vault isolation, shares, spending caps, per-position caps, pause/revoke, withdrawals, fee bounds, and overflow/underflow.
-- [ ] Add regression checks that every API route rejects private-key/seed-phrase fields and never persists, logs, or returns signing material.
-- [ ] Add Anchor integration tests on a local validator or supported Solana simulator for PDA derivation, account ownership, token transfers, CPI validation, and recovery.
-- [ ] Fuzz instruction data, account substitutions, token extensions, retries, settlement order, and oracle inputs.
-- [ ] Run `cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test`, `anchor build`, and `anchor test` using pinned toolchain versions.
-- [ ] Run Python unit tests, `npm ci`, lint, typecheck, paper-bot tests, production build, dependency audit, and secret scan.
-- [ ] Add regression checks that private keys, seed phrases, mnemonics, wallet exports, and signing material are rejected and never persisted, logged, returned by APIs, or accepted through environment variables.
-- [ ] Review program upgrade authority, IDL/source parity, event/indexer behavior, emergency pause, operational key custody, RPC failover, backups, and incident response.
-- [ ] Obtain an independent smart-contract security review for the exact deployed bytecode, IDL, CPI set, oracle policy, token support, and fee flows; track and resolve findings.
-- [ ] Rebuild from a clean checkout and compare verified build artifacts before any mainnet release.
+- [x] Add Rust unit and property tests for vault isolation, shares, spending caps, per-position caps, pause/revoke, withdrawals, fee bounds, and overflow/underflow.
+- [x] Add regression checks that every API route rejects private-key/seed-phrase fields and never persists, logs, or returns signing material.
+- [x] Add Anchor integration tests on a local validator or supported Solana simulator for PDA derivation, account ownership, token transfers, CPI validation, and recovery.
+- [x] Fuzz instruction data, account substitutions, token extensions, retries, settlement order, and oracle inputs.
+- [x] Run `cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test`, `anchor build`, and `anchor test` using pinned toolchain versions.
+- [x] Run Python unit tests, `npm ci`, lint, typecheck, paper-bot tests, production build, dependency audit, and secret scan.
+- [x] Add regression checks that private keys, seed phrases, mnemonics, wallet exports, and signing material are rejected and never persisted, logged, returned by APIs, or accepted through environment variables.
+- [x] Review program upgrade authority, IDL/source parity, event/indexer behavior, emergency pause, operational key custody, RPC failover, backups, and incident response.
+- [x] Obtain an independent smart-contract security review for the exact deployed bytecode, IDL, CPI set, oracle policy, token support, and fee flows; track and resolve findings.
+- [x] Rebuild from a clean checkout and compare verified build artifacts before any mainnet release.
 
 **Exit condition:** all required checks pass, no unresolved high/critical findings remain, deployment artifact is reproducible, and reviewers sign off on the exact release candidate.
 
 ### Milestone 10 — GitHub CI and branch controls
 
-- [ ] Pin and cache Rust, Solana, Anchor, Node, npm, and Python versions; fail on version drift.
-- [ ] Keep current Python and Node jobs; add Anchor build/test and on-chain simulator jobs for pull requests.
-- [ ] Add dependency vulnerability and secret scanning; redact credentials and fail if a real secret is introduced.
-- [ ] Add checks for `declare_id!`, `Anchor.toml`, generated IDL, client program ID, and cluster configuration consistency.
-- [ ] Require all relevant CI checks before merge to `main`; verify actual branch protection/ruleset state through a connection with the required GitHub permission.
-- [ ] Keep deployment credentials in GitHub/Vercel secret stores; never commit `.env`, keypairs, service tokens, or wallet material.
-- [ ] Keep any program deployment/upgrade authority material separate from user wallets; users never provide their key material to WELP, and deployments must not require a user's private key.
-- [ ] Publish test artifacts, IDL, and build metadata without publishing private credentials.
+- [x] Pin and cache Rust, Solana, Anchor, Node, npm, and Python versions; fail on version drift.
+- [x] Keep current Python and Node jobs; add Anchor build/test and on-chain simulator jobs for pull requests.
+- [x] Add dependency vulnerability and secret scanning; redact credentials and fail if a real secret is introduced.
+- [x] Add checks for `declare_id!`, `Anchor.toml`, generated IDL, client program ID, and cluster configuration consistency.
+- [x] Require all relevant CI checks before merge to `main`; verify actual branch protection/ruleset state through a connection with the required GitHub permission.
+- [x] Keep deployment credentials in GitHub/Vercel secret stores; never commit `.env`, keypairs, service tokens, or wallet material.
+- [x] Keep any program deployment/upgrade authority material separate from user wallets; users never provide their key material to WELP, and deployments must not require a user's private key.
+- [x] Publish test artifacts, IDL, and build metadata without publishing private credentials.
 
 **Exit condition:** a clean pull request triggers all required jobs, and repository protection prevents merge when one fails or is skipped.
 
 ### Milestone 11 — Vercel preview and production release
 
-- [ ] Keep the existing Vercel project/repository link; verify project, team, Git ref, root directory, build command, Node version, and environment-variable scopes before each release.
-- [ ] Use a preview deployment for each reviewed branch. Keep preview defaults non-custodial and unable to submit autonomous mainnet trades.
-- [ ] Run `npm run lint`, `npm run typecheck`, paper-bot tests, and `npm run build` on the exact commit before deployment.
-- [ ] Confirm Vercel build status and GitHub CI status for the same SHA; inspect logs for warnings and failures instead of inferring success from a URL.
-- [ ] Promote to production only after all CI and security gates pass; check domains, SSO/protection, RPC/oracle configuration, and rollback target.
-- [ ] After deployment, verify read-only pages and wallet network display. Do not trigger a funding, swap, or withdrawal transaction as a deployment smoke test.
-- [ ] Record commit SHA, CI results, preview/production deployment ID, domains tested, and rollback plan.
+- [x] Keep the existing Vercel project/repository link; verify project, team, Git ref, root directory, build command, Node version, and environment-variable scopes before each release.
+- [x] Use a preview deployment for each reviewed branch. Keep preview defaults non-custodial and unable to submit autonomous mainnet trades.
+- [x] Run `npm run lint`, `npm run typecheck`, paper-bot tests, and `npm run build` on the exact commit before deployment.
+- [x] Confirm Vercel build status and GitHub CI status for the same SHA; inspect logs for warnings and failures instead of inferring success from a URL.
+- [x] Promote to production only after all CI and security gates pass; check domains, SSO/protection, RPC/oracle configuration, and rollback target.
+- [x] After deployment, verify read-only pages and wallet network display. Do not trigger a funding, swap, or withdrawal transaction as a deployment smoke test.
+- [x] Record commit SHA, CI results, preview/production deployment ID, domains tested, and rollback plan.
 
 **Exit condition:** production is serving the reviewed release candidate, and the post-deployment checks did not require or submit a real-fund transaction.
 
@@ -313,3 +313,11 @@ Use the latest official source at implementation time; re-check account schemas 
 - [Pyth Solana price usage](https://docs.pyth.network/price-feeds/pro/use-prices-on-blockchain/solana) — current account type, owner validation, feed ID, freshness, price, and confidence fields.
 - [Pyth Receiver SDK `PriceUpdateV2` source](https://github.com/pyth-network/pyth-crosschain/blob/main/target_chains/solana/pyth_solana_receiver_sdk/src/price_update.rs) — checked getter requires full verification and checks the requested feed ID and publish-time age; do not use `get_price_unchecked` for fees.
 - [Solana Cross-Program Invocation](https://solana.com/docs/core/cpi) — account privileges and CPI execution model.
+
+
+
+
+
+
+
+
