@@ -37,6 +37,9 @@ fn map_err(err: CheckError) -> VaultError {
         CheckError::InsufficientFunds => VaultError::InsufficientFunds,
         CheckError::RouteNotAllowed => VaultError::RouteNotAllowed,
         CheckError::ExposureUnderflow => VaultError::ExposureUnderflow,
+        CheckError::FeeTooHigh => VaultError::FeeTooHigh,
+        CheckError::ZeroProfit => VaultError::ZeroAmount,
+        CheckError::AlreadyClaimed => VaultError::ZeroAmount,
     }
 }
 
@@ -331,6 +334,72 @@ pub mod welp_vault {
         Ok(())
     }
 
+    /// register_bot: creator registers a new bot
+    /// fee_bps must be <= 3000
+    pub fn register_bot(
+        ctx: Context<RegisterBot>,
+        strategy_hash: [u8; 32],
+        max_position_bps: u16,
+        max_slippage_bps: u16,
+        fee_bps: u16,
+    ) -> Result<()> {
+        use welp_vault_checks::validate_fee_bps;
+        validate_fee_bps(fee_bps as u64).map_err(|_| VaultError::FeeTooHigh)?;
+
+        let reg = &mut ctx.accounts.bot_registry;
+        reg.creator = ctx.accounts.creator.key();
+        reg.bot_account = ctx.accounts.bot_account.key();
+        reg.strategy_hash = strategy_hash;
+        reg.max_position_bps = max_position_bps;
+        reg.max_slippage_bps = max_slippage_bps;
+        reg.fee_bps = fee_bps;
+        reg.enabled = true;
+        reg.version = 1;
+        reg.bump = ctx.bumps.bot_registry;
+        Ok(())
+    }
+
+    /// settle_creator_fee: charge fee_bps on positive realized profit, add to user slot pending_creator_fee
+    pub fn settle_creator_fee(
+        ctx: Context<SettleCreatorFee>,
+        realized_profit_lamports: u64,
+    ) -> Result<()> {
+        use welp_vault_checks::compute_creator_fee;
+        let fee_bps = ctx.accounts.bot_registry.fee_bps as u64;
+        let fee = compute_creator_fee(realized_profit_lamports, fee_bps).map_err(|e| match e {
+            welp_vault_checks::CheckError::ZeroProfit => VaultError::ZeroAmount,
+            welp_vault_checks::CheckError::FeeTooHigh => VaultError::FeeTooHigh,
+            welp_vault_checks::CheckError::Overflow => VaultError::Overflow,
+            _ => VaultError::Overflow,
+        })?;
+
+        let slot = &mut ctx.accounts.user_slot;
+        slot.pending_creator_fee = slot
+            .pending_creator_fee
+            .checked_add(fee)
+            .ok_or(VaultError::Overflow)?;
+        Ok(())
+    }
+
+    /// claim_creator_fee: creator claims their pending fees from a user slot
+    /// Transfers pending_creator_fee from vault to creator, zeros it out
+    pub fn claim_creator_fee(ctx: Context<ClaimCreatorFee>) -> Result<()> {
+        let pending = ctx.accounts.user_slot.pending_creator_fee;
+        require!(pending > 0, VaultError::ZeroAmount);
+
+        // Zero out first (prevent re-entrancy / double claim)
+        ctx.accounts.user_slot.pending_creator_fee = 0;
+
+        // Transfer from vault to creator
+        let vault_info = ctx.accounts.vault.to_account_info();
+        let creator_info = ctx.accounts.creator.to_account_info();
+
+        **vault_info.try_borrow_mut_lamports()? -= pending;
+        **creator_info.try_borrow_mut_lamports()? += pending;
+
+        Ok(())
+    }
+
     // ── Legacy compatibility stubs ──────────────────────────────────────
 
     /// Compatibility: create vault with cap/position params (delegates to create_vault logic).
@@ -472,6 +541,23 @@ impl Treasury {
     pub const SPACE: usize = 8 + 8 + 1;
 }
 
+#[account]
+pub struct BotRegistry {
+    pub creator: Pubkey,
+    pub bot_account: Pubkey,
+    pub strategy_hash: [u8; 32],
+    pub max_position_bps: u16,
+    pub max_slippage_bps: u16,
+    pub fee_bps: u16,
+    pub enabled: bool,
+    pub version: u32,
+    pub bump: u8,
+}
+
+impl BotRegistry {
+    pub const SPACE: usize = 8 + 32 + 32 + 32 + 2 + 2 + 2 + 1 + 4 + 1;
+}
+
 // ── Instruction contexts ──────────────────────────────────────────────────
 
 #[derive(Accounts)]
@@ -569,6 +655,67 @@ pub struct UpdateSlotLimits<'info> {
         has_one = owner @ VaultError::UnauthorizedOwner
     )]
     pub user_slot: Account<'info, UserSlot>,
+}
+
+#[derive(Accounts)]
+#[instruction(strategy_hash: [u8;32], max_position_bps: u16, max_slippage_bps: u16, fee_bps: u16)]
+pub struct RegisterBot<'info> {
+    #[account(mut)]
+    pub creator: Signer<'info>,
+    /// CHECK: stored as bot_account in registry
+    pub bot_account: AccountInfo<'info>,
+    #[account(
+        init,
+        payer = creator,
+        space = BotRegistry::SPACE,
+        seeds = [b"bot-registry-v1", creator.key().as_ref(), bot_account.key().as_ref()],
+        bump
+    )]
+    pub bot_registry: Account<'info, BotRegistry>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct SettleCreatorFee<'info> {
+    pub authority: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"user-slot-v1", user_slot.owner.as_ref(), user_slot.bot_account.as_ref()],
+        bump = user_slot.bump
+    )]
+    pub user_slot: Account<'info, UserSlot>,
+    #[account(
+        seeds = [b"bot-registry-v1", bot_registry.creator.as_ref(), user_slot.bot_account.as_ref()],
+        bump = bot_registry.bump
+    )]
+    pub bot_registry: Account<'info, BotRegistry>,
+}
+
+#[derive(Accounts)]
+pub struct ClaimCreatorFee<'info> {
+    #[account(mut)]
+    pub creator: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"user-slot-v1", user_slot.owner.as_ref(), user_slot.bot_account.as_ref()],
+        bump = user_slot.bump
+    )]
+    pub user_slot: Account<'info, UserSlot>,
+    #[account(
+        mut,
+        seeds = [b"vault-v1", vault.owner.as_ref()],
+        bump = vault.bump,
+        has_one = owner @ VaultError::UnauthorizedOwner
+    )]
+    pub vault: Account<'info, Vault>,
+    /// CHECK: vault owner
+    pub owner: AccountInfo<'info>,
+    #[account(
+        seeds = [b"bot-registry-v1", creator.key().as_ref(), user_slot.bot_account.as_ref()],
+        bump = bot_registry.bump,
+        has_one = creator @ VaultError::UnauthorizedOwner
+    )]
+    pub bot_registry: Account<'info, BotRegistry>,
 }
 
 // ── Legacy compatibility contexts ─────────────────────────────────────────
@@ -697,4 +844,6 @@ pub enum VaultError {
     SharesOutstanding,
     #[msg("Would exceed 100 SOL aggregate cap")]
     AggregateCap,
+    #[msg("Creator fee basis points exceeds maximum 3000 (30%)")]
+    FeeTooHigh,
 }

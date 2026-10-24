@@ -28,6 +28,44 @@ pub enum CheckError {
     InsufficientFunds,
     RouteNotAllowed,
     ExposureUnderflow,
+    FeeTooHigh,         // fee_bps > 3000
+    ZeroProfit,         // profit == 0 — cannot charge
+    AlreadyClaimed,     // double-claim guard
+    InvalidPrice,
+    OverConfidence,
+    StaleFeed,
+    NonceTaken,
+    InsufficientBalance,
+}
+
+pub const MAX_FEE_BPS: u64 = 3000;
+
+/// Validate fee_bps is within 0..=3000
+pub fn validate_fee_bps(fee_bps: u64) -> Result<(), CheckError> {
+    if fee_bps > MAX_FEE_BPS {
+        Err(CheckError::FeeTooHigh)
+    } else {
+        Ok(())
+    }
+}
+
+/// Compute creator fee on realized positive profit. Rounds down.
+/// Returns fee in lamports (or 0 if rounded to 0)
+pub fn compute_creator_fee(
+    realized_profit_lamports: u64,
+    fee_bps: u64,
+) -> Result<u64, CheckError> {
+    if realized_profit_lamports == 0 {
+        return Err(CheckError::ZeroProfit);
+    }
+    validate_fee_bps(fee_bps)?;
+    let fee = (realized_profit_lamports as u128)
+        .checked_mul(fee_bps as u128)
+        .ok_or(CheckError::Overflow)?
+        .checked_div(10_000)
+        .ok_or(CheckError::Overflow)? as u64;
+    // fee of 0 is allowed (very small profit * small bps)
+    Ok(fee)
 }
 
 pub fn check_initialize(
@@ -193,6 +231,86 @@ fn bs58_decode_32(input: &str) -> [u8; 32] {
     out
 }
 
+/// Convert USD cents to lamports using a SOL/USD price.
+/// `sol_price_ulamports_per_usd`: lamports per dollar (= 1_000_000_000 / sol_price_usd).
+/// `fee_usd_cents`: fee in cents (10 = $0.10).
+/// Returns lamports, rounded UP to nearest 5.
+pub fn usd_cents_to_lamports_rounded5(
+    fee_usd_cents: u64,
+    sol_price_ulamports_per_usd: u64,
+) -> Result<u64, CheckError> {
+    if sol_price_ulamports_per_usd == 0 {
+        return Err(CheckError::InvalidPrice);
+    }
+    let lamports = (fee_usd_cents as u128)
+        .checked_mul(sol_price_ulamports_per_usd as u128)
+        .ok_or(CheckError::Overflow)?
+        .checked_div(100)
+        .ok_or(CheckError::Overflow)? as u64;
+    // Round UP to nearest 5 lamports
+    let rem = lamports % 5;
+    let rounded = if rem == 0 {
+        lamports
+    } else {
+        lamports.checked_add(5 - rem).ok_or(CheckError::Overflow)?
+    };
+    Ok(rounded)
+}
+
+/// Validate a Pyth price: must be positive, confidence < 2% of price.
+/// Returns `lamports_per_dollar` (= 1_000_000_000 / price_usd).
+/// `price`: raw price from Pyth (positive).
+/// `conf`: raw confidence from Pyth.
+/// `exponent`: Pyth exponent (typically negative, e.g. -8).
+pub fn validate_pyth_price(price: i64, conf: u64, exponent: i32) -> Result<u64, CheckError> {
+    if price <= 0 {
+        return Err(CheckError::InvalidPrice);
+    }
+    let price_u = price as u64;
+    // confidence < 2% of price => conf * 50 < price_u
+    if conf.saturating_mul(50) >= price_u {
+        return Err(CheckError::OverConfidence);
+    }
+    // Compute lamports_per_dollar:
+    // lamports_per_dollar = 10^9 / (price * 10^exponent)
+    // If exponent < 0: = (10^9 * 10^|exponent|) / price
+    let abs_exp = exponent.unsigned_abs() as u32;
+    if abs_exp > 18 {
+        return Err(CheckError::InvalidPrice);
+    }
+    let scale: u128 = 10u128.pow(abs_exp);
+    let numerator: u128 = if exponent < 0 {
+        (1_000_000_000u128)
+            .checked_mul(scale)
+            .ok_or(CheckError::Overflow)?
+    } else {
+        1_000_000_000u128
+            .checked_div(scale)
+            .ok_or(CheckError::InvalidPrice)?
+    };
+    let lamports_per_dollar = numerator
+        .checked_div(price_u as u128)
+        .ok_or(CheckError::Overflow)? as u64;
+    if lamports_per_dollar == 0 {
+        return Err(CheckError::InvalidPrice);
+    }
+    Ok(lamports_per_dollar)
+}
+
+/// Compute the 40/60 fee split. Returns `(fee_recipient_lamports, treasury_lamports)`.
+/// Rounds down fee_recipient; treasury gets the remainder to ensure exact total.
+pub fn split_fee(total: u64) -> Result<(u64, u64), CheckError> {
+    let recipient = total
+        .checked_mul(40)
+        .ok_or(CheckError::Overflow)?
+        .checked_div(100)
+        .ok_or(CheckError::Overflow)?;
+    let treasury = total
+        .checked_sub(recipient)
+        .ok_or(CheckError::Overflow)?;
+    Ok((recipient, treasury))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -354,5 +472,42 @@ mod tests {
             compute_redeem(1_000_000, 10_000_000, 0),
             Err(CheckError::InsufficientFunds)
         );
+    }
+
+    #[test]
+    fn creator_fee_rules() {
+        // fee_bps validation
+        assert!(validate_fee_bps(0).is_ok());
+        assert!(validate_fee_bps(1).is_ok());
+        assert!(validate_fee_bps(3000).is_ok());
+        assert_eq!(validate_fee_bps(3001), Err(CheckError::FeeTooHigh));
+        assert_eq!(validate_fee_bps(10000), Err(CheckError::FeeTooHigh));
+
+        // compute_creator_fee
+        // zero profit -> error
+        assert_eq!(compute_creator_fee(0, 1000), Err(CheckError::ZeroProfit));
+        // fee_bps too high -> error
+        assert_eq!(
+            compute_creator_fee(1_000_000, 3001),
+            Err(CheckError::FeeTooHigh)
+        );
+        // 10% fee on 1 SOL (1_000_000_000 lamports)
+        assert_eq!(
+            compute_creator_fee(1_000_000_000, 1000),
+            Ok(100_000_000)
+        );
+        // 30% fee on 1 SOL
+        assert_eq!(
+            compute_creator_fee(1_000_000_000, 3000),
+            Ok(300_000_000)
+        );
+        // min fee bps (0) -> fee = 0 (no fee on loss/zero bps)
+        assert_eq!(compute_creator_fee(1_000_000, 0), Ok(0));
+        // rounds down: 1 lamport profit * 3000 bps = 0.3 lamports -> 0
+        assert_eq!(compute_creator_fee(1, 3000), Ok(0));
+        // 3 lamports * 3000 bps / 10000 = 0.9 -> 0 (floor)
+        assert_eq!(compute_creator_fee(3, 3000), Ok(0));
+        // 10 lamports * 3000 bps / 10000 = 3
+        assert_eq!(compute_creator_fee(10, 3000), Ok(3));
     }
 }

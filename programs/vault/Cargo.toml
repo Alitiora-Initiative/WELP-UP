@@ -26,3 +26,4 @@ unexpected_cfgs = { level = "warn", check-cfg = [
 anchor-lang = "0.30.1"
 anchor-spl = "0.30.1"
 welp-vault-checks = { path = "../vault-checks" }
+pyth-solana-receiver-sdk = "0.4.0"
