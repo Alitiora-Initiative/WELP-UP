@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { AppSidebar } from '@/components/AppSidebar';
-import { Trophy, AlertTriangle, X, Users, TrendingUp, Layers } from 'lucide-react';
+import { Trophy, AlertTriangle, X, Users, Layers } from 'lucide-react';
 
 type BotEntry = {
   rank: number;

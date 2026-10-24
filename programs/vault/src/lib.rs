@@ -10,8 +10,10 @@
 
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
+use pyth_solana_receiver_sdk::price_update::{get_feed_id_from_hex, PriceUpdateV2};
 use welp_vault_checks::{
-    check_initialize, check_withdraw, compute_redeem, compute_shares, settle_exposure, CheckError,
+    check_initialize, check_withdraw, compute_redeem, compute_shares, settle_exposure,
+    split_fee, usd_cents_to_lamports_rounded5, validate_pyth_price, CheckError,
 };
 
 declare_id!("US517G5965aydkZ46HS38QLi7UQiSojurfbQfKCELFx"); // undeployed placeholder; replace after `anchor keys list`
@@ -40,7 +42,16 @@ fn map_err(err: CheckError) -> VaultError {
         CheckError::FeeTooHigh => VaultError::FeeTooHigh,
         CheckError::ZeroProfit => VaultError::ZeroAmount,
         CheckError::AlreadyClaimed => VaultError::ZeroAmount,
+        CheckError::InvalidPrice => VaultError::InvalidPrice,
+        CheckError::OverConfidence => VaultError::OverConfidence,
+        CheckError::StaleFeed => VaultError::StaleFeed,
+        CheckError::NonceTaken => VaultError::Overflow,
+        CheckError::InsufficientBalance => VaultError::InsufficientFunds,
     }
+}
+
+fn map_check_err(err: welp_vault_checks::CheckError) -> VaultError {
+    map_err(err)
 }
 
 // ── Enums ─────────────────────────────────────────────────────────────────

@@ -28,9 +28,9 @@ pub enum CheckError {
     InsufficientFunds,
     RouteNotAllowed,
     ExposureUnderflow,
-    FeeTooHigh,         // fee_bps > 3000
-    ZeroProfit,         // profit == 0 — cannot charge
-    AlreadyClaimed,     // double-claim guard
+    FeeTooHigh,     // fee_bps > 3000
+    ZeroProfit,     // profit == 0 — cannot charge
+    AlreadyClaimed, // double-claim guard
     InvalidPrice,
     OverConfidence,
     StaleFeed,
@@ -51,10 +51,7 @@ pub fn validate_fee_bps(fee_bps: u64) -> Result<(), CheckError> {
 
 /// Compute creator fee on realized positive profit. Rounds down.
 /// Returns fee in lamports (or 0 if rounded to 0)
-pub fn compute_creator_fee(
-    realized_profit_lamports: u64,
-    fee_bps: u64,
-) -> Result<u64, CheckError> {
+pub fn compute_creator_fee(realized_profit_lamports: u64, fee_bps: u64) -> Result<u64, CheckError> {
     if realized_profit_lamports == 0 {
         return Err(CheckError::ZeroProfit);
     }
@@ -305,9 +302,7 @@ pub fn split_fee(total: u64) -> Result<(u64, u64), CheckError> {
         .ok_or(CheckError::Overflow)?
         .checked_div(100)
         .ok_or(CheckError::Overflow)?;
-    let treasury = total
-        .checked_sub(recipient)
-        .ok_or(CheckError::Overflow)?;
+    let treasury = total.checked_sub(recipient).ok_or(CheckError::Overflow)?;
     Ok((recipient, treasury))
 }
 
@@ -492,15 +487,9 @@ mod tests {
             Err(CheckError::FeeTooHigh)
         );
         // 10% fee on 1 SOL (1_000_000_000 lamports)
-        assert_eq!(
-            compute_creator_fee(1_000_000_000, 1000),
-            Ok(100_000_000)
-        );
+        assert_eq!(compute_creator_fee(1_000_000_000, 1000), Ok(100_000_000));
         // 30% fee on 1 SOL
-        assert_eq!(
-            compute_creator_fee(1_000_000_000, 3000),
-            Ok(300_000_000)
-        );
+        assert_eq!(compute_creator_fee(1_000_000_000, 3000), Ok(300_000_000));
         // min fee bps (0) -> fee = 0 (no fee on loss/zero bps)
         assert_eq!(compute_creator_fee(1_000_000, 0), Ok(0));
         // rounds down: 1 lamport profit * 3000 bps = 0.3 lamports -> 0
@@ -509,5 +498,75 @@ mod tests {
         assert_eq!(compute_creator_fee(3, 3000), Ok(0));
         // 10 lamports * 3000 bps / 10000 = 3
         assert_eq!(compute_creator_fee(10, 3000), Ok(3));
+    }
+
+    #[test]
+    fn oracle_fee_math_boundaries() {
+        // validate_pyth_price: positive price, tight confidence
+        let result = validate_pyth_price(15_000_000_000, 1_000_000, -8);
+        assert!(result.is_ok(), "expected ok: {:?}", result);
+
+        // non-positive price
+        assert_eq!(
+            validate_pyth_price(0, 1_000, -8),
+            Err(CheckError::InvalidPrice)
+        );
+        assert_eq!(
+            validate_pyth_price(-100, 1_000, -8),
+            Err(CheckError::InvalidPrice)
+        );
+
+        // over-confidence: conf/price >= 2%
+        // price=100, conf=3 => conf*50=150 >= 100 => OverConfidence
+        assert_eq!(
+            validate_pyth_price(100, 3, -8),
+            Err(CheckError::OverConfidence)
+        );
+
+        // fee math: $0.10 at ~$150 SOL
+        // Using validate_pyth_price(15_000_000_000, 100_000_000, -8):
+        // lamports_per_dollar = (1e9 * 1e8) / 15_000_000_000 = 6_666
+        let lpd = validate_pyth_price(15_000_000_000, 100_000_000, -8).unwrap();
+        let fee = usd_cents_to_lamports_rounded5(10, lpd).unwrap();
+        assert!(fee % 5 == 0, "fee must be multiple of 5");
+        assert!(fee > 0);
+
+        // split_fee: 40/60
+        let (rec, treas) = split_fee(1000).unwrap();
+        assert_eq!(rec, 400);
+        assert_eq!(treas, 600);
+
+        let (rec2, treas2) = split_fee(101).unwrap();
+        assert_eq!(rec2 + treas2, 101); // must sum to total
+        assert_eq!(rec2, 40); // floor of 40.4
+        assert_eq!(treas2, 61); // remainder
+    }
+
+    #[test]
+    fn share_math_works() {
+        // first deposit: 1:1
+        assert_eq!(compute_shares(1_000_000, 0, 0), Ok(1_000_000));
+        // second deposit: proportional
+        assert_eq!(
+            compute_shares(1_000_000, 1_000_000, 1_000_000),
+            Ok(1_000_000)
+        );
+        // zero amount
+        assert_eq!(
+            compute_shares(0, 1_000_000, 1_000_000),
+            Err(CheckError::ZeroAmount)
+        );
+        // redeem
+        assert_eq!(compute_redeem(500_000, 1_000_000, 1_000_000), Ok(500_000));
+        // redeem zero shares
+        assert_eq!(
+            compute_redeem(0, 1_000_000, 1_000_000),
+            Err(CheckError::ZeroAmount)
+        );
+        // redeem all
+        assert_eq!(
+            compute_redeem(1_000_000, 1_000_000, 1_000_000),
+            Ok(1_000_000)
+        );
     }
 }
