@@ -9,13 +9,13 @@
 
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
-use welp_vault_checks::{
-    check_initialize, check_withdraw, settle_exposure, CheckError,
-};
+use welp_vault_checks::{check_initialize, check_withdraw, settle_exposure, CheckError};
 
 declare_id!("US517G5965aydkZ46HS38QLi7UQiSojurfbQfKCELFx"); // undeployed placeholder; replace after `anchor keys list`
 
-pub use welp_vault_checks::{DEFAULT_PER_POSITION_MAX as DEFAULT_PER_POSITION, MIN_POSITION_LAMPORTS as MIN_POSITION};
+pub use welp_vault_checks::{
+    DEFAULT_PER_POSITION_MAX as DEFAULT_PER_POSITION, MIN_POSITION_LAMPORTS as MIN_POSITION,
+};
 
 fn map_err(err: CheckError) -> VaultError {
     match err {

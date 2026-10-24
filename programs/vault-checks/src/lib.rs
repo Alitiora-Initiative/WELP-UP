@@ -30,7 +30,10 @@ pub enum CheckError {
     ExposureUnderflow,
 }
 
-pub fn check_initialize(total_cap_lamports: u64, per_position_max_lamports: u64) -> Result<(), CheckError> {
+pub fn check_initialize(
+    total_cap_lamports: u64,
+    per_position_max_lamports: u64,
+) -> Result<(), CheckError> {
     if total_cap_lamports < MIN_POSITION_LAMPORTS {
         return Err(CheckError::CapTooSmall);
     }
@@ -86,7 +89,11 @@ pub fn settle_exposure(open_exposure: u64, amount: u64) -> Result<u64, CheckErro
         .ok_or(CheckError::ExposureUnderflow)
 }
 
-pub fn check_withdraw(amount: u64, vault_lamports: u64, rent_exempt: u64) -> Result<(), CheckError> {
+pub fn check_withdraw(
+    amount: u64,
+    vault_lamports: u64,
+    rent_exempt: u64,
+) -> Result<(), CheckError> {
     if amount == 0 {
         return Err(CheckError::ZeroAmount);
     }
@@ -113,9 +120,9 @@ fn bs58_decode_32(input: &str) -> [u8; 32] {
     for c in input.bytes() {
         let val = ALPHABET.iter().position(|a| *a == c).expect("base58") as u32;
         let mut carry = val;
-        for i in 0..len {
-            carry += (bytes[i] as u32) * 58;
-            bytes[i] = (carry & 0xff) as u8;
+        for b in bytes.iter_mut().take(len) {
+            carry += (*b as u32) * 58;
+            *b = (carry & 0xff) as u8;
             carry >>= 8;
         }
         while carry > 0 {
@@ -140,7 +147,10 @@ mod tests {
 
     #[test]
     fn initialize_rejects_tiny_cap_and_bad_position() {
-        assert_eq!(check_initialize(100, DEFAULT_PER_POSITION_MAX), Err(CheckError::CapTooSmall));
+        assert_eq!(
+            check_initialize(100, DEFAULT_PER_POSITION_MAX),
+            Err(CheckError::CapTooSmall)
+        );
         assert_eq!(
             check_initialize(5_000_000, 100),
             Err(CheckError::InvalidPerPosition)
@@ -156,18 +166,42 @@ mod tests {
     fn spend_respects_pause_executor_min_max_and_cap() {
         let route = [0u8; 32];
         let base = |amt, spent| {
-            authorize_spend(false, true, amt, DEFAULT_PER_POSITION_MAX, spent, 50_000_000, &route)
+            authorize_spend(
+                false,
+                true,
+                amt,
+                DEFAULT_PER_POSITION_MAX,
+                spent,
+                50_000_000,
+                &route,
+            )
         };
         assert_eq!(base(500_000, 0), Err(CheckError::BelowMinPosition));
         assert_eq!(base(21_000_000, 0), Err(CheckError::AbovePerPosition));
         assert_eq!(base(20_000_000, 40_000_000), Err(CheckError::CapExceeded));
         assert_eq!(base(20_000_000, 0), Ok(20_000_000));
         assert_eq!(
-            authorize_spend(true, true, 1_000_000, DEFAULT_PER_POSITION_MAX, 0, 50_000_000, &route),
+            authorize_spend(
+                true,
+                true,
+                1_000_000,
+                DEFAULT_PER_POSITION_MAX,
+                0,
+                50_000_000,
+                &route
+            ),
             Err(CheckError::Paused)
         );
         assert_eq!(
-            authorize_spend(false, false, 1_000_000, DEFAULT_PER_POSITION_MAX, 0, 50_000_000, &route),
+            authorize_spend(
+                false,
+                false,
+                1_000_000,
+                DEFAULT_PER_POSITION_MAX,
+                0,
+                50_000_000,
+                &route
+            ),
             Err(CheckError::UnauthorizedExecutor)
         );
     }
@@ -199,7 +233,10 @@ mod tests {
         assert_eq!(check_withdraw(0, 10, 1), Err(CheckError::ZeroAmount));
         assert_eq!(check_withdraw(5, 10, 6), Err(CheckError::InsufficientFunds));
         assert!(check_withdraw(4, 10, 6).is_ok());
-        assert_eq!(settle_exposure(1_000_000, 2_000_000), Err(CheckError::ExposureUnderflow));
+        assert_eq!(
+            settle_exposure(1_000_000, 2_000_000),
+            Err(CheckError::ExposureUnderflow)
+        );
         assert_eq!(settle_exposure(3_000_000, 1_000_000), Ok(2_000_000));
     }
 
