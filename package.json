@@ -9,6 +9,8 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test:paper": "node --experimental-strip-types --test tests/paper-bots.test.mjs",
+    "test:notifications": "node --experimental-strip-types --test tests/notifications.test.mjs",
+    "test:vault-client": "node --experimental-strip-types --test tests/vault-client.test.mjs",
     "indexnow": "node --env-file=.env.local scripts/indexnow.mjs"
   },
   "dependencies": {
