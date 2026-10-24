@@ -33,7 +33,7 @@ export function AppSidebar({ active, signalCount = '—', status = 'Ready when w
           <Trophy size={17} /> Leaderboard
         </Link>
         <Link className={`nav-item${active === 'vault' ? ' active' : ''}`} href="/vault" aria-current={active === 'vault' ? 'page' : undefined}>
-          <Vault size={17} /> Devnet vault
+          <Vault size={17} /> Vault
         </Link>
         <Link className={`nav-item${active === 'swap' ? ' active' : ''}`} href="/swap" aria-current={active === 'swap' ? 'page' : undefined}><ArrowDownUp size={17} /> Swap</Link>
         <Link className={`nav-item${active === 'safety' ? ' active' : ''}`} href="/safety" aria-current={active === 'safety' ? 'page' : undefined}><ShieldCheck size={17} /> Safety rules</Link>

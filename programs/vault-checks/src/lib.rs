@@ -36,6 +36,7 @@ pub enum CheckError {
     StaleFeed,
     NonceTaken,
     InsufficientBalance,
+    MintNotAllowed,
 }
 
 pub const MAX_FEE_BPS: u64 = 3000;
@@ -226,6 +227,37 @@ fn bs58_decode_32(input: &str) -> [u8; 32] {
         out[32 - 1 - i] = bytes[i];
     }
     out
+}
+
+/// Validate swap amount limits: must be >= MIN_POSITION_LAMPORTS, <= per_position_max,
+/// and minimum_amount_out must be > 0.
+pub fn validate_swap_params(
+    amount_in: u64,
+    minimum_amount_out: u64,
+    per_position_max: u64,
+) -> Result<(), CheckError> {
+    if amount_in == 0 || minimum_amount_out == 0 {
+        return Err(CheckError::ZeroAmount);
+    }
+    if amount_in < MIN_POSITION_LAMPORTS {
+        return Err(CheckError::BelowMinPosition);
+    }
+    if amount_in > per_position_max {
+        return Err(CheckError::AbovePerPosition);
+    }
+    Ok(())
+}
+
+/// Validate that `mint` is one of the approved mints: WSOL, USDC, USDT.
+pub fn validate_mint_allowlist(mint: &[u8; 32]) -> Result<(), CheckError> {
+    let wsol = bs58_decode_32("So11111111111111111111111111111111111111112");
+    let usdc = bs58_decode_32("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+    let usdt = bs58_decode_32("Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB");
+    if mint == &wsol || mint == &usdc || mint == &usdt {
+        Ok(())
+    } else {
+        Err(CheckError::MintNotAllowed)
+    }
 }
 
 /// Convert USD cents to lamports using a SOL/USD price.
@@ -567,6 +599,51 @@ mod tests {
         assert_eq!(
             compute_redeem(1_000_000, 1_000_000, 1_000_000),
             Ok(1_000_000)
+        );
+    }
+
+    #[test]
+    fn validate_swap_params_checks_limits() {
+        assert_eq!(
+            validate_swap_params(0, 1, DEFAULT_PER_POSITION_MAX),
+            Err(CheckError::ZeroAmount)
+        );
+        assert_eq!(
+            validate_swap_params(1_000_000, 0, DEFAULT_PER_POSITION_MAX),
+            Err(CheckError::ZeroAmount)
+        );
+        assert_eq!(
+            validate_swap_params(999_999, 1, DEFAULT_PER_POSITION_MAX),
+            Err(CheckError::BelowMinPosition)
+        );
+        assert_eq!(
+            validate_swap_params(20_000_001, 1, DEFAULT_PER_POSITION_MAX),
+            Err(CheckError::AbovePerPosition)
+        );
+        assert!(validate_swap_params(1_000_000, 1, DEFAULT_PER_POSITION_MAX).is_ok());
+        assert!(validate_swap_params(20_000_000, 1, DEFAULT_PER_POSITION_MAX).is_ok());
+    }
+
+    #[test]
+    fn validate_mint_allowlist_accepts_known_and_rejects_unknown() {
+        let wsol = bs58_decode_32("So11111111111111111111111111111111111111112");
+        let usdc = bs58_decode_32("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+        let usdt = bs58_decode_32("Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB");
+        assert!(validate_mint_allowlist(&wsol).is_ok());
+        assert!(validate_mint_allowlist(&usdc).is_ok());
+        assert!(validate_mint_allowlist(&usdt).is_ok());
+        assert_eq!(
+            validate_mint_allowlist(&[0u8; 32]),
+            Err(CheckError::MintNotAllowed)
+        );
+        assert_eq!(
+            validate_mint_allowlist(&[1u8; 32]),
+            Err(CheckError::MintNotAllowed)
+        );
+        // Jupiter v6 program id is not a mint
+        assert_eq!(
+            validate_mint_allowlist(&jupiter_v6_bytes()),
+            Err(CheckError::MintNotAllowed)
         );
     }
 }
