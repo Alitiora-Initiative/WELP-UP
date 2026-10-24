@@ -104,6 +104,58 @@ pub fn check_withdraw(
     Ok(())
 }
 
+/// Compute shares to mint when depositing `amount` lamports into a vault
+/// with `total_deposited` already and `total_shares` issued.
+/// On first deposit (total_shares==0): shares = amount
+/// Otherwise: shares = (amount * total_shares) / total_deposited
+/// Returns Err(CheckError::Overflow) on overflow, Err(CheckError::ZeroAmount) if result is 0
+pub fn compute_shares(
+    amount: u64,
+    total_deposited: u64,
+    total_shares: u64,
+) -> Result<u64, CheckError> {
+    if amount == 0 {
+        return Err(CheckError::ZeroAmount);
+    }
+    if total_shares == 0 || total_deposited == 0 {
+        return Ok(amount); // first depositor: 1:1
+    }
+    let shares = (amount as u128)
+        .checked_mul(total_shares as u128)
+        .ok_or(CheckError::Overflow)?
+        .checked_div(total_deposited as u128)
+        .ok_or(CheckError::Overflow)?;
+    if shares == 0 {
+        return Err(CheckError::ZeroAmount);
+    }
+    Ok(shares as u64)
+}
+
+/// Compute lamports to return when burning `shares` from a vault
+/// with `available_lamports` and `total_shares`.
+/// lamports = (shares * available_lamports) / total_shares
+pub fn compute_redeem(
+    shares: u64,
+    available_lamports: u64,
+    total_shares: u64,
+) -> Result<u64, CheckError> {
+    if shares == 0 {
+        return Err(CheckError::ZeroAmount);
+    }
+    if total_shares == 0 {
+        return Err(CheckError::InsufficientFunds);
+    }
+    let lamports = (shares as u128)
+        .checked_mul(available_lamports as u128)
+        .ok_or(CheckError::Overflow)?
+        .checked_div(total_shares as u128)
+        .ok_or(CheckError::Overflow)?;
+    if lamports == 0 {
+        return Err(CheckError::ZeroAmount);
+    }
+    Ok(lamports as u64)
+}
+
 /// Default pubkey (all zeros) means "accounting only, no CPI yet".
 /// Otherwise the route program must be Jupiter v6.
 pub fn route_allowed(program: &[u8; 32]) -> bool {
@@ -245,5 +297,62 @@ mod tests {
         let id = jupiter_v6_bytes();
         assert_eq!(id.len(), 32);
         assert!(id.iter().any(|b| *b != 0));
+    }
+
+    #[test]
+    fn compute_shares_first_deposit_is_one_to_one() {
+        // First depositor: total_shares == 0
+        assert_eq!(compute_shares(1_000_000, 0, 0), Ok(1_000_000));
+        // First depositor: total_deposited == 0 but total_shares is also 0
+        assert_eq!(compute_shares(5_000_000, 0, 0), Ok(5_000_000));
+    }
+
+    #[test]
+    fn compute_shares_proportional_on_subsequent_deposits() {
+        // 10 SOL in, 10 shares out on first deposit (1:1)
+        // Then another 10 SOL → should also get 10 shares (pool doubled)
+        assert_eq!(
+            compute_shares(10_000_000, 10_000_000, 10_000_000),
+            Ok(10_000_000)
+        );
+        // Half deposit → half shares
+        assert_eq!(
+            compute_shares(5_000_000, 10_000_000, 10_000_000),
+            Ok(5_000_000)
+        );
+    }
+
+    #[test]
+    fn compute_shares_rejects_zero_amount() {
+        assert_eq!(
+            compute_shares(0, 10_000_000, 10_000_000),
+            Err(CheckError::ZeroAmount)
+        );
+    }
+
+    #[test]
+    fn compute_redeem_proportional_withdrawal() {
+        // Burn all 10 shares from a 10 SOL pool → get 10 SOL back
+        assert_eq!(
+            compute_redeem(10_000_000, 10_000_000, 10_000_000),
+            Ok(10_000_000)
+        );
+        // Burn half → get half back
+        assert_eq!(
+            compute_redeem(5_000_000, 10_000_000, 10_000_000),
+            Ok(5_000_000)
+        );
+    }
+
+    #[test]
+    fn compute_redeem_rejects_zero_shares_and_empty_pool() {
+        assert_eq!(
+            compute_redeem(0, 10_000_000, 10_000_000),
+            Err(CheckError::ZeroAmount)
+        );
+        assert_eq!(
+            compute_redeem(1_000_000, 10_000_000, 0),
+            Err(CheckError::InsufficientFunds)
+        );
     }
 }
