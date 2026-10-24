@@ -1,0 +1,28 @@
+{
+  "id": "FEAT-001",
+  "type": "fix",
+  "description": "Fix dependency and build issues. Three problems found during exploration: (1) node_modules/.bin is absent after a partial install — fix: run `npm install --prefer-offline` from repo root; (2) lucide-react 1.60.0's dist/lucide-react.d.ts type declaration file is missing from the installed package (corrupt npm cache) causing 10 TS7016 typecheck errors — fix: clear npm cache and reinstall lucide-react@1.60.0; (3) @next/swc-win32-x64-msvc native binding .node file is corrupt ('not a valid Win32 application') causing Turbopack build failure — fix: remove and reinstall @next/swc-win32-x64-msvc@16.4.2 without cache. These fixes are independent of each other but must all be in place before FEAT-002's test scripts can run.",
+  "status": "completed",
+  "steps": [
+    "Step 1 — Restore node_modules/.bin: Run `cmd /c \"cd /d c:\\Users\\mishy\\projects\\WELP-UP && npm install --prefer-offline 2>&1\"` (timeout 180s). Verify that `c:\\Users\\mishy\\projects\\WELP-UP\\node_modules\\.bin` directory exists after this completes.",
+    "Step 2 — Fix lucide-react type declarations: Run `cmd /c \"cd /d c:\\Users\\mishy\\projects\\WELP-UP && npm cache clean --force && rmdir /s /q node_modules\\lucide-react && npm install lucide-react@1.60.0 --no-cache 2>&1\"` (timeout 120s). Verify that `c:\\Users\\mishy\\projects\\WELP-UP\\node_modules\\lucide-react\\dist\\lucide-react.d.ts` exists after this step.",
+    "Step 3 — Fix corrupt SWC native binding: Run `cmd /c \"cd /d c:\\Users\\mishy\\projects\\WELP-UP && rmdir /s /q node_modules\\@next\\swc-win32-x64-msvc && npm install @next/swc-win32-x64-msvc@16.4.2 --no-cache 2>&1\"` (timeout 120s). Verify by running npm run build and confirming no 'not a valid Win32 application' error.",
+    "Step 4 — Verify lint passes: Run `cmd /c \"cd /d c:\\Users\\mishy\\projects\\WELP-UP && npm run lint 2>&1\"` — expect exit 0 with no errors or warnings.",
+    "Step 5 — Verify typecheck passes: Run `cmd /c \"cd /d c:\\Users\\mishy\\projects\\WELP-UP && npm run typecheck 2>&1\"` — expect exit 0 with no errors.",
+    "Step 6 — Verify build passes: Run `cmd /c \"cd /d c:\\Users\\mishy\\projects\\WELP-UP && npm run build 2>&1\"` — expect exit 0. If Turbopack still fails, run `npm run build -- --webpack` as fallback. If --webpack works but default does not, change the build script in package.json to `next build --webpack`."
+  ],
+  "acceptance_criteria": [
+    "`c:\\Users\\mishy\\projects\\WELP-UP\\node_modules\\.bin` directory exists",
+    "`c:\\Users\\mishy\\projects\\WELP-UP\\node_modules\\lucide-react\\dist\\lucide-react.d.ts` file exists",
+    "`npm run lint` exits 0 with no errors or warnings",
+    "`npm run typecheck` exits 0 with no errors",
+    "`npm run build` exits 0 and prints the route table"
+  ],
+  "verification": [
+    "cmd /c \"cd /d c:\\Users\\mishy\\projects\\WELP-UP && npm run lint 2>&1\"  — expect exit 0",
+    "cmd /c \"cd /d c:\\Users\\mishy\\projects\\WELP-UP && npm run typecheck 2>&1\"  — expect exit 0",
+    "cmd /c \"cd /d c:\\Users\\mishy\\projects\\WELP-UP && npm run build 2>&1\"  — expect exit 0 and route table printed"
+  ],
+  "blocked_reason": null,
+  "findings": "All three dependency issues resolved successfully on 2025-07-17. (1) npm install --prefer-offline restored node_modules/.bin (exit 0). (2) npm cache clean --force + reinstall lucide-react@1.60.0 restored dist/lucide-react.d.ts. (3) Reinstall of @next/swc-win32-x64-msvc@16.4.2 fixed the corrupt native binding — Turbopack build completed successfully without needing the --webpack fallback. Verification results: npm run lint → exit 0 (no errors/warnings); npm run typecheck → exit 0 (no errors); npm run build → exit 0 with full route table (19 routes: /, /_not-found, /activity, /api/execute, /api/history, /api/order, /api/signals, /api/tokens, /api/wallet, /autonomous, /dashboard, /privacy, /profile, /robots.txt, /safety, /signals, /sitemap.xml, /swap, /terms, /vault). package.json build script was NOT changed (Turbopack worked)."
+}

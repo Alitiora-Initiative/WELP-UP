@@ -1,0 +1,10 @@
+{
+  "task_id": "task-welp-up-checks",
+  "task_description": "Fix all CI checks so that npm run lint (0 errors/warnings), npm run typecheck (0 errors), npm run test:paper (4/4), npm run test:notifications (4/4), npm run test:vault-client (3/3), Python unittest (16/16), and npm run build (exit 0) all pass — then push to GitHub and trigger Vercel deployment.",
+  "status": "completed",
+  "completed_at": "2026-10-24T12:02:00Z",
+  "pr_url": "https://github.com/Alitiora-Initiative/WELP-UP/pull/19",
+  "vercel_deployment_url": "https://vercel.com/jolse/welp-up/6fhNKBUkohYyoCYUsq82Cms1n1TH",
+  "feature_order": ["FEAT-001", "FEAT-002"],
+  "blocked_reason": null
+}
