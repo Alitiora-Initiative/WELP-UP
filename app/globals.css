@@ -1025,3 +1025,80 @@ h2 { margin: 0; font: 600 17px var(--display); letter-spacing: -.02em; }
 .leaderboard-modal-footer { display: flex; gap: 10px; justify-content: flex-end; padding: 14px 20px; border-top: 1px solid var(--border-soft); }
 .leaderboard-cancel-button { min-height: 36px; padding: 0 14px; border: 1px solid #2c3830; border-radius: 7px; background: transparent; color: #8d9a8e; cursor: pointer; font-size: 11px; }
 .leaderboard-cancel-button:hover { background: #131a14; color: var(--text); }
+
+/* ── Leaderboard empty state ───────────────────────────────────────────── */
+.leaderboard-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.25rem;
+  padding: 3rem 2rem;
+  margin: 1.5rem 0;
+}
+.leaderboard-empty-icon {
+  color: var(--accent);
+  opacity: 0.5;
+}
+.leaderboard-empty-state h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0;
+}
+.leaderboard-empty-state > p {
+  max-width: 48ch;
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 0;
+}
+.leaderboard-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  width: 100%;
+  max-width: 700px;
+  margin: 0.5rem 0;
+}
+.leaderboard-status-card {
+  background: var(--surface2, rgba(255,255,255,0.04));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  text-align: left;
+}
+.leaderboard-status-card svg { color: var(--accent); }
+.leaderboard-status-card strong { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.leaderboard-status-card span { font-size: 0.85rem; color: var(--muted); line-height: 1.4; }
+.leaderboard-empty-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+/* ── Leaderboard preview grid ──────────────────────────────────────────── */
+.leaderboard-preview-section { margin: 2rem 0; }
+.leaderboard-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.leaderboard-preview-card {
+  padding: 1rem 1.25rem;
+}
+.leaderboard-preview-card strong {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 0.35rem;
+}
+.leaderboard-preview-card p {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
+}

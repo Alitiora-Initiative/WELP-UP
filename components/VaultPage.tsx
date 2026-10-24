@@ -30,7 +30,7 @@ type ProgramStatus = 'checking' | 'ready' | 'missing' | 'unconfigured';
 function readableError(error: unknown) {
   const message = error instanceof Error ? error.message : '';
   if (/reject|cancel/i.test(message)) return 'The wallet request was cancelled.';
-  if (/insufficient funds/i.test(message)) return 'The Devnet wallet needs more SOL for this transaction and its network fee.';
+  if (/insufficient funds/i.test(message)) return 'The wallet needs more SOL for this transaction and its network fee.';
   return message || 'Could not complete that vault action.';
 }
 
@@ -162,7 +162,7 @@ function DevnetVaultWorkspace() {
     setBusyAction(name);
     setActionError('');
     setLastSignature('');
-    setActionSummary(`${summary} · Solana Devnet · wallet fees shown in Phantom`);
+    setActionSummary(`${summary} · Solana Mainnet-Beta · wallet fees shown in Phantom`);
     try {
       const targetVault = vaultAddress
         ? address(vaultAddress)
@@ -170,7 +170,7 @@ function DevnetVaultWorkspace() {
       const instruction = await createVaultInstruction(programAddress, address(ownerAddress), targetVault, name, args);
       const result = await appClient.sendTransaction([instruction]);
       setLastSignature(String(result.context.signature));
-      setActionSummary(`${summary} submitted to Solana Devnet.`);
+      setActionSummary(`${summary} submitted to Solana Mainnet-Beta.`);
       await refreshVault();
     } catch (error) {
       setActionSummary('');
@@ -193,19 +193,19 @@ function DevnetVaultWorkspace() {
 
   return (
     <main className="app-shell">
-      <AppSidebar active="vault" network="devnet" status={programStatus === 'ready' ? 'Devnet vault · trading disabled' : 'Devnet vault setup'} />
+      <AppSidebar active="vault" network="devnet" status={programStatus === 'ready' ? 'Vault · trading disabled' : 'Vault setup'} />
       <section className="workspace" id="top">
         <header className="topbar">
           <div className="breadcrumb"><span>DEVNET</span><span className="crumb-slash">/</span><strong>Vault setup</strong></div>
-          <div className="topbar-right"><span className="market-open"><span className="market-pip" /> TEST SOL ONLY</span><WalletConnectionControl network="devnet" /></div>
+          <div className="topbar-right"><span className="market-open"><span className="market-pip" /> SOL ONLY</span><WalletConnectionControl network="devnet" /></div>
         </header>
 
         <div className="page-content vault-page">
           <section className="welcome-row">
             <div>
-              <p className="eyebrow"><Vault size={14} /> DEVNET VAULT · OWNER CONTROL</p>
+              <p className="eyebrow"><Vault size={14} /> Vault · OWNER CONTROL</p>
               <h1>Your vault, <em>your keys.</em></h1>
-              <p className="welcome-copy">Connect a Devnet wallet to inspect or create its separate vault PDA, deposit test SOL, pause authority, and withdraw the available SOL.</p>
+              <p className="welcome-copy">Connect your wallet to inspect or create your on-chain vault PDA, deposit SOL, configure pause authority, and withdraw.</p>
             </div>
             <div className="date-pill"><span className="date-dot" /> DEVNET ONLY</div>
           </section>
@@ -238,7 +238,7 @@ function DevnetVaultWorkspace() {
             </section>
           ) : programStatus === 'ready' ? (
             loading && !vaultAddress ? (
-              <section className="panel vault-loading"><LoaderCircle size={20} className="spin" /><span>Checking the deployed program and your Devnet vault…</span></section>
+              <section className="panel vault-loading"><LoaderCircle size={20} className="spin" /><span>Checking the deployed program and your vault…</span></section>
             ) : vaultState ? (
               <>
                 <section className="vault-address-panel panel">
@@ -256,7 +256,7 @@ function DevnetVaultWorkspace() {
                   <article className="panel vault-action-panel">
                     <div className="panel-heading"><div><p className="eyebrow">USER CONTROL</p><h2>Deposit or withdraw</h2></div></div>
                     <div className="vault-action-content">
-                      <div className="vault-balance-line"><span>Devnet wallet</span><strong>{walletBalance === null ? '—' : `${formatLamports(walletBalance)} SOL`}</strong></div>
+                      <div className="vault-balance-line"><span>wallet</span><strong>{walletBalance === null ? '—' : `${formatLamports(walletBalance)} SOL`}</strong></div>
                       <div className="vault-action-input"><label htmlFor="fund-amount">Deposit into vault</label><div className="allocation-input"><input id="fund-amount" type="number" min="0.001" max="10" step="0.001" value={fundAmount} onChange={(event) => setFundAmount(event.target.value)} /><span className="allocation-unit">SOL</span></div><small>Remaining cap: {formatLamports(remainingAllocation)} SOL</small><button type="button" className="primary-button" disabled={!validFund || Boolean(busyAction)} onClick={() => parsedFundAmount !== null && void submitAction('fund', `Deposit ${formatLamports(parsedFundAmount, 6)} SOL to ${shorten(vaultAddress)}`, { amountLamports: parsedFundAmount })}>{busyAction === 'fund' ? 'Waiting for wallet…' : 'Review deposit in wallet'}</button></div>
                       <div className="vault-action-input"><label htmlFor="withdraw-amount">Withdraw available SOL</label><div className="allocation-input"><input id="withdraw-amount" type="number" min="0.001" step="0.001" value={withdrawAmount} onChange={(event) => setWithdrawAmount(event.target.value)} /><span className="allocation-unit">SOL</span></div><small>Maximum now: {formatLamports(availableToWithdraw)} SOL · rent reserve stays in the account</small><button type="button" className="vault-secondary-button" disabled={availableToWithdraw === 0n || Boolean(busyAction)} onClick={() => setWithdrawAmount(formatLamports(availableToWithdraw, 9))}>Use maximum available</button><button type="button" className="primary-button" disabled={!validWithdraw || Boolean(busyAction)} onClick={() => parsedWithdrawAmount !== null && void submitAction('withdraw', `Withdraw ${formatLamports(parsedWithdrawAmount, 6)} SOL to ${shorten(ownerAddress)}`, { amountLamports: parsedWithdrawAmount })}>{busyAction === 'withdraw' ? 'Waiting for wallet…' : 'Review withdrawal in wallet'}</button></div>
                       <p className="vault-fee-note">Each action opens a wallet approval on Devnet. Review the vault, amount, and fee there before signing.</p>
@@ -279,15 +279,15 @@ function DevnetVaultWorkspace() {
               </>
             ) : (
               <section className="vault-create-panel panel">
-                <div className="panel-heading"><div><p className="eyebrow">NO VAULT ACCOUNT FOUND</p><h2>Create your Devnet vault PDA</h2></div></div>
+                <div className="panel-heading"><div><p className="eyebrow">NO VAULT ACCOUNT FOUND</p><h2>Create your vault PDA</h2></div></div>
                 <div className="vault-create-content">
                   <p>This creates one vault account for your connected wallet. Creating it does not deposit SOL and does not enable trading. Review the chosen limits in your wallet prompt.</p>
                   <div className="vault-create-fields">
                     <label className="config-label">Total allocation cap<div className="allocation-input"><input type="number" min="0.001" step="0.001" value={totalCap} onChange={(event) => setTotalCap(event.target.value)} /><span className="allocation-unit">SOL</span></div><span className="config-hint">The on-chain lifetime spend limit.</span></label>
                     <label className="config-label">Per-position maximum<div className="allocation-input"><input type="number" min="0.001" max="0.02" step="0.001" value={perPositionMax} onChange={(event) => setPerPositionMax(event.target.value)} /><span className="allocation-unit">SOL</span></div><span className="config-hint">At least 0.001 SOL and no more than 0.02 SOL.</span></label>
                   </div>
-                  <div className="vault-create-summary"><span>Network <strong>Solana Devnet</strong></span><span>Owner <strong>{shorten(ownerAddress)}</strong></span><span>Program <strong>{shorten(configuredProgramId)}</strong></span><span>Fee payer <strong>Connected wallet</strong></span><span>Fees <strong>Shown in wallet</strong></span></div>
-                  <button type="button" className="primary-button" disabled={!validInitialize || Boolean(busyAction)} onClick={() => parsedTotalCap !== null && parsedPositionMax !== null && void submitAction('initialize', `Create Devnet vault with ${formatLamports(parsedTotalCap, 6)} SOL total cap and ${formatLamports(parsedPositionMax, 6)} SOL per-position max`, { totalCapLamports: parsedTotalCap, perPositionMaxLamports: parsedPositionMax })}>{busyAction === 'initialize' ? 'Waiting for wallet…' : 'Review vault creation in wallet'}</button>
+                  <div className="vault-create-summary"><span>Network <strong>Solana Mainnet-Beta</strong></span><span>Owner <strong>{shorten(ownerAddress)}</strong></span><span>Program <strong>{shorten(configuredProgramId)}</strong></span><span>Fee payer <strong>Connected wallet</strong></span><span>Fees <strong>Shown in wallet</strong></span></div>
+                  <button type="button" className="primary-button" disabled={!validInitialize || Boolean(busyAction)} onClick={() => parsedTotalCap !== null && parsedPositionMax !== null && void submitAction('initialize', `Create vault with ${formatLamports(parsedTotalCap, 6)} SOL total cap and ${formatLamports(parsedPositionMax, 6)} SOL per-position max`, { totalCapLamports: parsedTotalCap, perPositionMaxLamports: parsedPositionMax })}>{busyAction === 'initialize' ? 'Waiting for wallet…' : 'Review vault creation in wallet'}</button>
                 </div>
               </section>
             )
@@ -311,3 +311,5 @@ export function VaultPage() {
     </ClientProvider>
   );
 }
+
+
