@@ -13,7 +13,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: TruffleHog OSS secret scan
-        uses: trufflesecurity/trufflehog-actions-scan@main
+        uses: trufflesecurity/trufflehog@main
         with:
           extra_args: --only-verified
 

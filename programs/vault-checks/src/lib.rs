@@ -205,10 +205,10 @@ fn bs58_decode_32(input: &str) -> [u8; 32] {
     let mut bytes = [0u8; 64];
     let mut len = 0usize;
     for c in input.bytes() {
-        let val = ALPHABET.iter().position(|a| *a == c).expect("base58") as u32;
+        let val = ALPHABET.iter().position(|a| *a == c).expect("base58") as u64;
         let mut carry = val;
         for b in bytes.iter_mut().take(len) {
-            carry += (*b as u32) * 58;
+            carry += (*b as u64) * 58;
             *b = (carry & 0xff) as u8;
             carry >>= 8;
         }
@@ -271,7 +271,7 @@ pub fn validate_pyth_price(price: i64, conf: u64, exponent: i32) -> Result<u64, 
     // Compute lamports_per_dollar:
     // lamports_per_dollar = 10^9 / (price * 10^exponent)
     // If exponent < 0: = (10^9 * 10^|exponent|) / price
-    let abs_exp = exponent.unsigned_abs() as u32;
+    let abs_exp = exponent.unsigned_abs();
     if abs_exp > 18 {
         return Err(CheckError::InvalidPrice);
     }
