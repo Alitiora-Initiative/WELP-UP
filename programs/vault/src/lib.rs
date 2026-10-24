@@ -879,7 +879,6 @@ pub struct LegacyWithdraw<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(bot_nonce: u64)]
 pub struct ChargeCreationFee<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
