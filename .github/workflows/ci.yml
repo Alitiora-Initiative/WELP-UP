@@ -5,13 +5,26 @@ on:
   pull_request:
 
 jobs:
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: TruffleHog OSS secret scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --only-verified
+
   python-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          # Blueprint target: 3.14; using 3.13 until setup-python supports 3.14 stable
+          python-version: "3.13"
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -25,7 +38,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: npm
       - run: npm ci
       - run: npm run lint
@@ -33,14 +46,43 @@ jobs:
       - run: npm run test:paper
       - run: npm run test:notifications
       - run: npm run test:vault-client
+      - run: npm run test:charts
+      - run: npm run test:security
       - run: npm run build
+      - name: Audit for high/critical vulnerabilities
+        run: npm audit --audit-level=high
 
-  rust-build:
+  rust-checks:
+    name: Rust checks (vault crates)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - name: Compile vault limit checks
-        run: cargo check --manifest-path programs/vault-checks/Cargo.toml
-      - name: Compile Anchor vault program for host
-        run: cargo check --manifest-path programs/vault/Cargo.toml
+        with:
+          components: rustfmt, clippy
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{runner.os}}-cargo-registry-${{hashFiles('**/Cargo.lock')}}
+          restore-keys: |
+            ${{runner.os}}-cargo-registry-
+      - name: Cache build artifacts
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{runner.os}}-cargo-target-${{hashFiles('**/Cargo.lock')}}
+          restore-keys: |
+            ${{runner.os}}-cargo-target-
+      - name: Check formatting — vault-checks
+        run: cargo fmt --check --manifest-path programs/vault-checks/Cargo.toml
+      - name: Check formatting — vault program
+        run: cargo fmt --check --manifest-path programs/vault/Cargo.toml
+      - name: Clippy — vault-checks
+        run: cargo clippy --manifest-path programs/vault-checks/Cargo.toml -- -D warnings
+      - name: Clippy — vault program
+        run: cargo clippy --manifest-path programs/vault/Cargo.toml -- -D warnings
+      - name: Unit tests — vault-checks
+        run: cargo test --manifest-path programs/vault-checks/Cargo.toml

@@ -28,6 +28,41 @@ pub enum CheckError {
     InsufficientFunds,
     RouteNotAllowed,
     ExposureUnderflow,
+    FeeTooHigh,     // fee_bps > 3000
+    ZeroProfit,     // profit == 0 — cannot charge
+    AlreadyClaimed, // double-claim guard
+    InvalidPrice,
+    OverConfidence,
+    StaleFeed,
+    NonceTaken,
+    InsufficientBalance,
+}
+
+pub const MAX_FEE_BPS: u64 = 3000;
+
+/// Validate fee_bps is within 0..=3000
+pub fn validate_fee_bps(fee_bps: u64) -> Result<(), CheckError> {
+    if fee_bps > MAX_FEE_BPS {
+        Err(CheckError::FeeTooHigh)
+    } else {
+        Ok(())
+    }
+}
+
+/// Compute creator fee on realized positive profit. Rounds down.
+/// Returns fee in lamports (or 0 if rounded to 0)
+pub fn compute_creator_fee(realized_profit_lamports: u64, fee_bps: u64) -> Result<u64, CheckError> {
+    if realized_profit_lamports == 0 {
+        return Err(CheckError::ZeroProfit);
+    }
+    validate_fee_bps(fee_bps)?;
+    let fee = (realized_profit_lamports as u128)
+        .checked_mul(fee_bps as u128)
+        .ok_or(CheckError::Overflow)?
+        .checked_div(10_000)
+        .ok_or(CheckError::Overflow)? as u64;
+    // fee of 0 is allowed (very small profit * small bps)
+    Ok(fee)
 }
 
 pub fn check_initialize(
@@ -104,6 +139,58 @@ pub fn check_withdraw(
     Ok(())
 }
 
+/// Compute shares to mint when depositing `amount` lamports into a vault
+/// with `total_deposited` already and `total_shares` issued.
+/// On first deposit (total_shares==0): shares = amount
+/// Otherwise: shares = (amount * total_shares) / total_deposited
+/// Returns Err(CheckError::Overflow) on overflow, Err(CheckError::ZeroAmount) if result is 0
+pub fn compute_shares(
+    amount: u64,
+    total_deposited: u64,
+    total_shares: u64,
+) -> Result<u64, CheckError> {
+    if amount == 0 {
+        return Err(CheckError::ZeroAmount);
+    }
+    if total_shares == 0 || total_deposited == 0 {
+        return Ok(amount); // first depositor: 1:1
+    }
+    let shares = (amount as u128)
+        .checked_mul(total_shares as u128)
+        .ok_or(CheckError::Overflow)?
+        .checked_div(total_deposited as u128)
+        .ok_or(CheckError::Overflow)?;
+    if shares == 0 {
+        return Err(CheckError::ZeroAmount);
+    }
+    Ok(shares as u64)
+}
+
+/// Compute lamports to return when burning `shares` from a vault
+/// with `available_lamports` and `total_shares`.
+/// lamports = (shares * available_lamports) / total_shares
+pub fn compute_redeem(
+    shares: u64,
+    available_lamports: u64,
+    total_shares: u64,
+) -> Result<u64, CheckError> {
+    if shares == 0 {
+        return Err(CheckError::ZeroAmount);
+    }
+    if total_shares == 0 {
+        return Err(CheckError::InsufficientFunds);
+    }
+    let lamports = (shares as u128)
+        .checked_mul(available_lamports as u128)
+        .ok_or(CheckError::Overflow)?
+        .checked_div(total_shares as u128)
+        .ok_or(CheckError::Overflow)?;
+    if lamports == 0 {
+        return Err(CheckError::ZeroAmount);
+    }
+    Ok(lamports as u64)
+}
+
 /// Default pubkey (all zeros) means "accounting only, no CPI yet".
 /// Otherwise the route program must be Jupiter v6.
 pub fn route_allowed(program: &[u8; 32]) -> bool {
@@ -118,10 +205,10 @@ fn bs58_decode_32(input: &str) -> [u8; 32] {
     let mut bytes = [0u8; 64];
     let mut len = 0usize;
     for c in input.bytes() {
-        let val = ALPHABET.iter().position(|a| *a == c).expect("base58") as u32;
+        let val = ALPHABET.iter().position(|a| *a == c).expect("base58") as u64;
         let mut carry = val;
         for b in bytes.iter_mut().take(len) {
-            carry += (*b as u32) * 58;
+            carry += (*b as u64) * 58;
             *b = (carry & 0xff) as u8;
             carry >>= 8;
         }
@@ -139,6 +226,84 @@ fn bs58_decode_32(input: &str) -> [u8; 32] {
         out[32 - 1 - i] = bytes[i];
     }
     out
+}
+
+/// Convert USD cents to lamports using a SOL/USD price.
+/// `sol_price_ulamports_per_usd`: lamports per dollar (= 1_000_000_000 / sol_price_usd).
+/// `fee_usd_cents`: fee in cents (10 = $0.10).
+/// Returns lamports, rounded UP to nearest 5.
+pub fn usd_cents_to_lamports_rounded5(
+    fee_usd_cents: u64,
+    sol_price_ulamports_per_usd: u64,
+) -> Result<u64, CheckError> {
+    if sol_price_ulamports_per_usd == 0 {
+        return Err(CheckError::InvalidPrice);
+    }
+    let lamports = (fee_usd_cents as u128)
+        .checked_mul(sol_price_ulamports_per_usd as u128)
+        .ok_or(CheckError::Overflow)?
+        .checked_div(100)
+        .ok_or(CheckError::Overflow)? as u64;
+    // Round UP to nearest 5 lamports
+    let rem = lamports % 5;
+    let rounded = if rem == 0 {
+        lamports
+    } else {
+        lamports.checked_add(5 - rem).ok_or(CheckError::Overflow)?
+    };
+    Ok(rounded)
+}
+
+/// Validate a Pyth price: must be positive, confidence < 2% of price.
+/// Returns `lamports_per_dollar` (= 1_000_000_000 / price_usd).
+/// `price`: raw price from Pyth (positive).
+/// `conf`: raw confidence from Pyth.
+/// `exponent`: Pyth exponent (typically negative, e.g. -8).
+pub fn validate_pyth_price(price: i64, conf: u64, exponent: i32) -> Result<u64, CheckError> {
+    if price <= 0 {
+        return Err(CheckError::InvalidPrice);
+    }
+    let price_u = price as u64;
+    // confidence < 2% of price => conf * 50 < price_u
+    if conf.saturating_mul(50) >= price_u {
+        return Err(CheckError::OverConfidence);
+    }
+    // Compute lamports_per_dollar:
+    // lamports_per_dollar = 10^9 / (price * 10^exponent)
+    // If exponent < 0: = (10^9 * 10^|exponent|) / price
+    let abs_exp = exponent.unsigned_abs();
+    if abs_exp > 18 {
+        return Err(CheckError::InvalidPrice);
+    }
+    let scale: u128 = 10u128.pow(abs_exp);
+    let numerator: u128 = if exponent < 0 {
+        (1_000_000_000u128)
+            .checked_mul(scale)
+            .ok_or(CheckError::Overflow)?
+    } else {
+        1_000_000_000u128
+            .checked_div(scale)
+            .ok_or(CheckError::InvalidPrice)?
+    };
+    let lamports_per_dollar = numerator
+        .checked_div(price_u as u128)
+        .ok_or(CheckError::Overflow)? as u64;
+    if lamports_per_dollar == 0 {
+        return Err(CheckError::InvalidPrice);
+    }
+    Ok(lamports_per_dollar)
+}
+
+/// Compute the 40/60 fee split. Returns `(fee_recipient_lamports, treasury_lamports)`.
+/// Rounds down fee_recipient; treasury gets the remainder to ensure exact total.
+pub fn split_fee(total: u64) -> Result<(u64, u64), CheckError> {
+    let recipient = total
+        .checked_mul(40)
+        .ok_or(CheckError::Overflow)?
+        .checked_div(100)
+        .ok_or(CheckError::Overflow)?;
+    let treasury = total.checked_sub(recipient).ok_or(CheckError::Overflow)?;
+    Ok((recipient, treasury))
 }
 
 #[cfg(test)]
@@ -245,5 +410,163 @@ mod tests {
         let id = jupiter_v6_bytes();
         assert_eq!(id.len(), 32);
         assert!(id.iter().any(|b| *b != 0));
+    }
+
+    #[test]
+    fn compute_shares_first_deposit_is_one_to_one() {
+        // First depositor: total_shares == 0
+        assert_eq!(compute_shares(1_000_000, 0, 0), Ok(1_000_000));
+        // First depositor: total_deposited == 0 but total_shares is also 0
+        assert_eq!(compute_shares(5_000_000, 0, 0), Ok(5_000_000));
+    }
+
+    #[test]
+    fn compute_shares_proportional_on_subsequent_deposits() {
+        // 10 SOL in, 10 shares out on first deposit (1:1)
+        // Then another 10 SOL → should also get 10 shares (pool doubled)
+        assert_eq!(
+            compute_shares(10_000_000, 10_000_000, 10_000_000),
+            Ok(10_000_000)
+        );
+        // Half deposit → half shares
+        assert_eq!(
+            compute_shares(5_000_000, 10_000_000, 10_000_000),
+            Ok(5_000_000)
+        );
+    }
+
+    #[test]
+    fn compute_shares_rejects_zero_amount() {
+        assert_eq!(
+            compute_shares(0, 10_000_000, 10_000_000),
+            Err(CheckError::ZeroAmount)
+        );
+    }
+
+    #[test]
+    fn compute_redeem_proportional_withdrawal() {
+        // Burn all 10 shares from a 10 SOL pool → get 10 SOL back
+        assert_eq!(
+            compute_redeem(10_000_000, 10_000_000, 10_000_000),
+            Ok(10_000_000)
+        );
+        // Burn half → get half back
+        assert_eq!(
+            compute_redeem(5_000_000, 10_000_000, 10_000_000),
+            Ok(5_000_000)
+        );
+    }
+
+    #[test]
+    fn compute_redeem_rejects_zero_shares_and_empty_pool() {
+        assert_eq!(
+            compute_redeem(0, 10_000_000, 10_000_000),
+            Err(CheckError::ZeroAmount)
+        );
+        assert_eq!(
+            compute_redeem(1_000_000, 10_000_000, 0),
+            Err(CheckError::InsufficientFunds)
+        );
+    }
+
+    #[test]
+    fn creator_fee_rules() {
+        // fee_bps validation
+        assert!(validate_fee_bps(0).is_ok());
+        assert!(validate_fee_bps(1).is_ok());
+        assert!(validate_fee_bps(3000).is_ok());
+        assert_eq!(validate_fee_bps(3001), Err(CheckError::FeeTooHigh));
+        assert_eq!(validate_fee_bps(10000), Err(CheckError::FeeTooHigh));
+
+        // compute_creator_fee
+        // zero profit -> error
+        assert_eq!(compute_creator_fee(0, 1000), Err(CheckError::ZeroProfit));
+        // fee_bps too high -> error
+        assert_eq!(
+            compute_creator_fee(1_000_000, 3001),
+            Err(CheckError::FeeTooHigh)
+        );
+        // 10% fee on 1 SOL (1_000_000_000 lamports)
+        assert_eq!(compute_creator_fee(1_000_000_000, 1000), Ok(100_000_000));
+        // 30% fee on 1 SOL
+        assert_eq!(compute_creator_fee(1_000_000_000, 3000), Ok(300_000_000));
+        // min fee bps (0) -> fee = 0 (no fee on loss/zero bps)
+        assert_eq!(compute_creator_fee(1_000_000, 0), Ok(0));
+        // rounds down: 1 lamport profit * 3000 bps = 0.3 lamports -> 0
+        assert_eq!(compute_creator_fee(1, 3000), Ok(0));
+        // 3 lamports * 3000 bps / 10000 = 0.9 -> 0 (floor)
+        assert_eq!(compute_creator_fee(3, 3000), Ok(0));
+        // 10 lamports * 3000 bps / 10000 = 3
+        assert_eq!(compute_creator_fee(10, 3000), Ok(3));
+    }
+
+    #[test]
+    fn oracle_fee_math_boundaries() {
+        // validate_pyth_price: positive price, tight confidence
+        let result = validate_pyth_price(15_000_000_000, 1_000_000, -8);
+        assert!(result.is_ok(), "expected ok: {:?}", result);
+
+        // non-positive price
+        assert_eq!(
+            validate_pyth_price(0, 1_000, -8),
+            Err(CheckError::InvalidPrice)
+        );
+        assert_eq!(
+            validate_pyth_price(-100, 1_000, -8),
+            Err(CheckError::InvalidPrice)
+        );
+
+        // over-confidence: conf/price >= 2%
+        // price=100, conf=3 => conf*50=150 >= 100 => OverConfidence
+        assert_eq!(
+            validate_pyth_price(100, 3, -8),
+            Err(CheckError::OverConfidence)
+        );
+
+        // fee math: $0.10 at ~$150 SOL
+        // Using validate_pyth_price(15_000_000_000, 100_000_000, -8):
+        // lamports_per_dollar = (1e9 * 1e8) / 15_000_000_000 = 6_666
+        let lpd = validate_pyth_price(15_000_000_000, 100_000_000, -8).unwrap();
+        let fee = usd_cents_to_lamports_rounded5(10, lpd).unwrap();
+        assert!(fee % 5 == 0, "fee must be multiple of 5");
+        assert!(fee > 0);
+
+        // split_fee: 40/60
+        let (rec, treas) = split_fee(1000).unwrap();
+        assert_eq!(rec, 400);
+        assert_eq!(treas, 600);
+
+        let (rec2, treas2) = split_fee(101).unwrap();
+        assert_eq!(rec2 + treas2, 101); // must sum to total
+        assert_eq!(rec2, 40); // floor of 40.4
+        assert_eq!(treas2, 61); // remainder
+    }
+
+    #[test]
+    fn share_math_works() {
+        // first deposit: 1:1
+        assert_eq!(compute_shares(1_000_000, 0, 0), Ok(1_000_000));
+        // second deposit: proportional
+        assert_eq!(
+            compute_shares(1_000_000, 1_000_000, 1_000_000),
+            Ok(1_000_000)
+        );
+        // zero amount
+        assert_eq!(
+            compute_shares(0, 1_000_000, 1_000_000),
+            Err(CheckError::ZeroAmount)
+        );
+        // redeem
+        assert_eq!(compute_redeem(500_000, 1_000_000, 1_000_000), Ok(500_000));
+        // redeem zero shares
+        assert_eq!(
+            compute_redeem(0, 1_000_000, 1_000_000),
+            Err(CheckError::ZeroAmount)
+        );
+        // redeem all
+        assert_eq!(
+            compute_redeem(1_000_000, 1_000_000, 1_000_000),
+            Ok(1_000_000)
+        );
     }
 }
