@@ -31,6 +31,8 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test:paper
+      - run: npm run test:notifications
+      - run: npm run test:vault-client
       - run: npm run build
 
   rust-build:

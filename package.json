@@ -9,6 +9,8 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test:paper": "node --experimental-strip-types --test tests/paper-bots.test.mjs",
+    "test:notifications": "node --experimental-strip-types --test tests/notifications.test.mjs",
+    "test:vault-client": "node --experimental-strip-types --test tests/vault-client.test.mjs",
     "indexnow": "node --env-file=.env.local scripts/indexnow.mjs"
   },
   "dependencies": {
@@ -20,6 +22,9 @@
     "next": "16.4.2",
     "react": "19.3.1",
     "react-dom": "19.3.1"
+  },
+  "optionalDependencies": {
+    "@next/swc-win32-x64-msvc": "16.4.2"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
