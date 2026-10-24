@@ -12,6 +12,7 @@
     "test:notifications": "node --experimental-strip-types --test tests/notifications.test.mjs",
     "test:vault-client": "node --experimental-strip-types --test tests/vault-client.test.mjs",
     "test:charts": "node --experimental-strip-types --test tests/chart-providers.test.mjs",
+    "test:security": "node --experimental-strip-types --test tests/security.test.mjs",
     "indexnow": "node --env-file=.env.local scripts/indexnow.mjs"
   },
   "dependencies": {
