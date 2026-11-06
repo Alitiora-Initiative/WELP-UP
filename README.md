@@ -23,7 +23,7 @@ WELP UP! is a Solana market research and wallet-approved trading interface. It r
 - **No governance or referral settlement:** no governance program, proposal registry, referral attribution, or reward payment system is deployed.
 - **No production fee routing:** the requested $0.10 fee and 60/40 operator/treasury split are not active. A treasury destination, on-chain payment flow, fee disclosures, reconciliation, and operational controls must exist before collection can be enabled.
 - **No max deposit/withdrawal policy is promised.** Any future vault limits must be disclosed and enforced by audited on-chain logic. Do not assume unlimited withdrawals or deposits until the program design and liquidity mechanics support them.
-- The existing Anchor/devnet configuration is for development and test workflows only. It is not evidence of a mainnet deployment and must never be used to invite mainnet deposits.
+- The checked-in Anchor configuration targets a local validator only. No Devnet or Mainnet provider is configured. This is not evidence of a deployment and must never be used to invite deposits.
 
 ## Pages
 
