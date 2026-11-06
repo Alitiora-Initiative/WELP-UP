@@ -12,7 +12,7 @@ This roadmap distinguishes the product the user wants from features currently av
 - [x] Add profile transaction history from Solana RPC, with 10, 25, 50, or 100 rows per page.
 - [x] Key local activity data by public wallet address and make its local-only scope explicit.
 - [x] Add a portfolio-style chart for wallet snapshots and distinguish scans from signed transactions.
-- [x] Add a paper-only AI Bot Studio with editable strategies, grid/risk settings, bot lifecycle controls, manual paper price ticks, and simulated P&L.
+- [x] Replace the previous dashboard shell with the WELP UP terminal, live Jupiter market board, rule-based signals, wallet-approved swap desk, and responsive navigation.
 - [x] Publish Terms v1.0 and Privacy Policy for the web application.
 - [x] Python agent: untrained brain no longer drags scores out of the 80–98 band.
 - [x] Python agent: dynamic priority fee when env fee is 0.
@@ -27,14 +27,12 @@ This roadmap distinguishes the product the user wants from features currently av
 
 ## Trading automation status
 
-### Paper trading — implemented in the browser
+### Automation and agent interfaces — status only
 
-- [x] Create, pause, stop, and remove up to 12 bot configurations in local browser storage.
-- [x] Configure strategy preset, symbol, direction, paper investment, price range, grid count, TP/SL, start/stop rules, and runtime.
-- [x] Apply manual paper price ticks and display estimated grid fills, cycles, grid profit, unpaired P&L, runtime, and status.
-- [x] Keep the shared wallet connection control visible in the page header without making a wallet necessary for paper runs.
-- [x] Label paper calculations as illustrative; do not present them as exchange data or actual returns.
-- [x] Add automated tests for bot validation, price-grid crossings, TP/SL, stop conditions, and numeric boundaries.
+- [x] Publish automation policy, agent status, and autonomous-monitor pages in the terminal.
+- [x] Keep the pages explicit that no production agent runtime, delegated signing authority, or unattended trade execution is configured.
+- [x] Remove the former browser paper-bot simulator rather than presenting simulated performance as live trading capability.
+- [ ] Build and independently review a real agent runtime only after the vault, consent, executor isolation, and recovery gates below are satisfied.
 
 ### Live trading — not implemented
 
@@ -64,7 +62,7 @@ The requested product is an AI agent that analyzes the market, selects suitable 
 6. [ ] Complete Kenyan legal and privacy review, update the Terms, and obtain new user consent.
 7. [ ] Launch only after the user-facing limits match the deployed enforcement and withdrawals have been verified.
 
-**Mainnet autonomous vault remains disabled.** The `/autonomous` page now supports local paper-bot configuration and manual simulated ticks. This does not change the on-chain status above: no executor is connected, no live order is placed, and the page does not use current exchange prices. The Python CLI cannot sign; existing swaps run only after a wallet connects on the website.
+**Mainnet autonomous vault remains disabled.** The `/automation`, `/agent`, and `/autonomous` pages are status and policy interfaces; they do not run bots, place orders, or simulate P&L. No executor is connected. Existing swaps run only after a wallet connects and explicitly signs the transaction.
 
 ## Requested trading product expansion — planning checklist
 
@@ -72,8 +70,8 @@ This is a staged plan, not a promise that a provider, market, or trading product
 
 | Priority | Work item | Acceptance gate | Status |
 | --- | --- | --- | --- |
-| P0 | Paper bot studio | Local config CRUD, validation, transparent manual ticks and simulated metrics; unit tests pass. | Implemented; 4 unit tests pass |
-| P0 | Wallet connect clarity | Keep a clear connect control on the bot page; improve wallet choice and visible network guidance before live trading. Require a user click for wallet prompts; connection alone never starts a bot. | Shared control reused; further clarity pending |
+| P0 | Paper bot studio | Local config CRUD, validation, transparent manual ticks and simulated metrics; unit tests pass. | Removed from production UI; no paper performance is presented |
+| P0 | Wallet connect clarity | Keep a clear connect control in the terminal; improve wallet choice and visible network guidance before live trading. Require a user click for wallet prompts; connection alone never starts a bot. | Shared control reused; further clarity pending |
 | P1 | Market catalog and price feed | Add curated Solana markets first; verify mint, pool, source, timestamp, quote asset, and stale-data behavior. Expand chain coverage only with maintained, deduplicated listings; do not claim “all crypto” without it. | Not started |
 | P1 | TradingView charts | Confirm library access and usage terms; implement a datafeed with symbol search, OHLC history, live updates, market hours/time zone, and stale/error states. The chart library itself does not provide market data; see the [Datafeed API](https://www.tradingview.com/charting-library-docs/latest/connecting_data/datafeed-api/). | Not started |
 | P1 | Vault Devnet gate 3 | Deploy matching source, run transaction-level and property tests for caps, executor permissions, pause/revoke, and owner recovery; implement and verify SPL-token withdrawals. | Partial scaffold only |
