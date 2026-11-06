@@ -21,3 +21,4 @@ target/
 test-ledger/
 **/*.rs.bk
 programs/**/target/
+.env*

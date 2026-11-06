@@ -18,6 +18,9 @@ use welp_vault_checks::{
 
 declare_id!("US517G5965aydkZ46HS38QLi7UQiSojurfbQfKCELFx"); // undeployed placeholder; replace after `anchor keys list`
 
+/// Jupiter Aggregator v6 program id (mainnet).
+pub const JUPITER_V6_ID: Pubkey = pubkey!("JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4");
+
 pub use welp_vault_checks::{
     DEFAULT_PER_POSITION_MAX as DEFAULT_PER_POSITION, MIN_POSITION_LAMPORTS as MIN_POSITION,
 };
@@ -45,8 +48,9 @@ fn map_err(err: CheckError) -> VaultError {
         CheckError::InvalidPrice => VaultError::InvalidPrice,
         CheckError::OverConfidence => VaultError::OverConfidence,
         CheckError::StaleFeed => VaultError::StaleFeed,
-        CheckError::NonceTaken => VaultError::Overflow,
+        CheckError::NonceTaken => VaultError::DuplicateNonce,
         CheckError::InsufficientBalance => VaultError::InsufficientFunds,
+        CheckError::MintNotAllowed => VaultError::MintNotAllowed,
     }
 }
 
@@ -103,6 +107,24 @@ pub struct SlotCreatedEvent {
     pub owner: Pubkey,
     pub bot_account: Pubkey,
     pub timestamp: i64,
+}
+
+#[event]
+pub struct SwapExecutedEvent {
+    pub owner: Pubkey,
+    pub bot_account: Pubkey,
+    pub amount_in: u64,
+    pub actual_out: u64,
+    pub order_nonce: u64,
+    pub timestamp: i64,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct ExecuteSwapParams {
+    pub amount_in: u64,
+    pub minimum_amount_out: u64,
+    pub order_nonce: u64,
+    pub route_data: Vec<u8>,
 }
 
 // ── Program ───────────────────────────────────────────────────────────────
@@ -463,8 +485,163 @@ pub mod welp_vault {
     }
 
     /// Trading stays disabled until the approved Jupiter CPI path is implemented.
-    pub fn execute_swap(_ctx: Context<ExecuteSwap>, _amount: u64, _route: [u8; 32]) -> Result<()> {
-        err!(VaultError::TradingDisabled)
+    pub fn execute_swap<'a>(
+        ctx: Context<'a, ExecuteSwap<'a>>,
+        params: ExecuteSwapParams,
+    ) -> Result<()> {
+        use anchor_lang::solana_program::instruction::Instruction as SolInstruction;
+        use anchor_lang::solana_program::program::invoke_signed;
+        use welp_vault_checks::{validate_mint_allowlist, validate_swap_params};
+
+        // 1. Global pause check
+        require!(
+            !ctx.accounts.global_config.pause_all,
+            VaultError::TradingPaused
+        );
+
+        // 2. Vault state
+        require!(
+            ctx.accounts.vault.state == VaultState::Active,
+            VaultError::VaultNotActive
+        );
+
+        // 3. Slot state
+        require!(
+            ctx.accounts.user_slot.state == SlotState::Active,
+            VaultError::SlotNotActive
+        );
+
+        // 4. Nonce uniqueness
+        require!(
+            ctx.accounts.user_slot.order_nonce != params.order_nonce,
+            VaultError::DuplicateNonce
+        );
+
+        // 5-6. Amount limits via vault-checks
+        validate_swap_params(
+            params.amount_in,
+            params.minimum_amount_out,
+            DEFAULT_PER_POSITION,
+        )
+        .map_err(map_err)?;
+
+        // 7. Jupiter program ID already enforced by address constraint on jupiter_program account
+
+        // 8. Mint allowlist
+        let input_mint_bytes: [u8; 32] = ctx.accounts.input_mint.key().to_bytes();
+        let output_mint_bytes: [u8; 32] = ctx.accounts.output_mint.key().to_bytes();
+        validate_mint_allowlist(&input_mint_bytes).map_err(|_| VaultError::MintNotAllowed)?;
+        validate_mint_allowlist(&output_mint_bytes).map_err(|_| VaultError::MintNotAllowed)?;
+
+        // 9. Source token account owned by vault PDA
+        require!(
+            ctx.accounts.source_token_account.owner == ctx.accounts.vault.key(),
+            VaultError::UnauthorizedOwner
+        );
+
+        // 10. Sufficient vault balance
+        require!(
+            ctx.accounts.vault.available_lamports >= params.amount_in,
+            VaultError::InsufficientVaultBalance
+        );
+
+        // Capture bot_account before mutable borrows
+        let bot_account = ctx.accounts.user_slot.bot_account;
+
+        // Balance delta: read pre-CPI destination balance
+        let pre_balance = ctx.accounts.destination_token_account.amount;
+
+        // Build Jupiter CPI accounts from remaining_accounts
+        let jupiter_accounts: Vec<anchor_lang::solana_program::instruction::AccountMeta> = ctx
+            .remaining_accounts
+            .iter()
+            .map(|a| {
+                if a.is_writable {
+                    anchor_lang::solana_program::instruction::AccountMeta::new(*a.key, a.is_signer)
+                } else {
+                    anchor_lang::solana_program::instruction::AccountMeta::new_readonly(
+                        *a.key,
+                        a.is_signer,
+                    )
+                }
+            })
+            .collect();
+
+        let jupiter_ix = SolInstruction {
+            program_id: ctx.accounts.jupiter_program.key(),
+            accounts: jupiter_accounts,
+            data: params.route_data.clone(),
+        };
+
+        // Vault PDA signer seeds
+        let vault_bump = ctx.accounts.vault.bump;
+        let owner_key = ctx.accounts.owner.key();
+        let vault_seeds: &[&[&[u8]]] = &[&[b"vault-v1", owner_key.as_ref(), &[vault_bump]]];
+
+        // Collect all account infos for the CPI.
+        // Jupiter route accounts arrive via remaining_accounts.
+        // We include the named SPL accounts so invoke_signed can find them.
+        // Use a raw account info array by collecting references.
+        let src_info = ctx.accounts.source_token_account.to_account_info();
+        let dst_info = ctx.accounts.destination_token_account.to_account_info();
+        let vault_ai = ctx.accounts.vault.to_account_info();
+        let token_ai = ctx.accounts.token_program.to_account_info();
+
+        // Build the account list: remaining_accounts first (Jupiter route), then named accounts.
+        // invoke_signed looks up accounts by pubkey so order matters only for the instruction metas.
+        #[allow(clippy::redundant_clone)]
+        let cpi_account_infos: Vec<AccountInfo> = {
+            let mut v: Vec<AccountInfo> = Vec::with_capacity(
+                ctx.remaining_accounts.len() + 4,
+            );
+            for a in ctx.remaining_accounts {
+                v.push(a.clone());
+            }
+            v.push(src_info.clone());
+            v.push(dst_info.clone());
+            v.push(vault_ai.clone());
+            v.push(token_ai.clone());
+            v
+        };
+
+        invoke_signed(&jupiter_ix, &cpi_account_infos, vault_seeds)?;
+
+        // Reload destination token account to get post-CPI balance
+        ctx.accounts.destination_token_account.reload()?;
+        let post_balance = ctx.accounts.destination_token_account.amount;
+
+        let actual_out = post_balance
+            .checked_sub(pre_balance)
+            .ok_or(VaultError::InsufficientOutput)?;
+        require!(
+            actual_out >= params.minimum_amount_out,
+            VaultError::InsufficientOutput
+        );
+
+        // Update accounting
+        let slot = &mut ctx.accounts.user_slot;
+        slot.open_exposure = slot
+            .open_exposure
+            .checked_add(params.amount_in)
+            .ok_or(VaultError::Overflow)?;
+        slot.order_nonce = params.order_nonce;
+
+        let vault = &mut ctx.accounts.vault;
+        vault.available_lamports = vault
+            .available_lamports
+            .checked_sub(params.amount_in)
+            .ok_or(VaultError::Overflow)?;
+
+        emit!(SwapExecutedEvent {
+            owner: ctx.accounts.owner.key(),
+            bot_account,
+            amount_in: params.amount_in,
+            actual_out,
+            order_nonce: params.order_nonce,
+            timestamp: Clock::get()?.unix_timestamp,
+        });
+
+        Ok(())
     }
 
     /// Owner or executor records a closed position.
@@ -845,13 +1022,40 @@ pub struct LegacyOwnerOnly<'info> {
 
 #[derive(Accounts)]
 pub struct ExecuteSwap<'info> {
-    pub executor: Signer<'info>,
+    #[account(mut)]
+    pub owner: Signer<'info>,
     #[account(
         mut,
-        seeds = [b"vault-v1", vault.owner.as_ref()],
-        bump = vault.bump
+        seeds = [b"global-config-v1"],
+        bump = global_config.bump
+    )]
+    pub global_config: Account<'info, GlobalConfig>,
+    #[account(
+        mut,
+        seeds = [b"vault-v1", owner.key().as_ref()],
+        bump = vault.bump,
+        has_one = owner @ VaultError::UnauthorizedOwner
     )]
     pub vault: Account<'info, Vault>,
+    #[account(
+        mut,
+        seeds = [b"user-slot-v1", owner.key().as_ref(), user_slot.bot_account.as_ref()],
+        bump = user_slot.bump,
+        has_one = owner @ VaultError::UnauthorizedOwner
+    )]
+    pub user_slot: Account<'info, UserSlot>,
+    #[account(mut)]
+    pub source_token_account: Account<'info, anchor_spl::token::TokenAccount>,
+    #[account(mut)]
+    pub destination_token_account: Account<'info, anchor_spl::token::TokenAccount>,
+    pub input_mint: Account<'info, anchor_spl::token::Mint>,
+    pub output_mint: Account<'info, anchor_spl::token::Mint>,
+    /// CHECK: validated by address constraint
+    #[account(address = JUPITER_V6_ID @ VaultError::InvalidJupiterProgram)]
+    pub jupiter_program: AccountInfo<'info>,
+    pub token_program: Program<'info, anchor_spl::token::Token>,
+    pub associated_token_program: Program<'info, anchor_spl::associated_token::AssociatedToken>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -931,8 +1135,6 @@ pub enum VaultError {
     RouteNotAllowed,
     #[msg("Exit amount exceeds open exposure")]
     ExposureUnderflow,
-    #[msg("Trading is disabled until a reviewed Jupiter CPI implementation is deployed")]
-    TradingDisabled,
     #[msg("Vault is not in a state that allows this operation")]
     InvalidState,
     #[msg("Vault has outstanding shares, cannot close")]
@@ -947,4 +1149,20 @@ pub enum VaultError {
     OverConfidence,
     #[msg("Oracle price feed is stale (>30s)")]
     StaleFeed,
+    #[msg("Trading is paused globally")]
+    TradingPaused,
+    #[msg("User slot is not active")]
+    SlotNotActive,
+    #[msg("Vault is not active")]
+    VaultNotActive,
+    #[msg("Order nonce has already been used")]
+    DuplicateNonce,
+    #[msg("CPI swap output is below minimum")]
+    InsufficientOutput,
+    #[msg("Jupiter program address is incorrect")]
+    InvalidJupiterProgram,
+    #[msg("Mint is not on the allowed list")]
+    MintNotAllowed,
+    #[msg("Vault does not have enough available balance")]
+    InsufficientVaultBalance,
 }
