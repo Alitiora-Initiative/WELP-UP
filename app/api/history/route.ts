@@ -101,7 +101,10 @@ export async function GET(request: NextRequest) {
 
     // Decode confirmed transaction metadata in bounded parallel batches. Missing/pruned
     // transaction data stays explicitly unclassified; it is never inferred as a trade.
-    const decoded = await Promise.all(signatures.map(async (record) => {
+    const decoded: Array<Record<string, unknown>> = [];
+    for (let offset = 0; offset < signatures.length; offset += 8) {
+      const batch = signatures.slice(offset, offset + 8);
+      decoded.push(...await Promise.all(batch.map(async (record) => {
       try {
         const detail = await rpc<TransactionDetail | null>(endpoint, 'getTransaction', [
           record.signature,
@@ -129,7 +132,8 @@ export async function GET(request: NextRequest) {
       } catch {
         return { ...record, failed: record.err != null, type: 'Details unavailable', nativeDeltaLamports: null, feeLamports: null, tokenDeltas: [], detailsAvailable: false };
       }
-    }));
+      })));
+    }
 
     return NextResponse.json({
       network: 'solana-mainnet',
