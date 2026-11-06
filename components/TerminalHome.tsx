@@ -48,7 +48,17 @@ export function TerminalHome() {
         <div className="home-market-card-top"><span><i /> SOL / USD · LIVE</span><span>{error ? 'FEED ISSUE' : feed ? 'JUPITER FEED' : 'CONNECTING'}</span></div>
         <strong>{sol ? price(sol.priceUsd) : '—'}</strong>
         {sol ? <em className={sol.priceChange24h >= 0 ? 'positive' : 'negative'}>{sol.priceChange24h >= 0 ? '+' : ''}{sol.priceChange24h.toFixed(2)}% <small>24H</small></em> : <small>Awaiting live market data</small>}
-        <div className="home-mini-bars" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /></div>
+        <div className="home-market-snapshot">
+          <div><span>TRACKED POOLS</span><strong>{feed ? feed.total : '—'}</strong></div>
+          <div><span>ELIGIBLE NOW</span><strong>{feed ? feed.eligible : '—'}</strong></div>
+          <div><span>BLOCKED</span><strong>{feed ? feed.blocked : '—'}</strong></div>
+        </div>
+        <div className="home-market-candidates">
+          {(feed?.assets || []).filter((asset) => asset.eligible).slice(0, 4).map((asset) => <Link href={'/swap?mint=' + encodeURIComponent(asset.mint)} key={asset.mint}>
+            <span className="home-market-rank">{asset.score}</span><strong>{asset.symbol}</strong><em>ELIGIBLE</em><small>{price(asset.priceUsd)}</small>
+          </Link>)}
+          {!feed?.assets?.length ? <p>{error || 'Loading current market snapshot…'}</p> : null}
+        </div>
         <div className="home-market-card-foot"><span>Source · Jupiter Token API v2</span><span>Updated {updated}</span></div>
       </div>
     </section>
