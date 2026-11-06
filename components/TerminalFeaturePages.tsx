@@ -215,8 +215,6 @@ export function TerminalFeaturePage({ kind }: { kind: FeatureKind }) {
   if (kind === 'explorer') return <ExplorerPage />;
   return <GenericUnavailable kind={kind} />;
 }
-  </main>;
-}
 
 function ActivityLogsPage() {
   const connected = useConnectedWallet(client);
