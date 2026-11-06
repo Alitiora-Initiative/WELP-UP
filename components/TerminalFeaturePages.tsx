@@ -4,19 +4,24 @@ import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useConnectedWallet } from '@solana/kit-plugin-wallet/react';
-import { ArrowUpRight, ExternalLink, LoaderCircle, LockKeyhole, RefreshCw, Search, ShieldAlert, Wallet } from 'lucide-react';
+import { ArrowUpRight, ExternalLink, LoaderCircle, LockKeyhole, RefreshCw, Search, ShieldAlert, ShieldCheck, Wallet } from 'lucide-react';
 import { client } from '@/components/Providers';
 import { WalletConnectionControl } from '@/components/WalletConnectionControl';
 import { TransactionHistory } from '@/components/TransactionHistory';
 import { getWalletHistory, type WalletHistory } from '@/lib/activity';
 
 export type FeatureKind = 'automation' | 'agent' | 'autonomous' | 'vault' | 'portfolio' | 'history' | 'activity' | 'marketplace' | 'support' | 'status' | 'governance' | 'risk' | 'apiKeys' | 'referral' | 'explorer';
-type Asset = { mint: string; name: string; symbol: string; priceUsd: number; priceChange24h: number; liquidityUsd: number; volume24hUsd: number; organicScore: number; score: number; verified: boolean; eligible: boolean; state: string; blockers: string[]; warnings: string[] };
-type Feed = { assets: Asset[]; eligible: number; blocked: number; updatedAt: string; error?: string };
-type Status = { updatedAt: string; overall: string; checks: Array<{ name: string; state: string; detail: string }> };
-type Policy = { id: string; name: string; minimumLiquidity: number; minimumOrganic: number; drawdownLimit: number; verifiedOnly: boolean; preset: string; createdAt: string };
 
-function Heading({ eyebrow, title, detail, action }: { eyebrow: string; title: string; detail: string; action?: ReactNode }) {
+type Asset = {
+  mint: string; name: string; symbol: string; priceUsd: number; priceChange24h: number;
+  liquidityUsd: number; volume24hUsd: number; organicScore: number; score: number;
+  verified: boolean; eligible: boolean; state: string; blockers: string[]; warnings: string[];
+};
+type Feed = { assets: Asset[]; eligible: number; blocked: number; updatedAt: string; error?: string };
+type Policy = { id: string; name: string; liquidity: number; organic: number; drawdown: number; verified: boolean; preset: string };
+type Status = { updatedAt: string; overall: string; checks: Array<{ name: string; state: string; detail: string }> };
+
+function Heading({ eyebrow, title, detail, action }: { eyebrow: string; title: ReactNode; detail: string; action?: ReactNode }) {
   return <div className="page-heading"><div><div className="eyebrow"><i className="eyebrow-dot" /> {eyebrow}</div><h1>{title}</h1><p>{detail}</p></div>{action}</div>;
 }
 function Panel({ title, children, eyebrow }: { title: string; children: ReactNode; eyebrow?: string }) {
@@ -25,6 +30,7 @@ function Panel({ title, children, eyebrow }: { title: string; children: ReactNod
 function Stat({ label, value, detail }: { label: string; value: string; detail: string }) {
   return <div className="feature-stat"><span>{label}</span><strong>{value}</strong><small>{detail}</small></div>;
 }
+const emptyHistory: WalletHistory = { events: [], points: [] };
 
 function AutomationPage() {
   const [policies, setPolicies] = useState<Policy[]>([]);
@@ -34,65 +40,99 @@ function AutomationPage() {
   const [organic, setOrganic] = useState('65');
   const [drawdown, setDrawdown] = useState('18');
   const [verified, setVerified] = useState(false);
-  const [evaluated, setEvaluated] = useState<Asset[] | null>(null);
+  const [results, setResults] = useState<Asset[] | null>(null);
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState('');
-  useEffect(() => { const timer = window.setTimeout(() => { try { setPolicies(JSON.parse(localStorage.getItem('welp-watch-policies') || '[]') as Policy[]); } catch { setPolicies([]); } }, 0); return () => window.clearTimeout(timer); }, []);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      try { setPolicies(JSON.parse(localStorage.getItem('welp-watch-policies') || '[]') as Policy[]); }
+      catch { setPolicies([]); }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
   function choosePreset(value: string) {
     setPreset(value);
     if (value === 'Momentum') { setLiquidity('250000'); setOrganic('65'); setDrawdown('18'); setVerified(false); }
     if (value === 'Depth first') { setLiquidity('500000'); setOrganic('40'); setDrawdown('20'); setVerified(false); }
     if (value === 'Organic only') { setLiquidity('100000'); setOrganic('85'); setDrawdown('25'); setVerified(true); }
   }
-  function save() {
-    const policy: Policy = { id: Date.now().toString(), name: name.trim() || 'Untitled policy', minimumLiquidity: Number(liquidity), minimumOrganic: Number(organic), drawdownLimit: Number(drawdown), verifiedOnly: verified, preset, createdAt: new Date().toISOString() };
+  function savePolicy() {
+    const policy: Policy = { id: Date.now().toString(), name: name.trim() || 'Untitled policy', liquidity: Number(liquidity), organic: Number(organic), drawdown: Number(drawdown), verified, preset };
     const next = [policy, ...policies].slice(0, 30);
-    setPolicies(next); setEvaluated(null); setMessage('Saved to this browser only. This policy never trades.');
+    setPolicies(next);
+    setResults(null);
+    setMessage('Saved to this browser only. This policy never trades.');
     try { localStorage.setItem('welp-watch-policies', JSON.stringify(next)); } catch {}
   }
-  function remove(id: string) {
-    const next = policies.filter((item) => item.id !== id); setPolicies(next);
+  function removePolicy(id: string) {
+    const next = policies.filter((policy) => policy.id !== id);
+    setPolicies(next);
     try { localStorage.setItem('welp-watch-policies', JSON.stringify(next)); } catch {}
   }
   async function evaluate(policy: Policy) {
-    setWorking(true); setMessage(''); setEvaluated(null);
+    setWorking(true); setMessage(''); setResults(null);
     try {
       const response = await fetch('/api/markets', { cache: 'no-store' });
       const data = await response.json() as Feed;
-      if (!response.ok) throw new Error(data.error || 'Live feed unavailable');
-      const rows = (data.assets || []).filter((asset) => asset.eligible && asset.liquidityUsd >= policy.minimumLiquidity && asset.organicScore >= policy.minimumOrganic && asset.priceChange24h >= -policy.drawdownLimit && (!policy.verifiedOnly || asset.verified));
-      setEvaluated(rows.slice(0, 12));
+      if (!response.ok) throw new Error(data.error || 'Live feed unavailable.');
+      const matches = (data.assets || []).filter((asset) => asset.eligible && asset.liquidityUsd >= policy.liquidity && asset.organicScore >= policy.organic && asset.priceChange24h >= -policy.drawdown && (!policy.verified || asset.verified));
+      setResults(matches.slice(0, 12));
       setMessage('Evaluated against the current live snapshot. No order was created.');
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Evaluation failed.'); }
     finally { setWorking(false); }
   }
-  return <main className="terminal-page feature-page"><Heading eyebrow="AUTOMATION · RULES, NOT AUTOPILOT" title={<>Policies you can read. <span>Analysis you can check.</span></>} detail="Save watch rules per browser and evaluate them against the live feed. Policies filter data only; neither policies nor this page place trades." />
-    <div className="feature-stats"><Stat label="SAVED POLICIES" value={String(policies.length)} detail="Stored in this browser" /><Stat label="EXECUTION" value="OFF" detail="No orders from policies" /><Stat label="FEED" value="LIVE" detail="Jupiter Token API v2" /></div>
-    <div className="feature-grid two"><Panel title="Signal policies" eyebrow="LOCAL WATCH RULES"><p className="muted-copy">Build a policy. It takes effect when you evaluate it against the latest feed.</p>{policies.length ? <div className="policy-list">{policies.map((policy) => <article key={policy.id}><div><strong>{policy.name}</strong><small>{policy.preset} · Liquidity {policy.minimumLiquidity.toLocaleString()} · Organic {policy.minimumOrganic}+ · Drawdown {policy.drawdownLimit}%</small></div><div className="inline-actions"><button className="outline-button small" onClick={() => void evaluate(policy)} disabled={working}>{working ? <LoaderCircle className="spin" size={13} /> : 'Evaluate'}</button><button className="text-action" onClick={() => remove(policy.id)}>Remove</button></div></article>)}</div> : <div className="empty-panel">No policies yet. Build one on the right.</div>}</Panel>
-    <Panel title="New policy" eyebrow="POLICY COMPOSER"><label className="field-label">NAME<input value={name} onChange={(e) => setName(e.target.value)} maxLength={48} /></label><label className="field-label">PRESET<select value={preset} onChange={(e) => choosePreset(e.target.value)}><option>Momentum</option><option>Depth first</option><option>Organic only</option><option>Custom</option></select></label><div className="form-grid"><label className="field-label">MIN LIQUIDITY ($)<input type="number" min="0" value={liquidity} onChange={(e) => setLiquidity(e.target.value)} /></label><label className="field-label">MIN ORGANIC SCORE<input type="number" min="0" max="100" value={organic} onChange={(e) => setOrganic(e.target.value)} /></label></div><label className="field-label">MAXIMUM 24H DRAWDOWN (%)<input type="number" min="0" max="100" value={drawdown} onChange={(e) => setDrawdown(e.target.value)} /></label><label className="checkbox-field"><input type="checkbox" checked={verified} onChange={(e) => setVerified(e.target.checked)} /> Verified assets only</label><button className="primary-action" onClick={save}>Save policy</button>{message ? <p className="inline-message">{message}</p> : null}</Panel></div>
-    {evaluated ? <Panel title="Evaluation results" eyebrow="LIVE FEED · NO ORDERS"><div className="compact-asset-list">{evaluated.map((a) => <div key={a.mint}><strong>{a.symbol}</strong><span>{a.name}</span><b>{a.score}</b><Link href={'/swap?mint=' + a.mint}>Route →</Link></div>)}</div>{!evaluated.length ? <p className="muted-copy">No assets currently satisfy all of this policy’s filters.</p> : null}</Panel> : null}
+  return <main className="terminal-page feature-page">
+    <Heading eyebrow="AUTOMATION · RULES, NOT AUTOPILOT" title={<>Policies you can read. <span>Analysis you can check.</span></>} detail="Save watch rules per browser and evaluate them against the live feed. Policies filter data only; neither policies nor this page place trades." />
+    <div className="feature-stats"><Stat label="SAVED POLICIES" value={String(policies.length)} detail="Stored in this browser" /><Stat label="EXECUTION" value="OFF" detail="No orders from policies" /><Stat label="FEED" value="LIVE" detail="Jupiter Token API v2" /><Stat label="POLICY STORAGE" value="LOCAL" detail="Not synced across devices" /></div>
+    <div className="feature-grid two">
+      <Panel title="Signal policies" eyebrow="LOCAL WATCH RULES">
+        <p className="muted-copy">Build a policy. It takes effect when you evaluate it against the latest feed.</p>
+        {policies.length ? <div className="policy-list">{policies.map((policy) => <article key={policy.id}><div><strong>{policy.name}</strong><small>{policy.preset} · Liquidity {policy.liquidity.toLocaleString()} · Organic {policy.organic}+ · Drawdown {policy.drawdown}%</small></div><div className="inline-actions"><button className="outline-button small" onClick={() => void evaluate(policy)} disabled={working}>{working ? <LoaderCircle className="spin" size={13} /> : 'Evaluate'}</button><button className="text-action" onClick={() => removePolicy(policy.id)}>Remove</button></div></article>)}</div> : <div className="empty-panel">No policies yet. Build one on the right.</div>}
+      </Panel>
+      <Panel title="New policy" eyebrow="POLICY COMPOSER">
+        <label className="field-label">NAME<input value={name} onChange={(event) => setName(event.target.value)} maxLength={48} /></label>
+        <label className="field-label">PRESET<select value={preset} onChange={(event) => choosePreset(event.target.value)}><option>Momentum</option><option>Depth first</option><option>Organic only</option><option>Custom</option></select></label>
+        <div className="form-grid"><label className="field-label">MIN LIQUIDITY ($)<input type="number" min="0" value={liquidity} onChange={(event) => setLiquidity(event.target.value)} /></label><label className="field-label">MIN ORGANIC SCORE<input type="number" min="0" max="100" value={organic} onChange={(event) => setOrganic(event.target.value)} /></label></div>
+        <label className="field-label">MAXIMUM 24H DRAWDOWN (%)<input type="number" min="0" max="100" value={drawdown} onChange={(event) => setDrawdown(event.target.value)} /></label>
+        <label className="checkbox-field"><input type="checkbox" checked={verified} onChange={(event) => setVerified(event.target.checked)} /> Verified assets only</label>
+        <button className="primary-action" onClick={savePolicy}>Save policy</button>
+        {message ? <p className="inline-message">{message}</p> : null}
+      </Panel>
+    </div>
+    {results ? <Panel title="Evaluation results" eyebrow="LIVE FEED · NO ORDERS"><div className="compact-asset-list">{results.map((asset) => <div key={asset.mint}><strong>{asset.symbol}</strong><span>{asset.name}</span><b>{asset.score}</b><Link href={'/swap?mint=' + encodeURIComponent(asset.mint)}>Route →</Link></div>)}</div>{!results.length ? <p className="muted-copy">No assets currently satisfy all of this policy’s filters.</p> : null}</Panel> : null}
   </main>;
 }
 
 function VaultPage() {
   const gates = [
-    ['Deployed program verified executable', 'OPEN', 'Program address is not configured in this deployment.'],
+    ['Deployed program verified executable', 'OPEN', 'No mainnet program address is configured.'],
     ['Independent security audit', 'OPEN', 'Critical and high findings must be closed and published.'],
-    ['Adversarial cap and allowlist tests', 'OPEN', 'Spending-cap, pause, revoke and withdrawal paths need independent tests.'],
+    ['Adversarial cap and allowlist tests', 'OPEN', 'Spending-cap, pause, revoke and withdrawal paths need tests.'],
     ['SOL and SPL withdrawal paths', 'OPEN', 'Owner-controlled withdrawal must be verified against the deployed program.'],
-    ['Wallet-signed consent record', 'PARTIAL', 'A future policy acknowledgement must bind the owner, version and exact policy hash.'],
+    ['Wallet-signed consent record', 'PARTIAL', 'A future policy acknowledgement must bind the owner and exact policy hash.'],
   ];
-  return <main className="terminal-page feature-page"><Heading eyebrow="VAULT · PER-WALLET PDA · FAIL-CLOSED" title={<>Authority you can <span>revoke.</span></>} detail="The planned vault uses an isolated per-wallet address and narrow owner-controlled authority. It is not deployed or audited for mainnet use." action={<span className="status-pill warning"><i /> FUNDING DISABLED</span>} />
+  return <main className="terminal-page feature-page">
+    <Heading eyebrow="VAULT · PER-WALLET PDA · FAIL-CLOSED" title={<>Authority you can <span>revoke.</span></>} detail="The planned vault uses an isolated per-wallet address and narrow owner-controlled authority. It is not deployed or audited for mainnet use." action={<span className="status-pill warning"><i /> FUNDING DISABLED</span>} />
     <div className="feature-stats"><Stat label="PROGRAM ADDRESS" value="UNCONFIGURED" detail="No PDA is derived" /><Stat label="MAINNET STATE" value="NOT DEPLOYED" detail="Funding disabled" /><Stat label="EXECUTOR" value="NONE" detail="No delegated authority" /><Stat label="OWNER CONTROLS" value="PLANNED" detail="Pause · revoke · rotate · withdraw" /></div>
-    <div className="feature-grid two"><Panel title="Launch gates" eyebrow="SECURITY CHECKLIST">{gates.map((gate) => <div className="gate-row" key={gate[0]}><span className={'gate-state ' + (gate[1] === 'PARTIAL' ? 'partial' : '')}>{gate[1]}</span><div><strong>{gate[0]}</strong><small>{gate[2]}</small></div></div>)}</Panel><Panel title="Funding remains closed" eyebrow="PROTECT YOUR ASSETS"><div className="notice-block danger"><ShieldAlert size={18} /><div><strong>Do not send SOL or tokens to a PDA derived from the placeholder program ID.</strong><p>No mainnet vault address is published and no deposits or withdrawals are accepted by this interface.</p></div></div><p className="muted-copy">An interface setting is not an on-chain security boundary. The contract must be deployed, verified, audited, tested and published before a funding path is considered.</p><Link className="text-link" href="/docs">Read the architecture and production checklist <ArrowUpRight size={13} /></Link></Panel></div>
+    <div className="feature-grid two">
+      <Panel title="Launch gates" eyebrow="SECURITY CHECKLIST">{gates.map((gate) => <div className="gate-row" key={gate[0]}><span className={'gate-state ' + (gate[1] === 'PARTIAL' ? 'partial' : '')}>{gate[1]}</span><div><strong>{gate[0]}</strong><small>{gate[2]}</small></div></div>)}</Panel>
+      <Panel title="Funding remains closed" eyebrow="PROTECT YOUR ASSETS"><div className="notice-block danger"><ShieldAlert size={18} /><div><strong>Do not send SOL or tokens to a PDA derived from the placeholder program ID.</strong><p>No mainnet vault address is published and no deposits or withdrawals are accepted by this interface.</p></div></div><p className="muted-copy">An interface setting is not an on-chain security boundary. The contract must be deployed, verified, audited, tested and published before a funding path is considered.</p><Link className="text-link" href="/docs">Read the architecture and production checklist <ArrowUpRight size={13} /></Link></Panel>
+    </div>
     <Panel title="Authority model" eyebrow="DESIGNED, NOT ACTIVE"><div className="authority-flow"><span>OWNER WALLET</span><b>fund · pause · revoke · withdraw</b><span className="authority-arrow">↓</span><span>PER-WALLET VAULT PDA</span><b>only a reviewed executor instruction could spend within an on-chain cap</b><span className="authority-arrow">↓</span><span>APPROVED ROUTE PROGRAMS</span></div></Panel>
   </main>;
 }
 
 function AgentPage({ monitor = false }: { monitor?: boolean }) {
-  return <main className="terminal-page feature-page"><Heading eyebrow={monitor ? 'AGENT MONITOR · NOT ENABLED' : 'MARKET AGENT · ANALYSIS ONLY'} title={monitor ? <>Agent <span>runtime monitor.</span></> : <>Ask the desk. <span>Keep control.</span></>} detail={monitor ? 'WELP does not currently run a production autonomous executor. No bot orders, delegated signing sessions or verified live P&L are available.' : 'The code-based product currently has no hosted model runtime configured. This page does not pretend to generate AI answers or invent market commentary.'} />
+  return <main className="terminal-page feature-page">
+    <Heading eyebrow={monitor ? 'AGENT MONITOR · NOT ENABLED' : 'MARKET AGENT · ANALYSIS ONLY'} title={monitor ? <>Agent <span>runtime monitor.</span></> : <>Ask the desk. <span>Keep control.</span></>} detail={monitor ? 'WELP does not currently run a production autonomous executor. No bot orders, delegated signing sessions or verified live P&L are available.' : 'The code-based product currently has no hosted model runtime configured. This page does not pretend to generate AI answers or invent market commentary.'} />
     <div className="feature-stats"><Stat label="MARKET FEED" value="AVAILABLE" detail="Read-only Jupiter feed" /><Stat label="MODEL RUNTIME" value="NOT CONFIGURED" detail="No production model endpoint" /><Stat label="WALLET ACCESS" value="NONE" detail="No signing capability" /><Stat label="AUTONOMOUS ORDERS" value="DISABLED" detail="No unattended executor" /></div>
-    <Panel title="Current service boundaries" eyebrow="WHAT IS ACTUALLY AVAILABLE"><div className="gate-row"><span className="gate-state">LIVE</span><div><strong>Public market data</strong><small>Token prices, liquidity, activity and audit fields are read from Jupiter.</small></div></div><div className="gate-row"><span className="gate-state">LIVE</span><div><strong>Deterministic rule scoring</strong><small>Signals are calculated from published fields and rules.</small></div></div><div className="gate-row"><span className="gate-state">OFF</span><div><strong>Hosted AI analysis</strong><small>No model provider is connected to this Next.js deployment.</small></div></div><div className="gate-row"><span className="gate-state">OFF</span><div><strong>Autonomous execution</strong><small>No agent can sign, route or submit trades on a user&apos;s behalf.</small></div></div><Link className="text-link" href="/signals">Open the live signal engine <ArrowUpRight size={13} /></Link></Panel>
+    <Panel title="Current service boundaries" eyebrow="WHAT IS ACTUALLY AVAILABLE">
+      <div className="gate-row"><span className="gate-state good">LIVE</span><div><strong>Public market data</strong><small>Token prices, liquidity, activity and audit fields are read from Jupiter.</small></div></div>
+      <div className="gate-row"><span className="gate-state good">LIVE</span><div><strong>Deterministic rule scoring</strong><small>Signals are calculated from published fields and rules.</small></div></div>
+      <div className="gate-row"><span className="gate-state">OFF</span><div><strong>Hosted AI analysis</strong><small>No model provider is connected to this Next.js deployment.</small></div></div>
+      <div className="gate-row"><span className="gate-state">OFF</span><div><strong>Autonomous execution</strong><small>No agent can sign, route or submit trades on a user&apos;s behalf.</small></div></div>
+      <Link className="text-link" href="/signals">Open the live signal engine <ArrowUpRight size={13} /></Link>
+    </Panel>
   </main>;
 }
 
@@ -109,9 +149,9 @@ function GenericUnavailable({ kind }: { kind: FeatureKind }) {
 
 function RiskPage() {
   const [feed, setFeed] = useState<Feed | null>(null);
-  useEffect(() => { fetch('/api/markets', { cache: 'no-store' }).then((r) => r.json()).then((d) => setFeed(d as Feed)).catch(() => undefined); }, []);
-  const blocked = feed?.assets?.filter((a) => !a.eligible) || [];
-  const warned = feed?.assets?.filter((a) => a.eligible && a.warnings?.length) || [];
+  useEffect(() => { const timer = window.setTimeout(() => { void fetch('/api/markets', { cache: 'no-store' }).then((response) => response.json()).then((data) => setFeed(data as Feed)).catch(() => undefined); }, 0); return () => window.clearTimeout(timer); }, []);
+  const blocked = feed?.assets?.filter((asset) => !asset.eligible) || [];
+  const warned = feed?.assets?.filter((asset) => asset.eligible && asset.warnings?.length) || [];
   return <main className="terminal-page feature-page"><Heading eyebrow="RISK DASHBOARD · LIVE FEED" title={<>See the risk. <span>Before the route.</span></>} detail="A read-only view of the hard rules and warnings calculated from the live Jupiter token feed. Filters do not guarantee safety or protect capital." />
     <div className="feature-stats"><Stat label="ASSETS REVIEWED" value={String(feed?.assets?.length ?? '—')} detail="Current feed snapshot" /><Stat label="BLOCKED" value={String(blocked.length)} detail="At least one hard rule failed" /><Stat label="WARNINGS" value={String(warned.length)} detail="Eligible but carries warnings" /><Stat label="LAST SNAPSHOT" value={feed?.updatedAt ? new Date(feed.updatedAt).toLocaleTimeString() : '—'} detail="Jupiter Token API v2" /></div>
     <div className="feature-grid two"><Panel title="Hard blocks" eyebrow="DO NOT ROUTE">{blocked.slice(0, 12).map((asset) => <div className="risk-row" key={asset.mint}><strong>{asset.symbol}</strong><span>{asset.blockers.join(' · ')}</span></div>)}{!blocked.length ? <p className="muted-copy">Loading feed or no blocked assets currently reported.</p> : null}</Panel><Panel title="Warnings to review" eyebrow="RISK FLAGS">{warned.slice(0, 12).map((asset) => <div className="risk-row" key={asset.mint}><strong>{asset.symbol}</strong><span>{asset.warnings.join(' · ')}</span></div>)}{!warned.length ? <p className="muted-copy">No warning rows available in this snapshot.</p> : null}</Panel></div>
@@ -120,7 +160,7 @@ function RiskPage() {
 
 function ExplorerPage() {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Array<{ mint: string; name: string; symbol: string; decimals: number; logo: string | null; price: number | null }>>([]);
+  const [results, setResults] = useState<Array<{ mint: string; name: string; symbol: string; logo: string | null; price: number | null }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const search = useCallback(async () => {
@@ -131,14 +171,14 @@ function ExplorerPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Token search unavailable.');
       const tokens = Array.isArray(data.tokens) ? data.tokens : [];
-      setResults(tokens.map((t: Record<string, unknown>) => ({ mint: String(t.mint), name: String(t.name), symbol: String(t.symbol), decimals: Number(t.decimals), logo: typeof t.logo === 'string' ? t.logo : null, price: Number.isFinite(Number(t.price)) ? Number(t.price) : null })));
+      setResults(tokens.map((token: Record<string, unknown>) => ({ mint: String(token.mint), name: String(token.name), symbol: String(token.symbol), logo: typeof token.logo === 'string' ? token.logo : null, price: Number.isFinite(Number(token.price)) ? Number(token.price) : null })));
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Search failed.'); }
     finally { setLoading(false); }
   }, [query]);
   return <main className="terminal-page feature-page"><Heading eyebrow="TOKEN EXPLORER · JUPITER SEARCH" title={<>Inspect a token. <span>Verify the mint.</span></>} detail="Search the public Jupiter token registry by symbol, name or mint address. Token inclusion is not an endorsement or a safety guarantee." />
-    <div className="explorer-search"><Search size={16} /><input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void search(); }} placeholder="Search token name, symbol or mint address" aria-label="Token search" /><button className="primary-action" onClick={() => void search()} disabled={loading}>{loading ? <LoaderCircle className="spin" size={14} /> : 'Search'}</button></div>
+    <div className="explorer-search"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void search(); }} placeholder="Search token name, symbol or mint address" aria-label="Token search" /><button className="primary-action" onClick={() => void search()} disabled={loading}>{loading ? <LoaderCircle className="spin" size={14} /> : 'Search'}</button></div>
     {error ? <div className="feed-error">{error}</div> : null}
-    <div className="explorer-results">{results.map((token) => <article key={token.mint} className="explorer-result"><div className="asset-cell">{token.logo ? <img src={token.logo} alt="" /> : <span className="asset-avatar">{token.symbol.slice(0,1)}</span>}<div><strong>{token.symbol}</strong><small>{token.name}</small><code>{token.mint}</code></div></div><span>{token.price === null ? 'Price unavailable' : '$' + token.price.toPrecision(5)}</span><a href={'https://solscan.io/token/' + encodeURIComponent(token.mint)} target="_blank" rel="noreferrer">Solscan <ExternalLink size={13} /></a><Link href={'/swap?mint=' + encodeURIComponent(token.mint)}>Open swap <ArrowUpRight size={13} /></Link></article>)}</div>
+    <div className="explorer-results">{results.map((token) => <article key={token.mint} className="explorer-result"><div className="asset-cell">{token.logo ? <span className="asset-avatar">{token.symbol.slice(0,1)}</span> : <span className="asset-avatar">{token.symbol.slice(0,1)}</span>}<div><strong>{token.symbol}</strong><small>{token.name}</small><code>{token.mint}</code></div></div><span>{token.price === null ? 'Price unavailable' : '$' + token.price.toPrecision(5)}</span><a href={'https://solscan.io/token/' + encodeURIComponent(token.mint)} target="_blank" rel="noreferrer">Solscan <ExternalLink size={13} /></a><Link href={'/swap?mint=' + encodeURIComponent(token.mint)}>Open swap <ArrowUpRight size={13} /></Link></article>)}</div>
   </main>;
 }
 
@@ -160,16 +200,18 @@ function StatusPage() {
   const [status, setStatus] = useState<Status | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const refresh = useCallback(async () => {
-    setLoading(true); setError('');
+  const refresh = useCallback(async (manual = false) => {
+    if (manual) setLoading(true);
+    setError('');
     try { const response = await fetch('/api/status', { cache: 'no-store' }); const data = await response.json() as Status; if (!response.ok) throw new Error(data.error || 'Status check failed.'); setStatus(data); }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Status unavailable.'); }
-    finally { setLoading(false); }
+    finally { if (manual) setLoading(false); }
   }, []);
   useEffect(() => { const timer = window.setTimeout(() => void refresh(), 0); return () => window.clearTimeout(timer); }, [refresh]);
-  return <main className="terminal-page feature-page"><Heading eyebrow="SYSTEM STATUS · LIVE CHECKS" title={<>Operational status <span>of the console.</span></>} detail="Connectivity checks run when this page loads. A healthy feed does not imply that vaults or autonomous services are available." action={<button className="outline-button" onClick={() => void refresh()} disabled={loading}><RefreshCw size={14} className={loading ? 'spin' : ''} /> Re-check</button>} />
+  return <main className="terminal-page feature-page"><Heading eyebrow="SYSTEM STATUS · LIVE CHECKS" title={<>Operational status <span>of the console.</span></>} detail="Connectivity checks run when this page loads. A healthy feed does not imply that vaults or autonomous services are available." action={<button className="outline-button" onClick={() => void refresh(true)} disabled={loading}><RefreshCw size={14} className={loading ? 'spin' : ''} /> Re-check</button>} />
     <div className="feature-stats"><Stat label="OVERALL" value={status?.overall || 'CHECKING'} detail="Aggregated service status" /><Stat label="UPDATED" value={status?.updatedAt ? new Date(status.updatedAt).toLocaleTimeString() : '—'} detail="Last check" /><Stat label="AUTONOMOUS AGENTS" value="OFF" detail="Not configured" /><Stat label="VAULT FUNDING" value="OFF" detail="Program not deployed" /></div>
-    {error ? <div className="feed-error">{error}</div> : null}<Panel title="Service checks" eyebrow="LIVE STATUS">{(status?.checks || []).map((item) => <div className="gate-row" key={item.name}><span className={'gate-state ' + (item.state === 'Operational' ? 'good' : '')}>{item.state.toUpperCase()}</span><div><strong>{item.name}</strong><small>{item.detail}</small></div></div>)}</Panel>
+    {error ? <div className="feed-error">{error}</div> : null}
+    <Panel title="Service checks" eyebrow="LIVE STATUS">{(status?.checks || []).map((item) => <div className="gate-row" key={item.name}><span className={'gate-state ' + (item.state === 'Operational' ? 'good' : '')}>{item.state.toUpperCase()}</span><div><strong>{item.name}</strong><small>{item.detail}</small></div></div>)}</Panel>
   </main>;
 }
 
@@ -179,7 +221,16 @@ function PortfolioPage() {
   const [balance, setBalance] = useState<{ owner: string; sol: number; solPrice: number; stableUsd: number; equityUsd: number } | null>(null);
   const activeBalance = balance?.owner === owner ? balance : null;
   const [error, setError] = useState('');
-  useEffect(() => { if (!owner) return; let active = true; fetch('/api/wallet?owner=' + encodeURIComponent(owner), { cache: 'no-store' }).then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Wallet read failed.'); if (active) { setBalance({ ...data, owner }); setError(''); } }).catch((caught) => { if (active) setError(caught instanceof Error ? caught.message : 'Wallet read failed.'); }); return () => { active = false; }; }, [owner]);
+  useEffect(() => {
+    if (!owner) return;
+    let active = true;
+    fetch('/api/wallet?owner=' + encodeURIComponent(owner), { cache: 'no-store' }).then(async (response) => {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Wallet read failed.');
+      if (active) { setBalance({ ...data, owner }); setError(''); }
+    }).catch((caught) => { if (active) setError(caught instanceof Error ? caught.message : 'Wallet read failed.'); });
+    return () => { active = false; };
+  }, [owner]);
   return <main className="terminal-page feature-page"><Heading eyebrow="PORTFOLIO · PUBLIC MAINNET DATA" title={<>Your wallet, <span>as it actually is.</span></>} detail="Balances are read from Solana for the connected public address. WELP never asks for a seed phrase or stores private keys." action={<WalletConnectionControl />} />
     {owner ? <><div className="feature-stats"><Stat label="SOL BALANCE" value={activeBalance ? activeBalance.sol.toFixed(4) + ' SOL' : '—'} detail={activeBalance ? 'SOL at $' + activeBalance.solPrice.toFixed(2) : 'Reading public balance'} /><Stat label="TOKEN VALUE" value={activeBalance ? '$' + activeBalance.stableUsd.toFixed(2) : '—'} detail="USDC and USDT snapshot" /><Stat label="TOTAL READ" value={activeBalance ? '$' + activeBalance.equityUsd.toFixed(2) : '—'} detail="Estimated SOL + stablecoin value" /></div>{error ? <div className="feed-error">{error}</div> : null}<TransactionHistory owner={owner} /></> : <div className="empty-panel centered"><Wallet size={24} /><strong>Open a wallet session</strong><p>Connect a Solana wallet to read balances and on-chain transaction history.</p></div>}
   </main>;
@@ -188,229 +239,8 @@ function PortfolioPage() {
 function ActivityLogsPage() {
   const connected = useConnectedWallet(client);
   const owner = connected?.account.address ?? '';
-  const [history, setHistory] = useState<WalletHistory>({ events: [], points: [] });
-  useEffect(() => { const timer = window.setTimeout(() => setHistory(owner ? getWalletHistory(owner) : { events: [], points: [] }), 0); return () => window.clearTimeout(timer); }, [owner]);
-  return <main className="terminal-page feature-page"><Heading eyebrow="ACTIVITY LOGS · BROWSER-LOCAL" title={<>A record of <span>this browser’s activity.</span></>} detail="These supplemental events are stored locally per wallet. They are not a tamper-proof audit ledger or a complete list of on-chain actions." action={<WalletConnectionControl />} />
-    {owner ? <Panel title="Recorded events" eyebrow="LOCAL STORAGE">{history.events.length ? history.events.map((event) => <div className="gate-row" key={event.id}><span className="gate-state">{event.type.toUpperCase()}</span><div><strong>{event.title}</strong><small>{event.detail} · {new Date(event.at).toLocaleString()}</small>{event.signature ? <a href={'https://explorer.solana.com/tx/' + event.signature} target="_blank" rel="noreferrer">View transaction <ExternalLink size={12} /></a> : null}</div></div>) : <div className="empty-panel">No local activity recorded for this wallet in this browser.</div>}</Panel> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>Local activity is scoped to the connected public wallet address.</p></div>}
-  </main>;
-}
-
-function HistoryPage() {
-  const connected = useConnectedWallet(client);
-  const owner = connected?.account.address ?? '';
-  return <main className="terminal-page feature-page"><Heading eyebrow="TRANSACTION HISTORY · PER WALLET" title={<>Every transaction, <span>from your address.</span></>} detail="On-chain signatures are read from Solana RPC. This view does not claim to be a tax statement or a complete accounting ledger." action={<WalletConnectionControl />} />{owner ? <TransactionHistory owner={owner} /> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>On-chain transaction history is read for the connected public address.</p></div>}</main>;
-}
-
-export function TerminalFeaturePage({ kind }: { kind: FeatureKind }) {
-  if (kind === 'automation') return <AutomationPage />;
-  if (kind === 'vault') return <VaultPage />;
-  if (kind === 'agent') return <AgentPage />;
-  if (kind === 'autonomous') return <AgentPage monitor />;
-  if (kind === 'portfolio') return <PortfolioPage />;
-  if (kind === 'history') return <HistoryPage />;
-  if (kind === 'activity') return <ActivityLogsPage />;
-  if (kind === 'status') return <StatusPage />;
-  if (kind === 'support') return <SupportPage />;
-  if (kind === 'risk') return <RiskPage />;
-  if (kind === 'explorer') return <ExplorerPage />;
-  return <GenericUnavailable kind={kind} />;
-}
-
-function ActivityLogsPage() {
-  const connected = useConnectedWallet(client);
-  const owner = connected?.account.address ?? '';
-  const [history, setHistory] = useState<WalletHistory>({ events: [], points: [] });
-  useEffect(() => { const timer = window.setTimeout(() => setHistory(owner ? getWalletHistory(owner) : { events: [], points: [] }), 0); return () => window.clearTimeout(timer); }, [owner]);
-  return <main className="terminal-page feature-page"><Heading eyebrow="ACTIVITY LOGS · BROWSER-LOCAL" title={<>A record of <span>this browser’s activity.</span></>} detail="These supplemental events are stored locally per wallet. They are not a tamper-proof audit ledger or a complete list of on-chain actions." action={<WalletConnectionControl />} />
-    {owner ? <Panel title="Recorded events" eyebrow="LOCAL STORAGE">{history.events.length ? history.events.map((event) => <div className="gate-row" key={event.id}><span className="gate-state">{event.type.toUpperCase()}</span><div><strong>{event.title}</strong><small>{event.detail} · {new Date(event.at).toLocaleString()}</small>{event.signature ? <a href={'https://explorer.solana.com/tx/' + event.signature} target="_blank" rel="noreferrer">View transaction <ExternalLink size={12} /></a> : null}</div></div>) : <div className="empty-panel">No local activity recorded for this wallet in this browser.</div>}</Panel> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>Local activity is scoped to the connected public wallet address.</p></div>}
-  </main>;
-}
-
-function HistoryPage() {
-  const connected = useConnectedWallet(client);
-  const owner = connected?.account.address ?? '';
-  return <main className="terminal-page feature-page"><Heading eyebrow="TRANSACTION HISTORY · PER WALLET" title={<>Every transaction, <span>from your address.</span></>} detail="On-chain signatures are read from Solana RPC. This view does not claim to be a tax statement or a complete accounting ledger." action={<WalletConnectionControl />} />{owner ? <TransactionHistory owner={owner} /> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>On-chain transaction history is read for the connected public address.</p></div>}</main>;
-}
-
-export function TerminalFeaturePage({ kind }: { kind: FeatureKind }) {
-  if (kind === 'automation') return <AutomationPage />;
-  if (kind === 'vault') return <VaultPage />;
-  if (kind === 'agent') return <AgentPage />;
-  if (kind === 'autonomous') return <AgentPage monitor />;
-  if (kind === 'portfolio') return <PortfolioPage />;
-  if (kind === 'history') return <HistoryPage />;
-  if (kind === 'activity') return <ActivityLogsPage />;
-  if (kind === 'status') return <StatusPage />;
-  if (kind === 'support') return <SupportPage />;
-  if (kind === 'risk') return <RiskPage />;
-  if (kind === 'explorer') return <ExplorerPage />;
-  return <GenericUnavailable kind={kind} />;
-}
-
-function ActivityLogsPage() {
-  const connected = useConnectedWallet(client);
-  const owner = connected?.account.address ?? '';
-  const [history, setHistory] = useState<WalletHistory>({ events: [], points: [] });
-  useEffect(() => { setHistory(owner ? getWalletHistory(owner) : { events: [], points: [] }); }, [owner]);
-  return <main className="terminal-page feature-page"><Heading eyebrow="ACTIVITY LOGS · BROWSER-LOCAL" title={<>A record of <span>this browser’s activity.</span></>} detail="These supplemental events are stored locally per wallet. They are not a tamper-proof audit ledger or a complete list of on-chain actions." action={<WalletConnectionControl />} />
-    {owner ? <Panel title="Recorded events" eyebrow="LOCAL STORAGE">{history.events.length ? history.events.map((event) => <div className="gate-row" key={event.id}><span className="gate-state">{event.type.toUpperCase()}</span><div><strong>{event.title}</strong><small>{event.detail} · {new Date(event.at).toLocaleString()}</small>{event.signature ? <a href={'https://explorer.solana.com/tx/' + event.signature} target="_blank" rel="noreferrer">View transaction <ExternalLink size={12} /></a> : null}</div></div>) : <div className="empty-panel">No local activity recorded for this wallet in this browser.</div>}</Panel> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>Local activity is scoped to the connected public wallet address.</p></div>}
-  </main>;
-}
-
-function HistoryPage() {
-  const connected = useConnectedWallet(client);
-  const owner = connected?.account.address ?? '';
-  return <main className="terminal-page feature-page"><Heading eyebrow="TRANSACTION HISTORY · PER WALLET" title={<>Every transaction, <span>from your address.</span></>} detail="On-chain signatures are read from Solana RPC. This view does not claim to be a tax statement or a complete accounting ledger." action={<WalletConnectionControl />} />{owner ? <TransactionHistory owner={owner} /> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>On-chain transaction history is read for the connected public address.</p></div>}</main>;
-}
-
-export function TerminalFeaturePage({ kind }: { kind: FeatureKind }) {
-  if (kind === 'automation') return <AutomationPage />;
-  if (kind === 'vault') return <VaultPage />;
-  if (kind === 'agent') return <AgentPage />;
-  if (kind === 'autonomous') return <AgentPage monitor />;
-  if (kind === 'portfolio') return <PortfolioPage />;
-  if (kind === 'history') return <HistoryPage />;
-  if (kind === 'activity') return <ActivityLogsPage />;
-  if (kind === 'status') return <StatusPage />;
-  if (kind === 'support') return <SupportPage />;
-  if (kind === 'risk') return <RiskPage />;
-  if (kind === 'explorer') return <ExplorerPage />;
-  return <GenericUnavailable kind={kind} />;
-}
-
-function ActivityLogsPage() {
-  const connected = useConnectedWallet(client);
-  const owner = connected?.account.address ?? '';
-  const [history, setHistory] = useState<WalletHistory>({ events: [], points: [] });
-  useEffect(() => { setHistory(owner ? getWalletHistory(owner) : { events: [], points: [] }); }, [owner]);
-  return <main className="terminal-page feature-page"><Heading eyebrow="ACTIVITY LOGS · BROWSER-LOCAL" title={<>A record of <span>this browser’s activity.</span></>} detail="These supplemental events are stored locally per wallet. They are not a tamper-proof audit ledger or a complete list of on-chain actions." action={<WalletConnectionControl />} />
-    {owner ? <Panel title="Recorded events" eyebrow="LOCAL STORAGE">{history.events.length ? history.events.map((event) => <div className="gate-row" key={event.id}><span className="gate-state">{event.type.toUpperCase()}</span><div><strong>{event.title}</strong><small>{event.detail} · {new Date(event.at).toLocaleString()}</small>{event.signature ? <a href={'https://explorer.solana.com/tx/' + event.signature} target="_blank" rel="noreferrer">View transaction <ExternalLink size={12} /></a> : null}</div></div>) : <div className="empty-panel">No local activity recorded for this wallet in this browser.</div>}</Panel> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>Local activity is scoped to the connected public wallet address.</p></div>}
-  </main>;
-}
-
-function HistoryPage() {
-  const connected = useConnectedWallet(client);
-  const owner = connected?.account.address ?? '';
-  return <main className="terminal-page feature-page"><Heading eyebrow="TRANSACTION HISTORY · PER WALLET" title={<>Every transaction, <span>from your address.</span></>} detail="On-chain signatures are read from Solana RPC. This view does not claim to be a tax statement or a complete accounting ledger." action={<WalletConnectionControl />} />{owner ? <TransactionHistory owner={owner} /> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>On-chain transaction history is read for the connected public address.</p></div>}</main>;
-}
-
-export function TerminalFeaturePage({ kind }: { kind: FeatureKind }) {
-  if (kind === 'automation') return <AutomationPage />;
-  if (kind === 'vault') return <VaultPage />;
-  if (kind === 'agent') return <AgentPage />;
-  if (kind === 'autonomous') return <AgentPage monitor />;
-  if (kind === 'portfolio') return <PortfolioPage />;
-  if (kind === 'history') return <HistoryPage />;
-  if (kind === 'activity') return <ActivityLogsPage />;
-  if (kind === 'status') return <StatusPage />;
-  if (kind === 'support') return <SupportPage />;
-  if (kind === 'risk') return <RiskPage />;
-  if (kind === 'explorer') return <ExplorerPage />;
-  return <GenericUnavailable kind={kind} />;
-}
-
-function ActivityLogsPage() {
-  const connected = useConnectedWallet(client);
-  const owner = connected?.account.address ?? '';
-  const [history, setHistory] = useState<WalletHistory>({ events: [], points: [] });
-  useEffect(() => { setHistory(owner ? getWalletHistory(owner) : { events: [], points: [] }); }, [owner]);
-  return <main className="terminal-page feature-page"><Heading eyebrow="ACTIVITY LOGS · BROWSER-LOCAL" title={<>A record of <span>this browser’s activity.</span></>} detail="These supplemental events are stored locally per wallet. They are not a tamper-proof audit ledger or a complete list of on-chain actions." action={<WalletConnectionControl />} />
-    {owner ? <Panel title="Recorded events" eyebrow="LOCAL STORAGE">{history.events.length ? history.events.map((event) => <div className="gate-row" key={event.id}><span className="gate-state">{event.type.toUpperCase()}</span><div><strong>{event.title}</strong><small>{event.detail} · {new Date(event.at).toLocaleString()}</small>{event.signature ? <a href={'https://explorer.solana.com/tx/' + event.signature} target="_blank" rel="noreferrer">View transaction <ExternalLink size={12} /></a> : null}</div></div>) : <div className="empty-panel">No local activity recorded for this wallet in this browser.</div>}</Panel> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>Local activity is scoped to the connected public wallet address.</p></div>}
-  </main>;
-}
-
-function HistoryPage() {
-  const connected = useConnectedWallet(client);
-  const owner = connected?.account.address ?? '';
-  return <main className="terminal-page feature-page"><Heading eyebrow="TRANSACTION HISTORY · PER WALLET" title={<>Every transaction, <span>from your address.</span></>} detail="On-chain signatures are read from Solana RPC. This view does not claim to be a tax statement or a complete accounting ledger." action={<WalletConnectionControl />} />{owner ? <TransactionHistory owner={owner} /> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>On-chain transaction history is read for the connected public address.</p></div>}</main>;
-}
-
-export function TerminalFeaturePage({ kind }: { kind: FeatureKind }) {
-  if (kind === 'automation') return <AutomationPage />;
-  if (kind === 'vault') return <VaultPage />;
-  if (kind === 'agent') return <AgentPage />;
-  if (kind === 'autonomous') return <AgentPage monitor />;
-  if (kind === 'portfolio') return <PortfolioPage />;
-  if (kind === 'history') return <HistoryPage />;
-  if (kind === 'activity') return <ActivityLogsPage />;
-  if (kind === 'status') return <StatusPage />;
-  if (kind === 'support') return <SupportPage />;
-  if (kind === 'risk') return <RiskPage />;
-  if (kind === 'explorer') return <ExplorerPage />;
-  return <GenericUnavailable kind={kind} />;
-}
-  </main>;
-}
-
-function ActivityLogsPage() {
-  const connected = useConnectedWallet(client);
-  const owner = connected?.account.address ?? '';
-  const [history, setHistory] = useState<WalletHistory>({ events: [], points: [] });
-  useEffect(() => { setHistory(owner ? getWalletHistory(owner) : { events: [], points: [] }); }, [owner]);
-  return <main className="terminal-page feature-page"><Heading eyebrow="ACTIVITY LOGS · BROWSER-LOCAL" title={<>A record of <span>this browser’s activity.</span></>} detail="These supplemental events are stored locally per wallet. They are not a tamper-proof audit ledger or a complete list of on-chain actions." action={<WalletConnectionControl />} />
-    {owner ? <Panel title="Recorded events" eyebrow="LOCAL STORAGE">{history.events.length ? history.events.map((event) => <div className="gate-row" key={event.id}><span className="gate-state">{event.type.toUpperCase()}</span><div><strong>{event.title}</strong><small>{event.detail} · {new Date(event.at).toLocaleString()}</small>{event.signature ? <a href={'https://explorer.solana.com/tx/' + event.signature} target="_blank" rel="noreferrer">View transaction <ExternalLink size={12} /></a> : null}</div></div>) : <div className="empty-panel">No local activity recorded for this wallet in this browser.</div>}</Panel> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>Local activity is scoped to the connected public wallet address.</p></div>}
-  </main>;
-}
-
-function HistoryPage() {
-  const connected = useConnectedWallet(client);
-  const owner = connected?.account.address ?? '';
-  return <main className="terminal-page feature-page"><Heading eyebrow="TRANSACTION HISTORY · PER WALLET" title={<>Every transaction, <span>from your address.</span></>} detail="On-chain signatures are read from Solana RPC. This view does not claim to be a tax statement or a complete accounting ledger." action={<WalletConnectionControl />} />{owner ? <TransactionHistory owner={owner} /> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>On-chain transaction history is read for the connected public address.</p></div>}</main>;
-}
-
-export function TerminalFeaturePage({ kind }: { kind: FeatureKind }) {
-  if (kind === 'automation') return <AutomationPage />;
-  if (kind === 'vault') return <VaultPage />;
-  if (kind === 'agent') return <AgentPage />;
-  if (kind === 'autonomous') return <AgentPage monitor />;
-  if (kind === 'portfolio') return <PortfolioPage />;
-  if (kind === 'history') return <HistoryPage />;
-  if (kind === 'activity') return <ActivityLogsPage />;
-  if (kind === 'status') return <StatusPage />;
-  if (kind === 'support') return <SupportPage />;
-  if (kind === 'risk') return <RiskPage />;
-  if (kind === 'explorer') return <ExplorerPage />;
-  return <GenericUnavailable kind={kind} />;
-}
-
-function ActivityLogsPage() {
-  const connected = useConnectedWallet(client);
-  const owner = connected?.account.address ?? '';
-  const [history, setHistory] = useState<WalletHistory>({ events: [], points: [] });
-  useEffect(() => { setHistory(owner ? getWalletHistory(owner) : { events: [], points: [] }); }, [owner]);
-  return <main className="terminal-page feature-page"><Heading eyebrow="ACTIVITY LOGS · BROWSER-LOCAL" title={<>A record of <span>this browser’s activity.</span></>} detail="These supplemental events are stored locally per wallet. They are not a tamper-proof audit ledger or a complete list of on-chain actions." action={<WalletConnectionControl />} />
-    {owner ? <Panel title="Recorded events" eyebrow="LOCAL STORAGE">{history.events.length ? history.events.map((event) => <div className="gate-row" key={event.id}><span className="gate-state">{event.type.toUpperCase()}</span><div><strong>{event.title}</strong><small>{event.detail} · {new Date(event.at).toLocaleString()}</small>{event.signature ? <a href={'https://explorer.solana.com/tx/' + event.signature} target="_blank" rel="noreferrer">View transaction <ExternalLink size={12} /></a> : null}</div></div>) : <div className="empty-panel">No local activity recorded for this wallet in this browser.</div>}</Panel> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>Local activity is scoped to the connected public wallet address.</p></div>}
-  </main>;
-}
-
-function HistoryPage() {
-  const connected = useConnectedWallet(client);
-  const owner = connected?.account.address ?? '';
-  return <main className="terminal-page feature-page"><Heading eyebrow="TRANSACTION HISTORY · PER WALLET" title={<>Every transaction, <span>from your address.</span></>} detail="On-chain signatures are read from Solana RPC. This view does not claim to be a tax statement or a complete accounting ledger." action={<WalletConnectionControl />} />{owner ? <TransactionHistory owner={owner} /> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>On-chain transaction history is read for the connected public address.</p></div>}</main>;
-}
-
-export function TerminalFeaturePage({ kind }: { kind: FeatureKind }) {
-  if (kind === 'automation') return <AutomationPage />;
-  if (kind === 'vault') return <VaultPage />;
-  if (kind === 'agent') return <AgentPage />;
-  if (kind === 'autonomous') return <AgentPage monitor />;
-  if (kind === 'portfolio') return <PortfolioPage />;
-  if (kind === 'history') return <HistoryPage />;
-  if (kind === 'activity') return <ActivityLogsPage />;
-  if (kind === 'status') return <StatusPage />;
-  if (kind === 'support') return <SupportPage />;
-  if (kind === 'risk') return <RiskPage />;
-  if (kind === 'explorer') return <ExplorerPage />;
-  return <GenericUnavailable kind={kind} />;
-}
-  </main>;
-}
-
-function ActivityLogsPage() {
-  const connected = useConnectedWallet(client);
-  const owner = connected?.account.address ?? '';
-  const [history, setHistory] = useState<WalletHistory>({ events: [], points: [] });
-  useEffect(() => { setHistory(owner ? getWalletHistory(owner) : { events: [], points: [] }); }, [owner]);
+  const [history, setHistory] = useState<WalletHistory>(emptyHistory);
+  useEffect(() => { const timer = window.setTimeout(() => setHistory(owner ? getWalletHistory(owner) : emptyHistory), 0); return () => window.clearTimeout(timer); }, [owner]);
   return <main className="terminal-page feature-page"><Heading eyebrow="ACTIVITY LOGS · BROWSER-LOCAL" title={<>A record of <span>this browser’s activity.</span></>} detail="These supplemental events are stored locally per wallet. They are not a tamper-proof audit ledger or a complete list of on-chain actions." action={<WalletConnectionControl />} />
     {owner ? <Panel title="Recorded events" eyebrow="LOCAL STORAGE">{history.events.length ? history.events.map((event) => <div className="gate-row" key={event.id}><span className="gate-state">{event.type.toUpperCase()}</span><div><strong>{event.title}</strong><small>{event.detail} · {new Date(event.at).toLocaleString()}</small>{event.signature ? <a href={'https://explorer.solana.com/tx/' + event.signature} target="_blank" rel="noreferrer">View transaction <ExternalLink size={12} /></a> : null}</div></div>) : <div className="empty-panel">No local activity recorded for this wallet in this browser.</div>}</Panel> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>Local activity is scoped to the connected public wallet address.</p></div>}
   </main>;
