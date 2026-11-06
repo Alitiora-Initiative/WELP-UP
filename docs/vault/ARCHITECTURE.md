@@ -1,6 +1,6 @@
 # WELP vault architecture (Gate 2)
 
-**Status:** Chosen and documented. No mainnet deployment. Devnet implementation is the next gate.
+**Status:** Design scaffold only. Not deployed to Devnet or Mainnet; not independently audited. The web vault UI is fail-closed and does not accept deposits.
 
 **Effective:** 2026-10-21  
 **Operator:** Alitiora Initiative / Joseph Mushelle Nyingeh (Kenya)
@@ -122,20 +122,18 @@ docs/vault/
 
 ## Next step (Gate 3)
 
-The website now has a Devnet-only `/vault` owner console for initializing a
-per-wallet PDA, SOL funding and withdrawal, pause, and executor revocation.
-It uses a separate Devnet wallet/RPC client; the existing swap interface stays
-on Mainnet. The console requires `NEXT_PUBLIC_WELP_VAULT_PROGRAM_ID` and checks
-that the address is executable on Devnet before deriving a PDA. Keep the value
-unset until the matching program has been deployed. Executable-account checks
-do not verify source or establish an audit. Each owner action is submitted only
-after the user clicks its review button and signs in their wallet.
+The previous Devnet-only vault console has been removed from the user-facing app.
+The current `/vault` page is a status and safety disclosure only. The checked-in
+Anchor configuration targets a local validator; no Devnet or Mainnet provider
+is configured. Executable-account checks, if reintroduced, would not verify
+source or establish an audit.
 
-This is a partial Gate 3 implementation only. The program is still undeployed,
-`execute_swap` still fails closed, SPL-token withdrawals are absent, and no
-Devnet transaction-level validation has been completed.
+The program remains undeployed, `execute_swap` still fails closed, SPL-token
+withdrawals are absent, and no independent audit has been completed.
 
-Implement and test on **devnet**:
+Before any deployment, complete local validator tests, independent review, and
+an explicit release decision. Staging validation must never be represented as
+mainnet availability.
 
 - Initialize, fund, set_executor, execute_swap (mock or real Jupiter devnet route), pause, revoke, withdraw.
 - Property tests for cap and per-position enforcement.
