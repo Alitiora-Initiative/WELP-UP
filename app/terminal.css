@@ -481,3 +481,52 @@ button { cursor: pointer; }
   .home-market-candidates a { grid-template-columns: 26px 1fr auto auto; }
   .home-market-candidates em { display: none; }
 }
+
+
+/* Typography scale-up: match the larger, more readable type in the supplied Base44 references */
+:root { --terminal-type-scale: 1.08; }
+.site-header { min-height: 68px; }
+.site-brand strong { font-size: 16px; }
+.site-brand-mark { width: 36px; height: 36px; font-size: 19px; }
+.network-badge { font-size: 9px; padding: 5px 8px; }
+.site-nav-trigger { min-height: 42px; padding-inline: 14px; font-size: 13px; }
+.mega-menu-heading { font-size: 13px; }
+.mega-menu-link { min-height: 74px; padding: 13px 15px; }
+.mega-menu-link strong { font-size: 13px; margin-bottom: 6px; }
+.mega-menu-link small { font-size: 11px; line-height: 1.55; }
+.mega-menu-aside { font-size: 12px; }
+.site-header .button, .site-header button, .site-header a[role="button"] { font-size: 12px; }
+.home-hero-copy h1 { font-size: clamp(48px, 5.8vw, 78px); line-height: 1.02; }
+.home-hero-copy > p { max-width: 660px; font-size: 15px; line-height: 1.75; }
+.home-actions { gap: 22px; margin-top: 28px; }
+.home-actions a { font-size: 13px; }
+.home-proof { font-size: 10px; }
+.home-market-card { padding: 26px 27px 21px; }
+.home-market-card > strong { font-size: clamp(42px, 4.2vw, 54px); }
+.home-market-snapshot span { font-size: 9px; }
+.home-market-snapshot strong { font-size: 18px; }
+.home-market-candidates a { min-height: 40px; gap: 11px; }
+.home-market-rank { font-size: 10px; }
+.home-market-candidates strong { font-size: 13px; }
+.home-market-candidates em { font-size: 8px; padding: 4px 7px; }
+.home-market-candidates small { font-size: 11px; }
+.home-market-card-foot { font-size: 10px; }
+.ticker-item { font-size: 11px; }
+.ticker-item strong { font-size: 12px; }
+.ticker-item em { font-size: 10px; }
+.eyebrow, .micro, .section-kicker { font-size: 10px; }
+button, input, select, textarea { font-size: 13px; }
+@media (max-width: 1180px) {
+  .site-nav-trigger { padding-inline: 10px; font-size: 12px; }
+}
+@media (max-width: 900px) {
+  .site-nav-trigger { min-height: 46px; font-size: 14px; }
+  .mega-menu-link strong { font-size: 14px; }
+  .mega-menu-link small { font-size: 12px; }
+}
+@media (max-width: 700px) {
+  .home-hero-copy h1 { font-size: clamp(43px, 11vw, 58px); }
+  .home-hero-copy > p { font-size: 14px; line-height: 1.7; }
+  .home-market-snapshot strong { font-size: 16px; }
+  .home-market-candidates strong { font-size: 12px; }
+}
