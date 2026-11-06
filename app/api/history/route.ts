@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
 
     // Decode confirmed transaction metadata in bounded parallel batches. Missing/pruned
     // transaction data stays explicitly unclassified; it is never inferred as a trade.
-    const decoded: Array<Record<string, unknown>> = [];
+    const decoded = [];
     for (let offset = 0; offset < signatures.length; offset += 8) {
       const batch = signatures.slice(offset, offset + 8);
       decoded.push(...await Promise.all(batch.map(async (record) => {
