@@ -12,6 +12,7 @@ WELP UP! is a Solana market research and wallet-approved trading interface. It r
 - Request a Jupiter Swap API v2 order, review the transaction in the wallet, and submit the wallet-signed order through Jupiter's execute endpoint.
 - View on-chain transaction signatures for a connected wallet through Solana RPC.
 - View browser-local activity and wallet-value snapshots. These are not a complete transaction ledger or verified P&L statement.
+- Save browser-local market watch policies and optionally monitor them with 60-second browser notifications while the Automation page remains open. Alerts are read-only and never create orders.
 - Adjust local appearance preferences.
 
 ## Important limitations
