@@ -8,14 +8,11 @@ skip-lint = false
 [programs.localnet]
 welp_vault = "US517G5965aydkZ46HS38QLi7UQiSojurfbQfKCELFx"
 
-[programs.devnet]
-welp_vault = "US517G5965aydkZ46HS38QLi7UQiSojurfbQfKCELFx"
-
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
