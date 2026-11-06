@@ -72,7 +72,7 @@ export function TerminalShell({ children }: { children: ReactNode }) {
   <TickerStrip/>
   <div className="site-main">{children}</div>
     <footer className="site-footer">
-      <div className="footer-brand"><img className="site-brand-mark" src="/welp-up-logo.svg" alt="" width="38" height="38" /><div><strong>WELP UP!</strong><p>A Solana market console. Live pools, published rules, wallet-approved execution. WELP never holds keys and never trades on your behalf.</p><small>Operator · Alitiora Initiative · Kenya</small></div></div>
+      <div className="footer-brand"><Image className="site-brand-mark" src="/welp-up-logo.svg" alt="" width={38} height={38} priority /><div><strong>WELP UP!</strong><p>A Solana market console. Live pools, published rules, wallet-approved execution. WELP never holds keys and never trades on your behalf.</p><small>Operator · Alitiora Initiative · Kenya</small></div></div>
       <div className="footer-column"><strong>PRODUCT</strong><Link href="/markets">Market board</Link><Link href="/signals">Signal engine</Link><Link href="/swap">Swap desk</Link><Link href="/portfolio">Portfolio</Link><Link href="/token-explorer">Token explorer</Link></div>
       <div className="footer-column"><strong>AUTOMATION</strong><Link href="/automation">Signal policies</Link><Link href="/agent">Market agent</Link><Link href="/vault">Vault console</Link><Link href="/strategy-marketplace">Strategy marketplace</Link></div>
       <div className="footer-column"><strong>CONSOLE</strong><Link href="/profile">Profile</Link><Link href="/history">Transaction history</Link><Link href="/activity-logs">Activity logs</Link><Link href="/support">Support centre</Link><Link href="/system-status">System status</Link></div>
