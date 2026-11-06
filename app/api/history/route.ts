@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
           detailsAvailable: true,
         };
       } catch {
-        return { ...record, failed: record.err != null, type: 'Details unavailable', nativeDeltaLamports: null, feeLamports: null, tokenDeltas: [], detailsAvailable: false };
+        return { ...record, failed: record.err != null, type: 'Details unavailable', nativeDeltaLamports: null, nativeDeltaSol: null, feeLamports: null, tokenDeltas: [], detailsAvailable: false };
       }
       })));
     }
