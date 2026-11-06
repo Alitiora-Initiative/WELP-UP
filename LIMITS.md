@@ -37,13 +37,13 @@ These controls are user-approved design goals only. The vault is not implemented
 
 - The user chooses and explicitly confirms the SOL allocation.
 - The vault is isolated and funded by the user through the website wallet session.
-- The user sets a total funding cap; a verified on-chain program enforces it.
-- Maximum position size is 0.02 SOL unless the user later explicitly chooses a lower limit.
+- The user may set a strategy allocation/spending budget that limits what an executor may use. This is not a platform-imposed deposit or withdrawal ceiling.
+- Any per-position risk limit must be clearly disclosed and enforced on-chain. It does not create a platform maximum deposit or withdrawal.
 - The user can stop or revoke the agent's authority and withdraw available vault assets to their wallet at any time.
 - AI market analysis, entry selection, trade execution, position monitoring, and take-profit/exit logic operate only under those enforced limits.
 - The deployed program and executor receive independent security review, published addresses and audit details, explicit user consent, and tested revocation/withdrawal paths before real funds are enabled.
 
-An interface setting by itself is not a secure on-chain limit. A withdrawal may require closing an open token position or withdrawing that token as-is; network congestion and liquidity can affect conversion and timing. The final implementation must describe this accurately before activation.
+An interface setting by itself is not a secure on-chain limit. A withdrawal may require closing an open token position or withdrawing that token as-is; network congestion and liquidity can affect conversion and timing. No fixed platform maximum deposit or withdrawal is intended. Withdrawals remain limited by the user's actual available assets, open positions, transaction validity, rent requirements, and network/liquidity conditions. These are operational constraints, not a hidden numeric ceiling.
 
 ## Separate legacy runner
 

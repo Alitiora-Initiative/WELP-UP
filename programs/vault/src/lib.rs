@@ -1,12 +1,10 @@
-//! WELP UP! vault program — M2 complete implementation.
+//! WELP UP! vault program — unlaunched security scaffold.
 //!
-//! Per-user PDA vault with global config, share-based accounting,
-//! user slots, treasury, and versioned events.
-//! Mainnet funds must remain disabled until ROADMAP vault gates 3–7 complete.
+//! The program is not deployed to Devnet or Mainnet and has not been audited.
+//! Mainnet funds and automated execution must remain disabled until every
+//! launch gate in docs/PRODUCTION_READINESS.md is independently verified.
 //!
-//! Build (when Anchor + Solana CLI are available):
-//!   anchor build -p welp-vault
-//! Deploy only to devnet until audited.
+//! Build and test against a local validator only. Do not deploy this scaffold.
 
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
@@ -24,9 +22,6 @@ pub const JUPITER_V6_ID: Pubkey = pubkey!("JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QN
 pub use welp_vault_checks::{
     DEFAULT_PER_POSITION_MAX as DEFAULT_PER_POSITION, MIN_POSITION_LAMPORTS as MIN_POSITION,
 };
-
-/// 100 SOL in lamports — aggregate deposit cap per vault.
-const AGGREGATE_CAP_LAMPORTS: u64 = 100_000_000_000;
 
 fn map_err(err: CheckError) -> VaultError {
     match err {
@@ -175,15 +170,6 @@ pub mod welp_vault {
             require!(
                 vault.state == VaultState::Funded || vault.state == VaultState::Active,
                 VaultError::InvalidState
-            );
-            // Enforce 100 SOL aggregate cap
-            require!(
-                vault
-                    .total_deposited_lamports
-                    .checked_add(amount)
-                    .ok_or(VaultError::Overflow)?
-                    <= AGGREGATE_CAP_LAMPORTS,
-                VaultError::AggregateCap
             );
         }
 
@@ -485,8 +471,8 @@ pub mod welp_vault {
     }
 
     /// Trading stays disabled until the approved Jupiter CPI path is implemented.
-    pub fn execute_swap<'a>(
-        ctx: Context<'a, ExecuteSwap<'a>>,
+    pub fn execute_swap<'info>(
+        ctx: Context<'_, '_, '_, 'info, ExecuteSwap<'info>>,
         params: ExecuteSwapParams,
     ) -> Result<()> {
         use anchor_lang::solana_program::instruction::Instruction as SolInstruction;
@@ -591,9 +577,7 @@ pub mod welp_vault {
         // invoke_signed looks up accounts by pubkey so order matters only for the instruction metas.
         #[allow(clippy::redundant_clone)]
         let cpi_account_infos: Vec<AccountInfo> = {
-            let mut v: Vec<AccountInfo> = Vec::with_capacity(
-                ctx.remaining_accounts.len() + 4,
-            );
+            let mut v: Vec<AccountInfo> = Vec::with_capacity(ctx.remaining_accounts.len() + 4);
             for a in ctx.remaining_accounts {
                 v.push(a.clone());
             }
@@ -1139,8 +1123,6 @@ pub enum VaultError {
     InvalidState,
     #[msg("Vault has outstanding shares, cannot close")]
     SharesOutstanding,
-    #[msg("Would exceed 100 SOL aggregate cap")]
-    AggregateCap,
     #[msg("Creator fee basis points exceeds maximum 3000 (30%)")]
     FeeTooHigh,
     #[msg("Invalid or non-positive oracle price")]
