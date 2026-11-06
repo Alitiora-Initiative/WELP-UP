@@ -1,111 +1,69 @@
 # WELP UP!
 
-WELP UP! is a Solana market-analysis and wallet trading interface. It reviews selected live token pools, shows the signals and limits it sees, and lets a user prepare a Jupiter swap for individual approval in Phantom or another compatible wallet.
+WELP UP! is a Solana market research and wallet-approved trading interface. It reads public market and wallet data, evaluates transparent rule-based signals, and prepares Jupiter swap orders for the connected wallet to review and sign.
 
-The deployed browser app does **not** trade unattended. A signal is analysis, not an order. Every current swap must be reviewed and signed by the wallet session on the website. Balances, quotes, and swaps stay locked until that session is active.
+**Production status: not an autonomous trading platform and not a live vault product.** The browser app does not operate user funds without an explicit wallet signature. No unattended agents, copy trading, strategy marketplace settlement, governance voting, referral rewards, or mainnet vault custody are enabled.
 
-## Product flow
+## Current working capabilities
 
-1. Connect a Solana wallet. WELP reads its public address and public balance data.
-2. Review market signals and the reason each token passed or failed the current rules.
-3. Set the swap amount, inspect the quote, and approve that transaction in the wallet.
-4. Review wallet balance snapshots and transaction activity in Portfolio and Profile.
+- Connect a compatible Solana wallet and read its public address and balance.
+- Retrieve live token/market information from the configured market-data providers.
+- Review deterministic signal scores and the rules behind them. A score is not a probability of profit or a forecast.
+- Request a Jupiter Swap API v2 order, review the transaction in the wallet, and submit the wallet-signed order through Jupiter's execute endpoint.
+- View on-chain transaction signatures for a connected wallet through Solana RPC.
+- View browser-local activity and wallet-value snapshots. These are not a complete transaction ledger or verified P&L statement.
+- Adjust local appearance preferences.
 
-The swap amount opens at **0.001 SOL** and is editable. Current browser buy limits are 0.001 SOL minimum and 0.02 SOL maximum per buy.
+## Important limitations
+
+- **No live AI execution:** the AI Bot Studio does not have a production agent runtime, delegated signing authority, or live strategy execution. Bot ROI, TVL, and copier statistics must not be represented as live performance.
+- **No production vault:** the Anchor program ID in source is a placeholder. The program is not deployed or independently audited on mainnet. Vault deposits, withdrawals, and automated trading must remain disabled.
+- **No copy trading:** there is no production bot-owner identity, follower consent, trade replication, or profit-share settlement system.
+- **No account backend:** preferences and activity stored in localStorage are specific to one browser. There is no authenticated user account, server-side profile, secure API-key manager, or multi-device sync.
+- **No governance or referral settlement:** no governance program, proposal registry, referral attribution, or reward payment system is deployed.
+- **No production fee routing:** the requested $0.10 fee and 60/40 operator/treasury split are not active. A treasury destination, on-chain payment flow, fee disclosures, reconciliation, and operational controls must exist before collection can be enabled.
+- **No max deposit/withdrawal policy is promised.** Any future vault limits must be disclosed and enforced by audited on-chain logic. Do not assume unlimited withdrawals or deposits until the program design and liquidity mechanics support them.
+- The existing Anchor/devnet configuration is for development and test workflows only. It is not evidence of a mainnet deployment and must never be used to invite mainnet deposits.
 
 ## Pages
 
-- `/` — product overview and how the current flow works.
-- `/dashboard` — trading console overview.
-- `/signals` — live market scanner and rule scores.
-- `/autonomous` — AI Bot Studio for creating local paper bots, manually simulating prices, and reviewing simulated grid metrics. It does not place orders.
-- `/swap` — token search, Jupiter quote, and wallet-approved swap.
-- `/leaderboard` — bot performance leaderboard with 7D/30D/All-time ROI, TVL, and copier count. Demo data until on-chain settlement records are available.
-- `/notifications` — in-app feed of public repository releases and commits; refreshes while open. No push delivery.
-- `/settings` — theme (`system` / `light` / `dark`) and text scale (`Compact` / `Normal` / `Large`) preferences, persisted locally.
-- `/vault` — Devnet-only vault PDA setup, funding, owner pause/revoke, and SOL withdrawal.
-- `/safety` — current rules, risks, and future vault requirements.
-- `/activity` — wallet-value snapshots, strategy scan events, and swaps recorded by this browser.
-- `/profile` — connected wallet, public balance summary, and paginated on-chain transaction history (10, 25, 50, or 100 per page).
-- `/terms` — Terms and Conditions (v1.0).
-- `/privacy` — Privacy Policy.
+- `/` — product overview.
+- `/dashboard` — market and wallet console.
+- `/signals` — rule-based market scanner.
+- `/swap` — Jupiter order preparation and wallet-signed execution.
+- `/profile` — connected wallet summary and public on-chain history.
+- `/activity` — browser-local activity and balance snapshots.
+- `/settings` — local appearance preferences.
+- `/vault` — vault launch status; funding is not enabled.
+- `/autonomous` — agent launch status; live agent execution is not enabled.
+- `/docs` — product and integration documentation.
+- `/whitepaper` — official technical/product whitepaper.
+- `/terms`, `/privacy`, `/safety` — legal and safety information.
 
-Activity snapshots and the activity feed are stored locally in the browser under the connected public wallet address. Profile transaction history is fetched from Solana RPC for the connected address. Neither page is an authenticated account service, complete portfolio ledger, tax report, or profit-and-loss statement. Local activity does not sync between devices.
+## Architecture
 
-## Current market and trade limits
+- Next.js App Router and React.
+- Solana Kit / Wallet Standard for wallet connection and transaction signing.
+- Jupiter Swap API v2 for order creation and execution.
+- Solana mainnet RPC for public wallet and transaction reads.
+- Anchor/Rust source under `programs/vault` is an unlaunched vault scaffold. The deployed app must fail closed while the program ID is unverified or the security gates are incomplete.
+- Python modules under `welp/` are research/agent code; their presence does not mean a production hosted agent is running.
 
-- Signal discovery evaluates a small set of trending Solana pools. The current web scanner is rule-based; it is not an unattended AI trader.
-- Entry scores must fall within 80–98 inclusive. A score is not a probability of profit.
-- A buy requires at least $0.50 estimated wallet equity and checks that 0.003 SOL remains for fees.
-- The interface blocks buys below 0.001 SOL or above 0.02 SOL and blocks quoted price impact above 2.5%.
-- The wallet signs every current swap. Quotes can expire or change. Transactions use real mainnet assets and can lose all value.
+## Local development
 
-These are application checks, not guarantees of safety. See [LIMITS.md](LIMITS.md), [ROADMAP.md](ROADMAP.md), [TERMS.md](TERMS.md), and [PRIVACY.md](PRIVACY.md).
-
-## AI Bot Studio and vault status
-
-The `/autonomous` page now provides a **paper-only strategy builder**. It supports AI Grid, Momentum, and DCA presets; market symbol, Long/Short/Neutral direction, investment, price range, grid quantity, TP/SL, start/stop conditions, runtime, status, and manually entered paper-price ticks. Bot settings are saved in the current browser only. Paper fills and P&L are illustrative calculations from those manual prices; they do not use a live market feed.
-
-The Studio includes the existing wallet connection control in its top bar. Connecting a wallet does not enable bot execution: the Studio sends no exchange or on-chain trade orders, requires no wallet signature for paper runs, and has no AI provider connection. Leverage is not offered. No user losses, liquidations, or balances are routed to an operator treasury.
-
-**Live autonomous trading is not enabled on mainnet.** Architecture and a threat model are published:
-
-- [docs/vault/THREAT_MODEL.md](docs/vault/THREAT_MODEL.md)
-- [docs/vault/ARCHITECTURE.md](docs/vault/ARCHITECTURE.md)
-- Scaffold Anchor program: [programs/vault/](programs/vault/)
-
-The intended design is an isolated on-chain vault funded only with an amount the user explicitly chooses and confirms. A future agent must act within user-approved on-chain limits; owners must retain unilateral pause, revocation, and withdrawal controls. Losses or liquidations belong to the user and are not a source of app revenue. Any future fee must be transparent, separately accounted for, and explicitly approved.
-
-The program ID currently in source is an undeployed placeholder, and its `execute_swap` instruction is deliberately disabled until a reviewed Jupiter CPI is implemented. The `/vault` route is Devnet-only and provides PDA setup, funding, owner pause/revoke controls, and SOL withdrawal only after a configured program address is found executable on Devnet. Set `NEXT_PUBLIC_WELP_VAULT_PROGRAM_ID` only to the address of matching deployed source. If it is missing or not executable, the app refuses to derive a fundable address. Token withdrawals, autonomous trading, Devnet transaction verification, audit, consent flow, and mainnet enablement remain open (see [ROADMAP.md](ROADMAP.md) launch gates). The shared wallet control opens a wallet prompt only after a click and an installed compatible wallet is available; connecting it never opts a user into bot trading.
-
-Product expansion work is tracked in [ROADMAP.md](ROADMAP.md). Fiat on/off-ramp, TradingView charts and broad market listings, perpetual futures, affiliate rewards, and any live bot execution are **planned only** and have no active integration.
-
-## Run locally
-
-Requirements: Node.js and npm. The browser app uses Next.js, React, Solana Kit/Wallet Standard, and Jupiter Swap v2.
+Requirements: Node.js and npm. Install and run:
 
 ```bash
 npm install
 npm run dev
-```
-
-Optional environment variables:
-
-- `NEXT_PUBLIC_SOLANA_RPC_URL` — public Solana RPC endpoint used by the wallet client.
-- `SOLANA_RPC_URL` — server-side RPC endpoint for balance and transaction-history reads.
-- `JUPITER_API_KEY` — server-only Jupiter API key; never prefix it with `NEXT_PUBLIC_`.
-
-The app falls back to public Solana RPC endpoints and Jupiter's unauthenticated limits if keys are not configured. See `.env.example` for variable names.
-
-Before committing or deploying changes, run all checks:
-
-```bash
 npm run lint
 npm run typecheck
-npm run test:paper
-npm run test:notifications
-npm run test:vault-client
-npm run test:charts
-npm run test:security
-npm run build
 ```
 
-Rust host-side checks (requires WSL with Rust toolchain):
+Optional environment variables are documented in `.env.example`. Keep API keys server-side. Never commit wallet seed phrases, private keys, RPC credentials, or provider secrets.
 
-```bash
-wsl -d Ubuntu-26.04 -- bash -lc "cd /mnt/c/Users/mishy/projects/WELP-UP && cargo fmt --check --manifest-path programs/vault/Cargo.toml && cargo clippy --manifest-path programs/vault-checks/Cargo.toml -- -D warnings && cargo test --manifest-path programs/vault-checks/Cargo.toml"
-```
+## Release and security gates
 
-## Legacy command-line agent
+See [docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md), [docs/vault/ARCHITECTURE.md](docs/vault/ARCHITECTURE.md), [docs/vault/THREAT_MODEL.md](docs/vault/THREAT_MODEL.md), [LIMITS.md](LIMITS.md), and [ROADMAP.md](ROADMAP.md). A successful frontend build is not a security audit or authorization to accept deposits.
 
-The repository still contains a separate Python command-line runner under `welp/`. It can scan markets and print status, but it cannot sign or submit swaps. Live swaps run only after a wallet connects on the website.
-
-## Operator and licensing
-
-**Operator:** Joseph Mushelle Nyingeh, Kenya, publishing under the free-tier GitHub organization [Alitiora Initiative](https://github.com/Alitiora-Initiative). Studio site: [alitiora-initiative.vercel.app](https://alitiora-initiative.vercel.app).
-
-Repository source code is distributed under the [MIT License](LICENSE). MIT is the software license; it does not replace or govern the service's Terms and Conditions, privacy disclosures, third-party services, or on-chain permissions. [TERMS.md](TERMS.md) (v1.0, effective 21 October 2026) are the published service terms for the non-custodial interface. [PRIVACY.md](PRIVACY.md) describes how personal information is processed. Independent Kenyan legal review is still recommended for formal reliance. Third-party packages and services retain their own licenses and terms.
-
-## Risks
-
-Mainnet swaps move real assets. Token prices, liquidity, quotes, route availability, and wallet balance estimates can be wrong or change quickly. Blockchain transactions can fail, consume fees, or become irreversible. No signal, filter, chart, audit, or take-profit plan guarantees a return or an exit. Only transact with assets you can afford to lose.
+WELP UP does not promise profits, capital protection, liquidity, or uninterrupted execution. On-chain transactions are irreversible in many circumstances and users can lose all funds they trade.
