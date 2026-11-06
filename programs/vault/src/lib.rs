@@ -471,7 +471,7 @@ pub mod welp_vault {
     }
 
     /// Trading stays disabled until the approved Jupiter CPI path is implemented.
-    pub fn execute_swap<'a>(
+    pub fn execute_swap<'info>(
         ctx: Context<'_, '_, '_, 'info, ExecuteSwap<'info>>,
         params: ExecuteSwapParams,
     ) -> Result<()> {
