@@ -472,7 +472,7 @@ pub mod welp_vault {
 
     /// Trading stays disabled until the approved Jupiter CPI path is implemented.
     pub fn execute_swap<'a>(
-        ctx: Context<'a, ExecuteSwap<'a>>,
+        ctx: Context<'_, '_, '_, 'info, ExecuteSwap<'info>>,
         params: ExecuteSwapParams,
     ) -> Result<()> {
         use anchor_lang::solana_program::instruction::Instruction as SolInstruction;
