@@ -18,6 +18,7 @@ export const metadata: Metadata = {
     siteName: 'WELP UP!',
     title: 'WELP UP! — Solana Market Console',
     description: 'Live Solana market data, transparent rule scores and wallet-approved execution.',
+    images: [{ url: '/welp-up-logo.svg', width: 512, height: 512, alt: 'WELP UP! logo' }],
   },
   twitter: {
     card: 'summary_large_image',
@@ -25,7 +26,8 @@ export const metadata: Metadata = {
     description: 'Live Solana market data, transparent rule scores and wallet-approved execution.',
   },
   robots: { index: true, follow: true },
-  icons: { icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }], apple: [{ url: '/icon.svg', type: 'image/svg+xml' }] },
+  icons: { icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }, { url: '/icon.svg', type: 'image/svg+xml' }], apple: [{ url: '/icon.svg', type: 'image/svg+xml' }] },
+
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

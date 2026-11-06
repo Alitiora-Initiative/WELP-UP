@@ -776,3 +776,70 @@ html, body {
   filter: brightness(.94);
   box-shadow: inset 0 2px 6px rgba(0,0,0,.22), 0 1px 4px rgba(0,0,0,.2);
 }
+
+
+/* ── Accessibility: readable type scale ─────────────────────────────────
+   Raise dense terminal microcopy to a comfortable floor without changing
+   component logic, layout state, or heading hierarchy. */
+.terminal-site {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+.terminal-site :where(
+  .network-badge, .site-nav a, .desk-link, .connect-button,
+  .wallet-connect-error, .ticker-item, .ticker-item strong, .ticker-item em,
+  .ticker-live, .ticker-status, .footer-brand p, .footer-brand small,
+  .footer-column strong, .footer-column a, .footer-bottom,
+  .eyebrow, .market-intro-row p, .page-heading p,
+  .live-status, .status-pill, .outline-button, .market-stats span,
+  .feature-stat > span, .market-stats small, .feature-stat small,
+  .market-search input, .explorer-search input, .market-sort,
+  .market-sort select, .text-action, .rules-explainer strong,
+  .rules-explainer span, .market-board-heading span, .market-tabs button,
+  .market-tabs button b, .selection-bar, .market-table th,
+  .market-table td, .asset-cell strong, .asset-cell small,
+  .asset-cell code, .numeric, .score-cell, .asset-state,
+  .state-reason, .market-pagination, .market-disclosures section > span,
+  .market-disclosures p, .market-disclosures a, .text-link,
+  .feed-error, .terminal-panel-heading > span, .terminal-panel-heading h2,
+  .muted-copy, .muted-note, .policy-list strong, .gate-row strong,
+  .policy-list small, .gate-row small, .field-label,
+  .field-label input, .field-label select, .checkbox-field,
+  .primary-action, .outline-button.small, .form-grid,
+  .leaderboard-table, .leaderboard-table th, .leaderboard-table td,
+  .leaderboard-rank, .leaderboard-bot-name, .leaderboard-creator,
+  .leaderboard-strategy-badge, .leaderboard-copy-button,
+  .leaderboard-loading, .leaderboard-error, .leaderboard-modal-dl,
+  .leaderboard-modal-disclaimer, .leaderboard-cancel-button
+) {
+  font-size: max(12px, 1em);
+}
+.terminal-site :where(
+  .ticker-item, .ticker-live, .market-table th, .asset-cell code,
+  .market-stats span, .feature-stat > span, .eyebrow,
+  .terminal-panel-heading > span, .leaderboard-table th
+) {
+  letter-spacing: .045em;
+}
+.terminal-site :where(
+  .market-intro-row p, .page-heading p, .market-disclosures p,
+  .muted-copy, .muted-note, .policy-list small, .gate-row small,
+  .footer-brand p, .feed-error
+) { line-height: 1.65; }
+.terminal-site :where(input, select, textarea) {
+  font-size: max(16px, 1em);
+}
+.terminal-site :where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid rgba(131, 217, 255, .9);
+  outline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .terminal-site :where(.terminal-page) {
+    width: min(100% - 32px, 1440px);
+  }
+  .terminal-site :where(.market-table td, .market-table th) {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+}

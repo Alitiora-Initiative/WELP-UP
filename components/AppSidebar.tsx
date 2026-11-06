@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { Activity, ArrowDownUp, Bot, BookOpen, FileText, Home, LayoutDashboard, LineChart, LockKeyhole, Settings, Shield, ShieldCheck, Trophy, UserRound, Vault } from 'lucide-react';
 
@@ -12,7 +13,7 @@ export function AppSidebar({ active, signalCount = '—', status = 'Ready when w
   return (
     <aside className="sidebar">
       <Link className="brand" href="/" aria-label="WELP UP home">
-        <span className="brand-mark">W</span>
+        <span className="brand-mark"><Image src="/welp-up-logo.svg" alt="" width={36} height={36} priority /></span>
         <span><strong>WELP UP</strong><small>AGENT CONSOLE</small></span>
       </Link>
       <div className="network-chip"><span className="network-pip" /> SOLANA {network.toUpperCase()}</div>
