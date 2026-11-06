@@ -9,7 +9,7 @@ const rec = (value: unknown): Row => value && typeof value === 'object' && !Arra
 const n = (value: unknown, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback;
 const clamp = (value: number) => Math.max(0, Math.min(100, value));
 const scale = (value: number, low: number, high: number) => value <= low ? 0 : value >= high ? 100 : clamp((Math.log10(value) - Math.log10(low)) / (Math.log10(high) - Math.log10(low)) * 100);
-const concentration = (value: unknown): number | null => value === null || value === undefined || value === '' || !Number.isFinite(Number(value)) ? null : clamp(Number(value) <= 1 ? Number(value) * 100 : Number(value));
+const concentration = (value: unknown): number | null => value === null || value === undefined || value === '' || !Number.isFinite(Number(value)) ? null : clamp(Number(value));
 
 function scoreToken(row: Row) {
   const audit = rec(row.audit);
@@ -29,7 +29,7 @@ function scoreToken(row: Row) {
   const depth = scale(liquidity, 100_000, 100_000_000);
   const turnover = liquidity > 0 ? volume / liquidity : 0;
   const holderSpread = topHolders === null ? 50 : clamp(100 - topHolders);
-  const calm = clamp(100 - Math.abs(n(s5.priceChange) * 100) * 2.5 - Math.abs(n(s1.priceChange) * 100) * 0.65);
+  const calm = clamp(100 - Math.abs(n(s5.priceChange)) * 2.5 - Math.abs(n(s1.priceChange)) * 0.65);
   const quality = organic * 0.32 + depth * 0.20 + scale(turnover, 0.05, 8) * 0.15
     + holderSpread * 0.13 + buyPressure * 0.12 + calm * 0.08;
   const score = Math.round(80 + quality * 0.18);
@@ -42,7 +42,7 @@ function scoreToken(row: Row) {
   if (freezeDisabled === null) warnings.push('Freeze-authority status is not reported');
   if (liquidity >= 100_000 && liquidity < 250_000) warnings.push('Liquidity is below the $250,000 desk guide');
   if (topHolders !== null && topHolders > 50 && topHolders <= 60) warnings.push('Top holders own ' + topHolders.toFixed(1) + '%');
-  const change = n(s24.priceChange) * 100;
+  const change = n(s24.priceChange);
   if (change <= -25) warnings.push('24-hour drawdown is ' + change.toFixed(1) + '%');
   if (row.isVerified !== true) warnings.push('Token is not marked verified by the feed');
   if (topHolders === null) warnings.push('Holder concentration is unavailable');
