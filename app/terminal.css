@@ -530,3 +530,200 @@ button, input, select, textarea { font-size: 13px; }
   .home-market-snapshot strong { font-size: 16px; }
   .home-market-candidates strong { font-size: 12px; }
 }
+
+
+/* ── WELP UP premium glass system ─────────────────────────────────────── */
+:root {
+  --terminal-bg: #070a10;
+  --terminal-panel: rgba(14, 19, 29, .78);
+  --terminal-panel-raised: rgba(20, 27, 40, .84);
+  --terminal-border: rgba(157, 178, 211, .15);
+  --terminal-border-soft: rgba(157, 178, 211, .09);
+  --terminal-text: #edf4ff;
+  --terminal-muted: #8e9bb0;
+  --terminal-subtle: #bac7da;
+  --terminal-accent: #b9f36d;
+  --terminal-accent-dim: rgba(185, 243, 109, .12);
+  --terminal-blue: #83d9ff;
+  --terminal-violet: #a99aff;
+}
+html, body {
+  background:
+    radial-gradient(ellipse at 12% -8%, rgba(64, 111, 170, .18), transparent 36rem),
+    radial-gradient(ellipse at 92% 8%, rgba(112, 80, 185, .14), transparent 34rem),
+    linear-gradient(145deg, #070a10 0%, #090d15 48%, #080b12 100%) !important;
+}
+.terminal-site {
+  background:
+    radial-gradient(ellipse at 12% 0%, rgba(57, 107, 163, .13), transparent 42rem),
+    radial-gradient(ellipse at 88% 18%, rgba(117, 79, 183, .10), transparent 38rem),
+    transparent;
+}
+.site-header {
+  border-bottom-color: rgba(169, 193, 226, .12);
+  background: rgba(7, 10, 17, .78);
+  backdrop-filter: blur(24px) saturate(155%);
+  -webkit-backdrop-filter: blur(24px) saturate(155%);
+}
+.ticker-strip, .ticker-live {
+  border-color: rgba(169, 193, 226, .10);
+  background: rgba(9, 13, 21, .72);
+  backdrop-filter: blur(16px);
+}
+.site-footer { background: rgba(8, 12, 19, .78); }
+.terminal-panel, .market-board, .home-market-card, .home-tool-card,
+.home-stat-strip, .home-safety-banner, .mega-menu,
+.leaderboard-preview-card, .leaderboard-status-card {
+  border: 1px solid rgba(166, 190, 224, .14);
+  border-radius: 18px;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.045), transparent 42%),
+    linear-gradient(135deg, rgba(18, 26, 40, .88), rgba(10, 15, 24, .84));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.055), 0 18px 54px rgba(0,0,0,.22);
+  backdrop-filter: blur(18px) saturate(135%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+}
+.market-board { overflow: hidden; }
+.home-market-card {
+  border-color: rgba(185, 243, 109, .22);
+  background:
+    radial-gradient(ellipse at 82% 0%, rgba(131, 217, 255, .11), transparent 55%),
+    linear-gradient(145deg, rgba(255,255,255,.055), transparent 42%),
+    rgba(12, 19, 29, .88);
+}
+.home-tool-card { transition: transform .28s ease, border-color .28s ease, box-shadow .28s ease; }
+.home-tool-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(131, 217, 255, .34);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.09), 0 20px 48px rgba(29, 94, 145, .13);
+}
+.home-stat-strip { overflow: hidden; }
+.home-stat-strip > div { border-color: rgba(166, 190, 224, .11); }
+.market-stats, .feature-stats {
+  border-color: rgba(166, 190, 224, .14);
+  border-radius: 16px;
+  background: rgba(15, 21, 32, .76);
+  backdrop-filter: blur(18px);
+}
+.market-stats > div, .feature-stat { border-color: rgba(166, 190, 224, .11); }
+.market-table thead { background: rgba(29, 40, 57, .66); }
+.market-table td { border-top-color: rgba(166, 190, 224, .08); }
+.market-table tbody tr:hover { background: rgba(131, 217, 255, .045); }
+.market-board-heading h2, .terminal-panel-heading h2 { letter-spacing: -.04em; }
+.terminal-page { padding-top: clamp(30px, 4vw, 58px); }
+.eyebrow { color: #a9b8cd; }
+.market-intro-row h1 span, .page-heading h1 span { color: var(--terminal-accent); text-shadow: 0 0 28px rgba(185,243,109,.16); }
+
+/* One consistent tactile glass treatment for action buttons and button-like links. */
+:where(
+  .terminal-site button:not(.text-action):not(.sort-heading):not(.watch-button):not(.mobile-nav-toggle):not(.leaderboard-modal-close):not(.icon-button),
+  .terminal-site .primary-action,
+  .terminal-site .outline-button,
+  .terminal-site .desk-link,
+  .terminal-site .home-secondary-link,
+  .terminal-site .text-link,
+  .terminal-site .market-disclosures a,
+  .terminal-site .home-actions a
+) {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgba(215, 232, 255, .22);
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(255,255,255,.12), rgba(255,255,255,.035) 52%, rgba(131,217,255,.045)), rgba(255,255,255,.055);
+  color: #edf5ff;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.40),
+    inset 0 -1px 0 rgba(0,0,0,.24),
+    0 5px 16px rgba(0,0,0,.25),
+    0 2px 16px rgba(131,217,255,.055);
+  backdrop-filter: blur(14px) saturate(155%);
+  -webkit-backdrop-filter: blur(14px) saturate(155%);
+  transition: transform .3s ease-out, background .3s ease-out, border-color .3s ease-out, box-shadow .3s ease-out, filter .3s ease-out, backdrop-filter .3s ease-out;
+  -webkit-tap-highlight-color: transparent;
+}
+:where(
+  .terminal-site button:not(.text-action):not(.sort-heading):not(.watch-button):not(.mobile-nav-toggle):not(.leaderboard-modal-close):not(.icon-button),
+  .terminal-site .primary-action,
+  .terminal-site .outline-button,
+  .terminal-site .desk-link,
+  .terminal-site .home-secondary-link,
+  .terminal-site .text-link,
+  .terminal-site .market-disclosures a,
+  .terminal-site .home-actions a
+)::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0 0 auto;
+  height: 58%;
+  border-radius: inherit;
+  background: linear-gradient(165deg, rgba(255,255,255,.26), rgba(255,255,255,.09) 42%, transparent 100%);
+  pointer-events: none;
+}
+:where(
+  .terminal-site button:not(.text-action):not(.sort-heading):not(.watch-button):not(.mobile-nav-toggle):not(.leaderboard-modal-close):not(.icon-button),
+  .terminal-site .primary-action,
+  .terminal-site .outline-button,
+  .terminal-site .desk-link,
+  .terminal-site .home-secondary-link,
+  .terminal-site .text-link,
+  .terminal-site .market-disclosures a,
+  .terminal-site .home-actions a
+) > * { position: relative; z-index: 1; }
+:where(
+  .terminal-site button:not(.text-action):not(.sort-heading):not(.watch-button):not(.mobile-nav-toggle):not(.leaderboard-modal-close):not(.icon-button),
+  .terminal-site .primary-action,
+  .terminal-site .outline-button,
+  .terminal-site .desk-link,
+  .terminal-site .home-secondary-link,
+  .terminal-site .text-link,
+  .terminal-site .market-disclosures a,
+  .terminal-site .home-actions a
+):hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: rgba(192, 224, 255, .43);
+  background-color: rgba(255,255,255,.10);
+  filter: brightness(1.08);
+  box-shadow: 0 0 15px rgba(131,217,255,.17), inset 0 1px 0 rgba(255,255,255,.48), 0 9px 24px rgba(0,0,0,.32);
+  backdrop-filter: blur(19px) saturate(175%);
+}
+:where(
+  .terminal-site button:not(.text-action):not(.sort-heading):not(.watch-button):not(.mobile-nav-toggle):not(.leaderboard-modal-close):not(.icon-button),
+  .terminal-site .primary-action,
+  .terminal-site .outline-button,
+  .terminal-site .desk-link,
+  .terminal-site .home-secondary-link,
+  .terminal-site .text-link,
+  .terminal-site .market-disclosures a,
+  .terminal-site .home-actions a
+):active:not(:disabled) {
+  transform: scale(.97);
+  filter: brightness(.94);
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.22), 0 1px 4px rgba(0,0,0,.2);
+}
+:where(
+  .terminal-site button:not(.text-action):not(.sort-heading):not(.watch-button):not(.mobile-nav-toggle):not(.leaderboard-modal-close):not(.icon-button)
+):disabled { opacity: .48; cursor: not-allowed; box-shadow: inset 0 1px 0 rgba(255,255,255,.12); }
+:where(.site-nav-trigger, .market-tabs button, .market-pagination button, .outline-button, .primary-action) { min-height: 40px; }
+.site-nav-trigger { border: 1px solid transparent; border-radius: 11px; background: transparent; color: #aab8ca; transition: .25s ease; }
+.site-nav-trigger:hover, .site-nav-trigger.is-active {
+  border-color: rgba(131,217,255,.17);
+  background: rgba(131,217,255,.075);
+  color: #f2f7ff;
+}
+.site-nav-trigger.is-active { box-shadow: inset 0 -2px 0 var(--terminal-accent); }
+.network-badge, .live-status, .status-pill { border-color: rgba(166,190,224,.17); background: rgba(255,255,255,.035); backdrop-filter: blur(12px); }
+.market-search, .explorer-search, .field-label input, .field-label select, .market-sort select {
+  border-color: rgba(166,190,224,.17);
+  border-radius: 11px;
+  background: rgba(7, 12, 20, .72);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.18);
+}
+.mega-menu { background: rgba(11, 17, 27, .94); }
+@media (max-width: 900px) {
+  .terminal-panel, .market-board, .home-market-card, .home-tool-card, .home-stat-strip, .home-safety-banner { border-radius: 15px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-tool-card, .terminal-site button, .terminal-site a { transition: none !important; }
+}
