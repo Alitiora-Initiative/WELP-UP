@@ -3,16 +3,12 @@
 import { LogOut, Wallet } from 'lucide-react';
 import { useConnect, useConnectedWallet, useDisconnect, useWallets } from '@solana/kit-plugin-wallet/react';
 import { client } from '@/components/Providers';
-import { devnetVaultClient } from '@/lib/devnet-client';
 
-type WalletNetwork = 'mainnet' | 'devnet';
-
-export function WalletConnectionControl({ network = 'mainnet' }: { network?: WalletNetwork }) {
-  const activeClient = network === 'devnet' ? devnetVaultClient : client;
-  const connected = useConnectedWallet(activeClient);
-  const wallets = useWallets(activeClient);
-  const connect = useConnect(activeClient);
-  const disconnect = useDisconnect(activeClient);
+export function WalletConnectionControl() {
+  const connected = useConnectedWallet(client);
+  const wallets = useWallets(client);
+  const connect = useConnect(client);
+  const disconnect = useDisconnect(client);
   const connectError = connect.error instanceof Error ? connect.error.message : '';
 
   function connectWallet() {
@@ -25,7 +21,7 @@ export function WalletConnectionControl({ network = 'mainnet' }: { network?: Wal
     const shortAddress = `${address.slice(0, 4)}…${address.slice(-4)}`;
 
     return (
-      <div className="connect-wrap" aria-label={`Wallet connected on Solana ${network}`}>
+      <div className="connect-wrap" aria-label="Wallet connected on Solana mainnet">
         <div className="wallet-connected">
           <span className="wallet-pip" />
           <span className="wallet-name">{connected.wallet.name}</span>
@@ -41,7 +37,7 @@ export function WalletConnectionControl({ network = 'mainnet' }: { network?: Wal
   return (
     <div className="wallet-connect-control">
       <div className="connect-wrap">
-        <button className="connect-button" type="button" onClick={connectWallet} disabled={!wallets.length || connect.isRunning} aria-label={`Connect wallet to Solana ${network}`}>
+        <button className="connect-button" type="button" onClick={connectWallet} disabled={!wallets.length || connect.isRunning} aria-label="Connect wallet to Solana mainnet">
           <Wallet size={15} /> {connect.isRunning ? 'Connecting…' : 'Connect wallet'}
         </button>
         {!wallets.length ? <a className="wallet-install-link" href="https://phantom.app/download" target="_blank" rel="noreferrer">Install Phantom</a> : null}
