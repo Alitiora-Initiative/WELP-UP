@@ -1102,3 +1102,149 @@ h2 { margin: 0; font: 600 17px var(--display); letter-spacing: -.02em; }
   margin: 0;
   line-height: 1.5;
 }
+
+
+/* iPhone-inspired glass finish for interactive controls */
+:where(
+  .connect-button,
+  .primary-button,
+  .profile-copy-button,
+  .refresh-button,
+  .vault-secondary-button,
+  .vault-danger-button,
+  .studio-create-button,
+  .leaderboard-copy-button,
+  .leaderboard-cancel-button,
+  .history-pagination button,
+  .studio-templates button,
+  .studio-tick-list button,
+  .studio-directions button
+) {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 10px;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 38%),
+    inset 0 -1px 0 rgb(0 0 0 / 20%),
+    0 3px 9px rgb(0 0 0 / 24%);
+  transition:
+    transform 160ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    filter 180ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where(
+  .connect-button,
+  .primary-button,
+  .profile-copy-button,
+  .refresh-button,
+  .vault-secondary-button,
+  .vault-danger-button,
+  .studio-create-button,
+  .leaderboard-copy-button,
+  .leaderboard-cancel-button,
+  .history-pagination button,
+  .studio-templates button,
+  .studio-tick-list button,
+  .studio-directions button
+)::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 auto;
+  height: 58%;
+  border-radius: inherit;
+  background: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 24%) 0%,
+    rgb(255 255 255 / 9%) 38%,
+    rgb(255 255 255 / 0%) 100%
+  );
+  pointer-events: none;
+}
+
+:where(
+  .connect-button,
+  .primary-button,
+  .profile-copy-button,
+  .refresh-button,
+  .vault-secondary-button,
+  .vault-danger-button,
+  .studio-create-button,
+  .leaderboard-copy-button,
+  .leaderboard-cancel-button,
+  .history-pagination button,
+  .studio-templates button,
+  .studio-tick-list button,
+  .studio-directions button
+):hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.08) saturate(1.06);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 48%),
+    inset 0 -1px 0 rgb(0 0 0 / 18%),
+    0 6px 16px rgb(0 0 0 / 30%);
+}
+
+:where(
+  .connect-button,
+  .primary-button,
+  .profile-copy-button,
+  .refresh-button,
+  .vault-secondary-button,
+  .vault-danger-button,
+  .studio-create-button,
+  .leaderboard-copy-button,
+  .leaderboard-cancel-button,
+  .history-pagination button,
+  .studio-templates button,
+  .studio-tick-list button,
+  .studio-directions button
+):active:not(:disabled) {
+  transform: translateY(1px) scale(.985);
+  filter: brightness(.97);
+  box-shadow:
+    inset 0 2px 5px rgb(0 0 0 / 20%),
+    0 1px 3px rgb(0 0 0 / 20%);
+}
+
+:where(
+  .connect-button,
+  .primary-button,
+  .profile-copy-button,
+  .refresh-button,
+  .vault-secondary-button,
+  .vault-danger-button,
+  .studio-create-button,
+  .leaderboard-copy-button,
+  .leaderboard-cancel-button,
+  .history-pagination button,
+  .studio-templates button,
+  .studio-tick-list button,
+  .studio-directions button
+):disabled {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 10%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(
+    .connect-button,
+    .primary-button,
+    .profile-copy-button,
+    .refresh-button,
+    .vault-secondary-button,
+    .vault-danger-button,
+    .studio-create-button,
+    .leaderboard-copy-button,
+    .leaderboard-cancel-button,
+    .history-pagination button,
+    .studio-templates button,
+    .studio-tick-list button,
+    .studio-directions button
+  ) {
+    transition: none;
+  }
+}
