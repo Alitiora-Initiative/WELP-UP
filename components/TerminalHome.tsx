@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowDownUp, ArrowRight, ArrowUpRight, Bot, ChartNoAxesCombined, CircleGauge, LockKeyhole, ShieldCheck, Sparkles, Vault, Wallet } from 'lucide-react';
+import { ArrowDownUp, ArrowRight, ArrowUpRight, Bot, ChartNoAxesCombined, CircleGauge, LockKeyhole, ShieldCheck, Sparkles, Wallet } from 'lucide-react';
 
 type Asset = {
   mint: string; name: string; symbol: string; priceUsd: number; priceChange24h: number;
