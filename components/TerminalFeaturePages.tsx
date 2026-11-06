@@ -246,9 +246,6 @@ export function TerminalFeaturePage({ kind }: { kind: FeatureKind }) {
   if (kind === 'explorer') return <ExplorerPage />;
   return <GenericUnavailable kind={kind} />;
 }
- + activeBalance.stableUsd.toFixed(2) : '—'} detail="USDC and USDT snapshot" /><Stat label="TOTAL READ" value={balance ? '$' + balance.equityUsd.toFixed(2) : '—'} detail="Estimated SOL + stablecoin value" /></div>{error ? <div className="feed-error">{error}</div> : null}<TransactionHistory owner={owner} /></> : <div className="empty-panel centered"><Wallet size={24} /><strong>Open a wallet session</strong><p>Connect a Solana wallet to read balances and on-chain transaction history.</p></div>}
-  </main>;
-}
 
 function ActivityLogsPage() {
   const connected = useConnectedWallet(client);
@@ -313,9 +310,6 @@ export function TerminalFeaturePage({ kind }: { kind: FeatureKind }) {
   if (kind === 'explorer') return <ExplorerPage />;
   return <GenericUnavailable kind={kind} />;
 }
- + activeBalance.equityUsd.toFixed(2) : '—'} detail="Estimated SOL + stablecoin value" /></div>{error ? <div className="feed-error">{error}</div> : null}<TransactionHistory owner={owner} /></> : <div className="empty-panel centered"><Wallet size={24} /><strong>Open a wallet session</strong><p>Connect a Solana wallet to read balances and on-chain transaction history.</p></div>}
-  </main>;
-}
 
 function ActivityLogsPage() {
   const connected = useConnectedWallet(client);
@@ -379,9 +373,6 @@ export function TerminalFeaturePage({ kind }: { kind: FeatureKind }) {
   if (kind === 'risk') return <RiskPage />;
   if (kind === 'explorer') return <ExplorerPage />;
   return <GenericUnavailable kind={kind} />;
-}
- + activeBalance.stableUsd.toFixed(2) : '—'} detail="USDC and USDT snapshot" /><Stat label="TOTAL READ" value={balance ? '$' + balance.equityUsd.toFixed(2) : '—'} detail="Estimated SOL + stablecoin value" /></div>{error ? <div className="feed-error">{error}</div> : null}<TransactionHistory owner={owner} /></> : <div className="empty-panel centered"><Wallet size={24} /><strong>Open a wallet session</strong><p>Connect a Solana wallet to read balances and on-chain transaction history.</p></div>}
-  </main>;
 }
 
 function ActivityLogsPage() {
