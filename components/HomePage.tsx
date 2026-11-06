@@ -13,8 +13,8 @@ const steps = [
 
 const destinations = [
   { href: '/signals', icon: Activity, title: 'Live signals', copy: 'Review candidates, price movement, score and entry status.' },
-  { href: '/autonomous', icon: Bot, title: 'Autonomous AI', copy: 'Configure AI-powered trading strategies (coming soon).' },
-  { href: '/vault', icon: Vault, title: 'Vault', copy: 'Set up your on-chain vault, deposit SOL, and manage owner controls.' },
+  { href: '/autonomous', icon: Bot, title: 'Autonomous AI', copy: 'Live agent execution is not enabled; no simulated bot performance is shown.' },
+  { href: '/vault', icon: Vault, title: 'Vault', copy: 'Vault funding is disabled until a verified and audited mainnet program is available.' },
   { href: '/swap', icon: ArrowDownUp, title: 'Swap', copy: 'Prepare a quote and approve one transaction in your wallet.' },
   { href: '/activity', icon: ChartNoAxesCombined, title: 'Portfolio activity', copy: 'See recorded wallet snapshots, scans and approved swaps.' },
   { href: '/safety', icon: ShieldCheck, title: 'Safety rules', copy: 'Read the current limits and what the app does not do yet.' },
