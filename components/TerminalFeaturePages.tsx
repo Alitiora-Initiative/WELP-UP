@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useConnectedWallet } from '@solana/kit-plugin-wallet/react';
-import { ArrowUpRight, ExternalLink, LoaderCircle, LockKeyhole, RefreshCw, Search, ShieldAlert, ShieldCheck, Wallet } from 'lucide-react';
+import { ArrowUpRight, ExternalLink, LoaderCircle, LockKeyhole, RefreshCw, Search, ShieldAlert, Wallet } from 'lucide-react';
 import { client } from '@/components/Providers';
 import { WalletConnectionControl } from '@/components/WalletConnectionControl';
 import { TransactionHistory } from '@/components/TransactionHistory';
