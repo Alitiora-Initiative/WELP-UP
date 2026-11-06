@@ -1,5 +1,2 @@
-import { Dashboard } from '@/components/Dashboard';
-
-export default function DashboardRoute() {
-  return <Dashboard view="console" />;
-}
+import { redirect } from 'next/navigation';
+export default function DashboardRoute() { redirect('/markets'); }

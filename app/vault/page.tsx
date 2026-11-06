@@ -1,5 +1,2 @@
-import { VaultPage } from '@/components/VaultPage';
-
-export default function VaultRoute() {
-  return <VaultPage />;
-}
+import { TerminalFeaturePage } from '@/components/TerminalFeaturePages';
+export default function VaultPage() { return <TerminalFeaturePage kind="vault" />; }
