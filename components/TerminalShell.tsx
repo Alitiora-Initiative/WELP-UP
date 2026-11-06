@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ArrowUpRight, ChevronDown, Menu, X } from 'lucide-react';
 import { WalletConnectionControl } from '@/components/WalletConnectionControl';

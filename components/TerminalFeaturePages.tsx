@@ -19,7 +19,7 @@ type Asset = {
 };
 type Feed = { assets: Asset[]; eligible: number; blocked: number; updatedAt: string; error?: string };
 type Policy = { id: string; name: string; liquidity: number; organic: number; drawdown: number; verified: boolean; preset: string };
-type Status = { updatedAt: string; overall: string; checks: Array<{ name: string; state: string; detail: string }> };
+type Status = { updatedAt: string; overall: string; error?: string; checks: Array<{ name: string; state: string; detail: string }> };
 
 function Heading({ eyebrow, title, detail, action }: { eyebrow: string; title: ReactNode; detail: string; action?: ReactNode }) {
   return <div className="page-heading"><div><div className="eyebrow"><i className="eyebrow-dot" /> {eyebrow}</div><h1>{title}</h1><p>{detail}</p></div>{action}</div>;
