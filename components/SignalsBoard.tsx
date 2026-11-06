@@ -30,7 +30,7 @@ export function SignalsBoard() {
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Could not refresh signals.'); }
     finally { setLoading(false); }
   }, []);
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => { const timer = window.setTimeout(() => void refresh(), 0); return () => window.clearTimeout(timer); }, [refresh]);
   const shown = assets.filter((asset) => filter === 'All' || (filter === 'Eligible' && asset.eligible) || (filter === 'Blocked' && !asset.eligible));
   return <main className="terminal-page feature-page">
     <div className="page-heading"><div><div className="eyebrow"><i className="eyebrow-dot" /> DETERMINISTIC RULE ENGINE · NO PREDICTION</div><h1>Signals with <span>the reason attached.</span></h1><p>Each tracked asset is tested against published hard rules, then scored on live fields. A blocked row names the rule that stopped it.</p></div><button className="outline-button" onClick={() => void refresh()} disabled={loading}><RefreshCw size={14} className={loading ? 'spin' : ''} /> Re-scan</button></div>

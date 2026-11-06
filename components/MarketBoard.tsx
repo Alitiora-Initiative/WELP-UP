@@ -14,7 +14,6 @@ type Filter = 'All' | 'Eligible' | 'Blocked' | 'Score 90+' | 'Verified';
 const compact = (value: number) => value >= 1e9 ? '$' + (value / 1e9).toFixed(1) + 'B' : value >= 1e6 ? '$' + (value / 1e6).toFixed(1) + 'M' : value >= 1e3 ? '$' + (value / 1e3).toFixed(value >= 1e5 ? 0 : 1) + 'K' : '$' + value.toFixed(2);
 const price = (value: number) => value >= 1000 ? '$' + value.toLocaleString('en-US', { maximumFractionDigits: 2 }) : value >= 1 ? '$' + value.toFixed(2) : value >= .01 ? '$' + value.toFixed(4) : '$' + value.toPrecision(4);
 const short = (value: string) => value.slice(0, 5) + '…' + value.slice(-5);
-const count = (value: number) => value >= 1e6 ? (value / 1e6).toFixed(1) + 'M' : value >= 1000 ? (value / 1000).toFixed(1) + 'K' : value.toLocaleString();
 
 export function MarketBoard() {
   const [feed, setFeed] = useState<Feed | null>(null);
@@ -28,7 +27,7 @@ export function MarketBoard() {
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [rulesOpen, setRulesOpen] = useState(false);
   const pageSize = 8;
-  useEffect(() => { try { setWatchlist(JSON.parse(localStorage.getItem('welp-watchlist') || '[]') as string[]); } catch { setWatchlist([]); } }, []);
+  useEffect(() => { const timer = window.setTimeout(() => { try { setWatchlist(JSON.parse(localStorage.getItem('welp-watchlist') || '[]') as string[]); } catch { setWatchlist([]); } }, 0); return () => window.clearTimeout(timer); }, []);
 
   const refresh = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
@@ -44,11 +43,11 @@ export function MarketBoard() {
   }, []);
 
   useEffect(() => {
-    void refresh();
+    const initial = window.setTimeout(() => void refresh(), 0);
     const interval = window.setInterval(() => void refresh(true), 60_000);
     const visible = () => { if (document.visibilityState === 'visible') void refresh(true); };
     document.addEventListener('visibilitychange', visible);
-    return () => { window.clearInterval(interval); document.removeEventListener('visibilitychange', visible); };
+    return () => { window.clearTimeout(initial); window.clearInterval(interval); document.removeEventListener('visibilitychange', visible); };
   }, [refresh]);
 
   const assets = feed?.assets ?? [];
@@ -63,7 +62,6 @@ export function MarketBoard() {
   }, [assets, query, filter, sort]);
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const rows = filtered.slice((page - 1) * pageSize, page * pageSize);
-  useEffect(() => { setPage(1); }, [query, filter, sort]);
 
   function toggleWatch(mint: string) {
     setWatchlist((current) => {
@@ -100,13 +98,13 @@ export function MarketBoard() {
     </section>
 
     {error ? <div className="feed-error" role="alert"><strong>Market feed unavailable</strong><span>{error}</span><button className="text-action" onClick={() => void refresh()}>Try again</button></div> : null}
-    <div className="market-toolbar"><label className="market-search"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search symbol, name or mint" aria-label="Search symbol, name or mint" /></label><div className="market-sort"><span>Sorted by</span><select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)} aria-label="Sort assets"><option value="score">Engine score</option><option value="liquidity">Liquidity</option><option value="volume">24h volume</option></select><button className="text-action" onClick={() => setRulesOpen((value) => !value)}><CircleHelp size={14} /> Why a row is blocked</button></div></div>
+    <div className="market-toolbar"><label className="market-search"><Search size={16} /><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Search symbol, name or mint" aria-label="Search symbol, name or mint" /></label><div className="market-sort"><span>Sorted by</span><select value={sort} onChange={(event) => { setSort(event.target.value as typeof sort); setPage(1); }} aria-label="Sort assets"><option value="score">Engine score</option><option value="liquidity">Liquidity</option><option value="volume">24h volume</option></select><button className="text-action" onClick={() => setRulesOpen((value) => !value)}><CircleHelp size={14} /> Why a row is blocked</button></div></div>
 
     {rulesOpen ? <div className="rules-explainer"><div><strong>Hard rules</strong><span>Active freeze authority · liquidity below $100k · 24h volume below $100k · top holders above 60%.</span></div><div><strong>Warnings</strong><span>Liquidity below $250k · 24h drawdown beyond −25% · concentrated holders · incomplete feed data.</span></div><button onClick={() => setRulesOpen(false)} aria-label="Close explanation">×</button></div> : null}
 
     <section className="market-board">
       <div className="market-board-heading"><div><h2>market board</h2><span>{feed ? feed.total + ' assets' : '—'} · {pageSize} per page · {updated}</span></div><button className="outline-button" onClick={() => exportRows(filtered, 'welp-market-board.csv')} disabled={!filtered.length}><Download size={14} /> Export CSV</button></div>
-      <div className="market-tabs">{tabs.map((tab) => <button key={tab.key} className={filter === tab.key ? 'selected' : ''} onClick={() => setFilter(tab.key)}><span>{tab.key === 'Eligible' ? <i className="tab-dot green" /> : tab.key === 'Blocked' ? <i className="tab-dot red" /> : tab.key === 'Score 90+' ? <i className="tab-dot blue" /> : tab.key === 'Verified' ? <i className="tab-dot violet" /> : null}{tab.key}</span><b>{tab.value}</b></button>)}</div>
+      <div className="market-tabs">{tabs.map((tab) => <button key={tab.key} className={filter === tab.key ? 'selected' : ''} onClick={() => { setFilter(tab.key); setPage(1); }}><span>{tab.key === 'Eligible' ? <i className="tab-dot green" /> : tab.key === 'Blocked' ? <i className="tab-dot red" /> : tab.key === 'Score 90+' ? <i className="tab-dot blue" /> : tab.key === 'Verified' ? <i className="tab-dot violet" /> : null}{tab.key}</span><b>{tab.value}</b></button>)}</div>
       <div className="selection-bar"><span>{selected.length} selected</span><button className="text-action" disabled={!selected.length} onClick={() => setSelected([])}>Clear</button><button className="text-action" disabled={!selected.length} onClick={() => exportRows(assets.filter((asset) => selected.includes(asset.mint)), 'welp-selected-assets.csv')}>Export selected <ArrowUpRight size={13} /></button></div>
       <div className="market-table-wrap"><table className="market-table"><thead><tr>
         <th><input aria-label="Select all rows on this page" type="checkbox" checked={rows.length > 0 && rows.every((row) => selected.includes(row.mint))} onChange={(event) => setSelected((current) => event.target.checked ? Array.from(new Set([...current, ...rows.map((row) => row.mint)])) : current.filter((id) => !rows.some((row) => row.mint === id)))} /></th>

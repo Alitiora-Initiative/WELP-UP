@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { ArrowUpRight, ChevronDown, Menu, X } from 'lucide-react';
 import { WalletConnectionControl } from '@/components/WalletConnectionControl';
@@ -51,13 +51,12 @@ function TickerStrip() {
 export function TerminalShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  useEffect(() => setOpen(false), [pathname]);
   const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href + '/'));
   return <div className="terminal-site">
     <header className="site-header">
       <Link href="/" className="site-brand"><span className="site-brand-mark">W</span><strong>WELP UP!</strong><span className="network-badge"><i /> MAINNET</span></Link>
       <nav className={'site-nav' + (open ? ' is-open' : '')} aria-label="Main navigation">
-        {nav.map((item) => <Link key={item.href} href={item.href} className={isActive(item.href) ? 'is-active' : ''}>{item.label}{item.label === 'Console' || item.label === 'Docs' ? <ChevronDown size={12} /> : null}</Link>)}
+        {nav.map((item) => <Link key={item.href} href={item.href} onClick={() => setOpen(false)} className={isActive(item.href) ? 'is-active' : ''}>{item.label}{item.label === 'Console' || item.label === 'Docs' ? <ChevronDown size={12} /> : null}</Link>)}
       </nav>
       <div className="site-header-actions"><Link className="desk-link" href="/swap">Open trade desk <ArrowUpRight size={14} /></Link><WalletConnectionControl /><button className="mobile-nav-toggle" onClick={() => setOpen((value) => !value)} aria-label={open ? 'Close navigation' : 'Open navigation'}>{open ? <X size={18} /> : <Menu size={18} />}</button></div>
     </header>

@@ -37,7 +37,7 @@ function AutomationPage() {
   const [evaluated, setEvaluated] = useState<Asset[] | null>(null);
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState('');
-  useEffect(() => { try { setPolicies(JSON.parse(localStorage.getItem('welp-watch-policies') || '[]') as Policy[]); } catch { setPolicies([]); } }, []);
+  useEffect(() => { const timer = window.setTimeout(() => { try { setPolicies(JSON.parse(localStorage.getItem('welp-watch-policies') || '[]') as Policy[]); } catch { setPolicies([]); } }, 0); return () => window.clearTimeout(timer); }, []);
   function choosePreset(value: string) {
     setPreset(value);
     if (value === 'Momentum') { setLiquidity('250000'); setOrganic('65'); setDrawdown('18'); setVerified(false); }
@@ -92,7 +92,7 @@ function VaultPage() {
 function AgentPage({ monitor = false }: { monitor?: boolean }) {
   return <main className="terminal-page feature-page"><Heading eyebrow={monitor ? 'AGENT MONITOR · NOT ENABLED' : 'MARKET AGENT · ANALYSIS ONLY'} title={monitor ? <>Agent <span>runtime monitor.</span></> : <>Ask the desk. <span>Keep control.</span></>} detail={monitor ? 'WELP does not currently run a production autonomous executor. No bot orders, delegated signing sessions or verified live P&L are available.' : 'The code-based product currently has no hosted model runtime configured. This page does not pretend to generate AI answers or invent market commentary.'} />
     <div className="feature-stats"><Stat label="MARKET FEED" value="AVAILABLE" detail="Read-only Jupiter feed" /><Stat label="MODEL RUNTIME" value="NOT CONFIGURED" detail="No production model endpoint" /><Stat label="WALLET ACCESS" value="NONE" detail="No signing capability" /><Stat label="AUTONOMOUS ORDERS" value="DISABLED" detail="No unattended executor" /></div>
-    <Panel title="Current service boundaries" eyebrow="WHAT IS ACTUALLY AVAILABLE"><div className="gate-row"><span className="gate-state">LIVE</span><div><strong>Public market data</strong><small>Token prices, liquidity, activity and audit fields are read from Jupiter.</small></div></div><div className="gate-row"><span className="gate-state">LIVE</span><div><strong>Deterministic rule scoring</strong><small>Signals are calculated from published fields and rules.</small></div></div><div className="gate-row"><span className="gate-state">OFF</span><div><strong>Hosted AI analysis</strong><small>No model provider is connected to this Next.js deployment.</small></div></div><div className="gate-row"><span className="gate-state">OFF</span><div><strong>Autonomous execution</strong><small>No agent can sign, route or submit trades on a user's behalf.</small></div></div><Link className="text-link" href="/signals">Open the live signal engine <ArrowUpRight size={13} /></Link></Panel>
+    <Panel title="Current service boundaries" eyebrow="WHAT IS ACTUALLY AVAILABLE"><div className="gate-row"><span className="gate-state">LIVE</span><div><strong>Public market data</strong><small>Token prices, liquidity, activity and audit fields are read from Jupiter.</small></div></div><div className="gate-row"><span className="gate-state">LIVE</span><div><strong>Deterministic rule scoring</strong><small>Signals are calculated from published fields and rules.</small></div></div><div className="gate-row"><span className="gate-state">OFF</span><div><strong>Hosted AI analysis</strong><small>No model provider is connected to this Next.js deployment.</small></div></div><div className="gate-row"><span className="gate-state">OFF</span><div><strong>Autonomous execution</strong><small>No agent can sign, route or submit trades on a user&apos;s behalf.</small></div></div><Link className="text-link" href="/signals">Open the live signal engine <ArrowUpRight size={13} /></Link></Panel>
   </main>;
 }
 
@@ -166,7 +166,7 @@ function StatusPage() {
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Status unavailable.'); }
     finally { setLoading(false); }
   }, []);
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => { const timer = window.setTimeout(() => void refresh(), 0); return () => window.clearTimeout(timer); }, [refresh]);
   return <main className="terminal-page feature-page"><Heading eyebrow="SYSTEM STATUS · LIVE CHECKS" title={<>Operational status <span>of the console.</span></>} detail="Connectivity checks run when this page loads. A healthy feed does not imply that vaults or autonomous services are available." action={<button className="outline-button" onClick={() => void refresh()} disabled={loading}><RefreshCw size={14} className={loading ? 'spin' : ''} /> Re-check</button>} />
     <div className="feature-stats"><Stat label="OVERALL" value={status?.overall || 'CHECKING'} detail="Aggregated service status" /><Stat label="UPDATED" value={status?.updatedAt ? new Date(status.updatedAt).toLocaleTimeString() : '—'} detail="Last check" /><Stat label="AUTONOMOUS AGENTS" value="OFF" detail="Not configured" /><Stat label="VAULT FUNDING" value="OFF" detail="Program not deployed" /></div>
     {error ? <div className="feed-error">{error}</div> : null}<Panel title="Service checks" eyebrow="LIVE STATUS">{(status?.checks || []).map((item) => <div className="gate-row" key={item.name}><span className={'gate-state ' + (item.state === 'Operational' ? 'good' : '')}>{item.state.toUpperCase()}</span><div><strong>{item.name}</strong><small>{item.detail}</small></div></div>)}</Panel>
@@ -176,11 +176,250 @@ function StatusPage() {
 function PortfolioPage() {
   const connected = useConnectedWallet(client);
   const owner = connected?.account.address ?? '';
-  const [balance, setBalance] = useState<{ sol: number; solPrice: number; stableUsd: number; equityUsd: number } | null>(null);
+  const [balance, setBalance] = useState<{ owner: string; sol: number; solPrice: number; stableUsd: number; equityUsd: number } | null>(null);
+  const activeBalance = balance?.owner === owner ? balance : null;
   const [error, setError] = useState('');
-  useEffect(() => { if (!owner) { setBalance(null); return; } let active = true; fetch('/api/wallet?owner=' + encodeURIComponent(owner), { cache: 'no-store' }).then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Wallet read failed.'); if (active) { setBalance(data); setError(''); } }).catch((caught) => { if (active) setError(caught instanceof Error ? caught.message : 'Wallet read failed.'); }); return () => { active = false; }; }, [owner]);
+  useEffect(() => { if (!owner) return; let active = true; fetch('/api/wallet?owner=' + encodeURIComponent(owner), { cache: 'no-store' }).then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Wallet read failed.'); if (active) { setBalance({ ...data, owner }); setError(''); } }).catch((caught) => { if (active) setError(caught instanceof Error ? caught.message : 'Wallet read failed.'); }); return () => { active = false; }; }, [owner]);
   return <main className="terminal-page feature-page"><Heading eyebrow="PORTFOLIO · PUBLIC MAINNET DATA" title={<>Your wallet, <span>as it actually is.</span></>} detail="Balances are read from Solana for the connected public address. WELP never asks for a seed phrase or stores private keys." action={<WalletConnectionControl />} />
-    {owner ? <><div className="feature-stats"><Stat label="SOL BALANCE" value={balance ? balance.sol.toFixed(4) + ' SOL' : '—'} detail={balance ? 'SOL at $' + balance.solPrice.toFixed(2) : 'Reading public balance'} /><Stat label="TOKEN VALUE" value={balance ? '$' + balance.stableUsd.toFixed(2) : '—'} detail="USDC and USDT snapshot" /><Stat label="TOTAL READ" value={balance ? '$' + balance.equityUsd.toFixed(2) : '—'} detail="Estimated SOL + stablecoin value" /></div>{error ? <div className="feed-error">{error}</div> : null}<TransactionHistory owner={owner} /></> : <div className="empty-panel centered"><Wallet size={24} /><strong>Open a wallet session</strong><p>Connect a Solana wallet to read balances and on-chain transaction history.</p></div>}
+    {owner ? <><div className="feature-stats"><Stat label="SOL BALANCE" value={activeBalance ? activeBalance.sol.toFixed(4) + ' SOL' : '—'} detail={activeBalance ? 'SOL at  /><Stat label="TOKEN VALUE" value={activeBalance ? ' detail="USDC and USDT snapshot" /><Stat label="TOTAL READ" value={activeBalance ? ' detail="Estimated SOL + stablecoin value" /></div>{error ? <div className="feed-error">{error}</div> : null}<TransactionHistory owner={owner} /></> : <div className="empty-panel centered"><Wallet size={24} /><strong>Open a wallet session</strong><p>Connect a Solana wallet to read balances and on-chain transaction history.</p></div>}
+  </main>;
+}
+
+function ActivityLogsPage() {
+  const connected = useConnectedWallet(client);
+  const owner = connected?.account.address ?? '';
+  const [history, setHistory] = useState<WalletHistory>({ events: [], points: [] });
+  useEffect(() => { const timer = window.setTimeout(() => setHistory(owner ? getWalletHistory(owner) : { events: [], points: [] }), 0); return () => window.clearTimeout(timer); }, [owner]);
+  return <main className="terminal-page feature-page"><Heading eyebrow="ACTIVITY LOGS · BROWSER-LOCAL" title={<>A record of <span>this browser’s activity.</span></>} detail="These supplemental events are stored locally per wallet. They are not a tamper-proof audit ledger or a complete list of on-chain actions." action={<WalletConnectionControl />} />
+    {owner ? <Panel title="Recorded events" eyebrow="LOCAL STORAGE">{history.events.length ? history.events.map((event) => <div className="gate-row" key={event.id}><span className="gate-state">{event.type.toUpperCase()}</span><div><strong>{event.title}</strong><small>{event.detail} · {new Date(event.at).toLocaleString()}</small>{event.signature ? <a href={'https://explorer.solana.com/tx/' + event.signature} target="_blank" rel="noreferrer">View transaction <ExternalLink size={12} /></a> : null}</div></div>) : <div className="empty-panel">No local activity recorded for this wallet in this browser.</div>}</Panel> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>Local activity is scoped to the connected public wallet address.</p></div>}
+  </main>;
+}
+
+function HistoryPage() {
+  const connected = useConnectedWallet(client);
+  const owner = connected?.account.address ?? '';
+  return <main className="terminal-page feature-page"><Heading eyebrow="TRANSACTION HISTORY · PER WALLET" title={<>Every transaction, <span>from your address.</span></>} detail="On-chain signatures are read from Solana RPC. This view does not claim to be a tax statement or a complete accounting ledger." action={<WalletConnectionControl />} />{owner ? <TransactionHistory owner={owner} /> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>On-chain transaction history is read for the connected public address.</p></div>}</main>;
+}
+
+export function TerminalFeaturePage({ kind }: { kind: FeatureKind }) {
+  if (kind === 'automation') return <AutomationPage />;
+  if (kind === 'vault') return <VaultPage />;
+  if (kind === 'agent') return <AgentPage />;
+  if (kind === 'autonomous') return <AgentPage monitor />;
+  if (kind === 'portfolio') return <PortfolioPage />;
+  if (kind === 'history') return <HistoryPage />;
+  if (kind === 'activity') return <ActivityLogsPage />;
+  if (kind === 'status') return <StatusPage />;
+  if (kind === 'support') return <SupportPage />;
+  if (kind === 'risk') return <RiskPage />;
+  if (kind === 'explorer') return <ExplorerPage />;
+  return <GenericUnavailable kind={kind} />;
+}
+ + activeBalance.solPrice.toFixed(2) : 'Reading public balance'} /><Stat label="TOKEN VALUE" value={balance ? '$' + balance.stableUsd.toFixed(2) : '—'} detail="USDC and USDT snapshot" /><Stat label="TOTAL READ" value={balance ? '$' + balance.equityUsd.toFixed(2) : '—'} detail="Estimated SOL + stablecoin value" /></div>{error ? <div className="feed-error">{error}</div> : null}<TransactionHistory owner={owner} /></> : <div className="empty-panel centered"><Wallet size={24} /><strong>Open a wallet session</strong><p>Connect a Solana wallet to read balances and on-chain transaction history.</p></div>}
+  </main>;
+}
+
+function ActivityLogsPage() {
+  const connected = useConnectedWallet(client);
+  const owner = connected?.account.address ?? '';
+  const [history, setHistory] = useState<WalletHistory>({ events: [], points: [] });
+  useEffect(() => { setHistory(owner ? getWalletHistory(owner) : { events: [], points: [] }); }, [owner]);
+  return <main className="terminal-page feature-page"><Heading eyebrow="ACTIVITY LOGS · BROWSER-LOCAL" title={<>A record of <span>this browser’s activity.</span></>} detail="These supplemental events are stored locally per wallet. They are not a tamper-proof audit ledger or a complete list of on-chain actions." action={<WalletConnectionControl />} />
+    {owner ? <Panel title="Recorded events" eyebrow="LOCAL STORAGE">{history.events.length ? history.events.map((event) => <div className="gate-row" key={event.id}><span className="gate-state">{event.type.toUpperCase()}</span><div><strong>{event.title}</strong><small>{event.detail} · {new Date(event.at).toLocaleString()}</small>{event.signature ? <a href={'https://explorer.solana.com/tx/' + event.signature} target="_blank" rel="noreferrer">View transaction <ExternalLink size={12} /></a> : null}</div></div>) : <div className="empty-panel">No local activity recorded for this wallet in this browser.</div>}</Panel> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>Local activity is scoped to the connected public wallet address.</p></div>}
+  </main>;
+}
+
+function HistoryPage() {
+  const connected = useConnectedWallet(client);
+  const owner = connected?.account.address ?? '';
+  return <main className="terminal-page feature-page"><Heading eyebrow="TRANSACTION HISTORY · PER WALLET" title={<>Every transaction, <span>from your address.</span></>} detail="On-chain signatures are read from Solana RPC. This view does not claim to be a tax statement or a complete accounting ledger." action={<WalletConnectionControl />} />{owner ? <TransactionHistory owner={owner} /> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>On-chain transaction history is read for the connected public address.</p></div>}</main>;
+}
+
+export function TerminalFeaturePage({ kind }: { kind: FeatureKind }) {
+  if (kind === 'automation') return <AutomationPage />;
+  if (kind === 'vault') return <VaultPage />;
+  if (kind === 'agent') return <AgentPage />;
+  if (kind === 'autonomous') return <AgentPage monitor />;
+  if (kind === 'portfolio') return <PortfolioPage />;
+  if (kind === 'history') return <HistoryPage />;
+  if (kind === 'activity') return <ActivityLogsPage />;
+  if (kind === 'status') return <StatusPage />;
+  if (kind === 'support') return <SupportPage />;
+  if (kind === 'risk') return <RiskPage />;
+  if (kind === 'explorer') return <ExplorerPage />;
+  return <GenericUnavailable kind={kind} />;
+}
+ + activeBalance.stableUsd.toFixed(2) : '—'} detail="USDC and USDT snapshot" /><Stat label="TOTAL READ" value={balance ? '$' + balance.equityUsd.toFixed(2) : '—'} detail="Estimated SOL + stablecoin value" /></div>{error ? <div className="feed-error">{error}</div> : null}<TransactionHistory owner={owner} /></> : <div className="empty-panel centered"><Wallet size={24} /><strong>Open a wallet session</strong><p>Connect a Solana wallet to read balances and on-chain transaction history.</p></div>}
+  </main>;
+}
+
+function ActivityLogsPage() {
+  const connected = useConnectedWallet(client);
+  const owner = connected?.account.address ?? '';
+  const [history, setHistory] = useState<WalletHistory>({ events: [], points: [] });
+  useEffect(() => { setHistory(owner ? getWalletHistory(owner) : { events: [], points: [] }); }, [owner]);
+  return <main className="terminal-page feature-page"><Heading eyebrow="ACTIVITY LOGS · BROWSER-LOCAL" title={<>A record of <span>this browser’s activity.</span></>} detail="These supplemental events are stored locally per wallet. They are not a tamper-proof audit ledger or a complete list of on-chain actions." action={<WalletConnectionControl />} />
+    {owner ? <Panel title="Recorded events" eyebrow="LOCAL STORAGE">{history.events.length ? history.events.map((event) => <div className="gate-row" key={event.id}><span className="gate-state">{event.type.toUpperCase()}</span><div><strong>{event.title}</strong><small>{event.detail} · {new Date(event.at).toLocaleString()}</small>{event.signature ? <a href={'https://explorer.solana.com/tx/' + event.signature} target="_blank" rel="noreferrer">View transaction <ExternalLink size={12} /></a> : null}</div></div>) : <div className="empty-panel">No local activity recorded for this wallet in this browser.</div>}</Panel> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>Local activity is scoped to the connected public wallet address.</p></div>}
+  </main>;
+}
+
+function HistoryPage() {
+  const connected = useConnectedWallet(client);
+  const owner = connected?.account.address ?? '';
+  return <main className="terminal-page feature-page"><Heading eyebrow="TRANSACTION HISTORY · PER WALLET" title={<>Every transaction, <span>from your address.</span></>} detail="On-chain signatures are read from Solana RPC. This view does not claim to be a tax statement or a complete accounting ledger." action={<WalletConnectionControl />} />{owner ? <TransactionHistory owner={owner} /> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>On-chain transaction history is read for the connected public address.</p></div>}</main>;
+}
+
+export function TerminalFeaturePage({ kind }: { kind: FeatureKind }) {
+  if (kind === 'automation') return <AutomationPage />;
+  if (kind === 'vault') return <VaultPage />;
+  if (kind === 'agent') return <AgentPage />;
+  if (kind === 'autonomous') return <AgentPage monitor />;
+  if (kind === 'portfolio') return <PortfolioPage />;
+  if (kind === 'history') return <HistoryPage />;
+  if (kind === 'activity') return <ActivityLogsPage />;
+  if (kind === 'status') return <StatusPage />;
+  if (kind === 'support') return <SupportPage />;
+  if (kind === 'risk') return <RiskPage />;
+  if (kind === 'explorer') return <ExplorerPage />;
+  return <GenericUnavailable kind={kind} />;
+}
+ + activeBalance.solPrice.toFixed(2) : 'Reading public balance'} /><Stat label="TOKEN VALUE" value={balance ? '$' + balance.stableUsd.toFixed(2) : '—'} detail="USDC and USDT snapshot" /><Stat label="TOTAL READ" value={balance ? '$' + balance.equityUsd.toFixed(2) : '—'} detail="Estimated SOL + stablecoin value" /></div>{error ? <div className="feed-error">{error}</div> : null}<TransactionHistory owner={owner} /></> : <div className="empty-panel centered"><Wallet size={24} /><strong>Open a wallet session</strong><p>Connect a Solana wallet to read balances and on-chain transaction history.</p></div>}
+  </main>;
+}
+
+function ActivityLogsPage() {
+  const connected = useConnectedWallet(client);
+  const owner = connected?.account.address ?? '';
+  const [history, setHistory] = useState<WalletHistory>({ events: [], points: [] });
+  useEffect(() => { setHistory(owner ? getWalletHistory(owner) : { events: [], points: [] }); }, [owner]);
+  return <main className="terminal-page feature-page"><Heading eyebrow="ACTIVITY LOGS · BROWSER-LOCAL" title={<>A record of <span>this browser’s activity.</span></>} detail="These supplemental events are stored locally per wallet. They are not a tamper-proof audit ledger or a complete list of on-chain actions." action={<WalletConnectionControl />} />
+    {owner ? <Panel title="Recorded events" eyebrow="LOCAL STORAGE">{history.events.length ? history.events.map((event) => <div className="gate-row" key={event.id}><span className="gate-state">{event.type.toUpperCase()}</span><div><strong>{event.title}</strong><small>{event.detail} · {new Date(event.at).toLocaleString()}</small>{event.signature ? <a href={'https://explorer.solana.com/tx/' + event.signature} target="_blank" rel="noreferrer">View transaction <ExternalLink size={12} /></a> : null}</div></div>) : <div className="empty-panel">No local activity recorded for this wallet in this browser.</div>}</Panel> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>Local activity is scoped to the connected public wallet address.</p></div>}
+  </main>;
+}
+
+function HistoryPage() {
+  const connected = useConnectedWallet(client);
+  const owner = connected?.account.address ?? '';
+  return <main className="terminal-page feature-page"><Heading eyebrow="TRANSACTION HISTORY · PER WALLET" title={<>Every transaction, <span>from your address.</span></>} detail="On-chain signatures are read from Solana RPC. This view does not claim to be a tax statement or a complete accounting ledger." action={<WalletConnectionControl />} />{owner ? <TransactionHistory owner={owner} /> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>On-chain transaction history is read for the connected public address.</p></div>}</main>;
+}
+
+export function TerminalFeaturePage({ kind }: { kind: FeatureKind }) {
+  if (kind === 'automation') return <AutomationPage />;
+  if (kind === 'vault') return <VaultPage />;
+  if (kind === 'agent') return <AgentPage />;
+  if (kind === 'autonomous') return <AgentPage monitor />;
+  if (kind === 'portfolio') return <PortfolioPage />;
+  if (kind === 'history') return <HistoryPage />;
+  if (kind === 'activity') return <ActivityLogsPage />;
+  if (kind === 'status') return <StatusPage />;
+  if (kind === 'support') return <SupportPage />;
+  if (kind === 'risk') return <RiskPage />;
+  if (kind === 'explorer') return <ExplorerPage />;
+  return <GenericUnavailable kind={kind} />;
+}
+ + activeBalance.equityUsd.toFixed(2) : '—'} detail="Estimated SOL + stablecoin value" /></div>{error ? <div className="feed-error">{error}</div> : null}<TransactionHistory owner={owner} /></> : <div className="empty-panel centered"><Wallet size={24} /><strong>Open a wallet session</strong><p>Connect a Solana wallet to read balances and on-chain transaction history.</p></div>}
+  </main>;
+}
+
+function ActivityLogsPage() {
+  const connected = useConnectedWallet(client);
+  const owner = connected?.account.address ?? '';
+  const [history, setHistory] = useState<WalletHistory>({ events: [], points: [] });
+  useEffect(() => { setHistory(owner ? getWalletHistory(owner) : { events: [], points: [] }); }, [owner]);
+  return <main className="terminal-page feature-page"><Heading eyebrow="ACTIVITY LOGS · BROWSER-LOCAL" title={<>A record of <span>this browser’s activity.</span></>} detail="These supplemental events are stored locally per wallet. They are not a tamper-proof audit ledger or a complete list of on-chain actions." action={<WalletConnectionControl />} />
+    {owner ? <Panel title="Recorded events" eyebrow="LOCAL STORAGE">{history.events.length ? history.events.map((event) => <div className="gate-row" key={event.id}><span className="gate-state">{event.type.toUpperCase()}</span><div><strong>{event.title}</strong><small>{event.detail} · {new Date(event.at).toLocaleString()}</small>{event.signature ? <a href={'https://explorer.solana.com/tx/' + event.signature} target="_blank" rel="noreferrer">View transaction <ExternalLink size={12} /></a> : null}</div></div>) : <div className="empty-panel">No local activity recorded for this wallet in this browser.</div>}</Panel> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>Local activity is scoped to the connected public wallet address.</p></div>}
+  </main>;
+}
+
+function HistoryPage() {
+  const connected = useConnectedWallet(client);
+  const owner = connected?.account.address ?? '';
+  return <main className="terminal-page feature-page"><Heading eyebrow="TRANSACTION HISTORY · PER WALLET" title={<>Every transaction, <span>from your address.</span></>} detail="On-chain signatures are read from Solana RPC. This view does not claim to be a tax statement or a complete accounting ledger." action={<WalletConnectionControl />} />{owner ? <TransactionHistory owner={owner} /> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>On-chain transaction history is read for the connected public address.</p></div>}</main>;
+}
+
+export function TerminalFeaturePage({ kind }: { kind: FeatureKind }) {
+  if (kind === 'automation') return <AutomationPage />;
+  if (kind === 'vault') return <VaultPage />;
+  if (kind === 'agent') return <AgentPage />;
+  if (kind === 'autonomous') return <AgentPage monitor />;
+  if (kind === 'portfolio') return <PortfolioPage />;
+  if (kind === 'history') return <HistoryPage />;
+  if (kind === 'activity') return <ActivityLogsPage />;
+  if (kind === 'status') return <StatusPage />;
+  if (kind === 'support') return <SupportPage />;
+  if (kind === 'risk') return <RiskPage />;
+  if (kind === 'explorer') return <ExplorerPage />;
+  return <GenericUnavailable kind={kind} />;
+}
+ + activeBalance.solPrice.toFixed(2) : 'Reading public balance'} /><Stat label="TOKEN VALUE" value={balance ? '$' + balance.stableUsd.toFixed(2) : '—'} detail="USDC and USDT snapshot" /><Stat label="TOTAL READ" value={balance ? '$' + balance.equityUsd.toFixed(2) : '—'} detail="Estimated SOL + stablecoin value" /></div>{error ? <div className="feed-error">{error}</div> : null}<TransactionHistory owner={owner} /></> : <div className="empty-panel centered"><Wallet size={24} /><strong>Open a wallet session</strong><p>Connect a Solana wallet to read balances and on-chain transaction history.</p></div>}
+  </main>;
+}
+
+function ActivityLogsPage() {
+  const connected = useConnectedWallet(client);
+  const owner = connected?.account.address ?? '';
+  const [history, setHistory] = useState<WalletHistory>({ events: [], points: [] });
+  useEffect(() => { setHistory(owner ? getWalletHistory(owner) : { events: [], points: [] }); }, [owner]);
+  return <main className="terminal-page feature-page"><Heading eyebrow="ACTIVITY LOGS · BROWSER-LOCAL" title={<>A record of <span>this browser’s activity.</span></>} detail="These supplemental events are stored locally per wallet. They are not a tamper-proof audit ledger or a complete list of on-chain actions." action={<WalletConnectionControl />} />
+    {owner ? <Panel title="Recorded events" eyebrow="LOCAL STORAGE">{history.events.length ? history.events.map((event) => <div className="gate-row" key={event.id}><span className="gate-state">{event.type.toUpperCase()}</span><div><strong>{event.title}</strong><small>{event.detail} · {new Date(event.at).toLocaleString()}</small>{event.signature ? <a href={'https://explorer.solana.com/tx/' + event.signature} target="_blank" rel="noreferrer">View transaction <ExternalLink size={12} /></a> : null}</div></div>) : <div className="empty-panel">No local activity recorded for this wallet in this browser.</div>}</Panel> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>Local activity is scoped to the connected public wallet address.</p></div>}
+  </main>;
+}
+
+function HistoryPage() {
+  const connected = useConnectedWallet(client);
+  const owner = connected?.account.address ?? '';
+  return <main className="terminal-page feature-page"><Heading eyebrow="TRANSACTION HISTORY · PER WALLET" title={<>Every transaction, <span>from your address.</span></>} detail="On-chain signatures are read from Solana RPC. This view does not claim to be a tax statement or a complete accounting ledger." action={<WalletConnectionControl />} />{owner ? <TransactionHistory owner={owner} /> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>On-chain transaction history is read for the connected public address.</p></div>}</main>;
+}
+
+export function TerminalFeaturePage({ kind }: { kind: FeatureKind }) {
+  if (kind === 'automation') return <AutomationPage />;
+  if (kind === 'vault') return <VaultPage />;
+  if (kind === 'agent') return <AgentPage />;
+  if (kind === 'autonomous') return <AgentPage monitor />;
+  if (kind === 'portfolio') return <PortfolioPage />;
+  if (kind === 'history') return <HistoryPage />;
+  if (kind === 'activity') return <ActivityLogsPage />;
+  if (kind === 'status') return <StatusPage />;
+  if (kind === 'support') return <SupportPage />;
+  if (kind === 'risk') return <RiskPage />;
+  if (kind === 'explorer') return <ExplorerPage />;
+  return <GenericUnavailable kind={kind} />;
+}
+ + activeBalance.stableUsd.toFixed(2) : '—'} detail="USDC and USDT snapshot" /><Stat label="TOTAL READ" value={balance ? '$' + balance.equityUsd.toFixed(2) : '—'} detail="Estimated SOL + stablecoin value" /></div>{error ? <div className="feed-error">{error}</div> : null}<TransactionHistory owner={owner} /></> : <div className="empty-panel centered"><Wallet size={24} /><strong>Open a wallet session</strong><p>Connect a Solana wallet to read balances and on-chain transaction history.</p></div>}
+  </main>;
+}
+
+function ActivityLogsPage() {
+  const connected = useConnectedWallet(client);
+  const owner = connected?.account.address ?? '';
+  const [history, setHistory] = useState<WalletHistory>({ events: [], points: [] });
+  useEffect(() => { setHistory(owner ? getWalletHistory(owner) : { events: [], points: [] }); }, [owner]);
+  return <main className="terminal-page feature-page"><Heading eyebrow="ACTIVITY LOGS · BROWSER-LOCAL" title={<>A record of <span>this browser’s activity.</span></>} detail="These supplemental events are stored locally per wallet. They are not a tamper-proof audit ledger or a complete list of on-chain actions." action={<WalletConnectionControl />} />
+    {owner ? <Panel title="Recorded events" eyebrow="LOCAL STORAGE">{history.events.length ? history.events.map((event) => <div className="gate-row" key={event.id}><span className="gate-state">{event.type.toUpperCase()}</span><div><strong>{event.title}</strong><small>{event.detail} · {new Date(event.at).toLocaleString()}</small>{event.signature ? <a href={'https://explorer.solana.com/tx/' + event.signature} target="_blank" rel="noreferrer">View transaction <ExternalLink size={12} /></a> : null}</div></div>) : <div className="empty-panel">No local activity recorded for this wallet in this browser.</div>}</Panel> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>Local activity is scoped to the connected public wallet address.</p></div>}
+  </main>;
+}
+
+function HistoryPage() {
+  const connected = useConnectedWallet(client);
+  const owner = connected?.account.address ?? '';
+  return <main className="terminal-page feature-page"><Heading eyebrow="TRANSACTION HISTORY · PER WALLET" title={<>Every transaction, <span>from your address.</span></>} detail="On-chain signatures are read from Solana RPC. This view does not claim to be a tax statement or a complete accounting ledger." action={<WalletConnectionControl />} />{owner ? <TransactionHistory owner={owner} /> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>On-chain transaction history is read for the connected public address.</p></div>}</main>;
+}
+
+export function TerminalFeaturePage({ kind }: { kind: FeatureKind }) {
+  if (kind === 'automation') return <AutomationPage />;
+  if (kind === 'vault') return <VaultPage />;
+  if (kind === 'agent') return <AgentPage />;
+  if (kind === 'autonomous') return <AgentPage monitor />;
+  if (kind === 'portfolio') return <PortfolioPage />;
+  if (kind === 'history') return <HistoryPage />;
+  if (kind === 'activity') return <ActivityLogsPage />;
+  if (kind === 'status') return <StatusPage />;
+  if (kind === 'support') return <SupportPage />;
+  if (kind === 'risk') return <RiskPage />;
+  if (kind === 'explorer') return <ExplorerPage />;
+  return <GenericUnavailable kind={kind} />;
+}
+ + activeBalance.solPrice.toFixed(2) : 'Reading public balance'} /><Stat label="TOKEN VALUE" value={balance ? '$' + balance.stableUsd.toFixed(2) : '—'} detail="USDC and USDT snapshot" /><Stat label="TOTAL READ" value={balance ? '$' + balance.equityUsd.toFixed(2) : '—'} detail="Estimated SOL + stablecoin value" /></div>{error ? <div className="feed-error">{error}</div> : null}<TransactionHistory owner={owner} /></> : <div className="empty-panel centered"><Wallet size={24} /><strong>Open a wallet session</strong><p>Connect a Solana wallet to read balances and on-chain transaction history.</p></div>}
   </main>;
 }
 
