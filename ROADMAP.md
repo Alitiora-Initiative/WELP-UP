@@ -13,6 +13,7 @@ This roadmap distinguishes the product the user wants from features currently av
 - [x] Key local activity data by public wallet address and make its local-only scope explicit.
 - [x] Add a portfolio-style chart for wallet snapshots and distinguish scans from signed transactions.
 - [x] Replace the previous dashboard shell with the WELP UP terminal, live Jupiter market board, rule-based signals, wallet-approved swap desk, and responsive navigation.
+- [x] Add optional 60-second browser-local watch-policy monitoring with permission-based desktop alerts and 24-hour per-policy/token deduplication; monitoring never places trades.
 - [x] Publish Terms v1.0 and Privacy Policy for the web application.
 - [x] Python agent: untrained brain no longer drags scores out of the 80–98 band.
 - [x] Python agent: dynamic priority fee when env fee is 0.

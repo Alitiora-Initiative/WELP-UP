@@ -43,6 +43,7 @@ function AutomationPage() {
   const [results, setResults] = useState<Asset[] | null>(null);
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState('');
+  const [monitoring, setMonitoring] = useState(false);
   useEffect(() => {
     const timer = window.setTimeout(() => {
       try { setPolicies(JSON.parse(localStorage.getItem('welp-watch-policies') || '[]') as Policy[]); }
@@ -50,6 +51,61 @@ function AutomationPage() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
+  useEffect(() => {
+    if (!monitoring || policies.length === 0) return;
+    let active = true;
+    let scanning = false;
+    async function scanPolicies() {
+      if (scanning) return;
+      scanning = true;
+      try {
+        const response = await fetch('/api/markets', { cache: 'no-store' });
+        const data = await response.json() as Feed;
+        if (!response.ok) throw new Error(data.error || 'Live feed unavailable.');
+        if (!active) return;
+        const now = Date.now();
+        let sent: Record<string, number> = {};
+        try { sent = JSON.parse(localStorage.getItem('welp-watch-alerts-sent') || '{}') as Record<string, number>; } catch { sent = {}; }
+        let notifications = 0;
+        for (const policy of policies) {
+          const matches = (data.assets || []).filter((asset) => asset.eligible && asset.liquidityUsd >= policy.liquidity && asset.organicScore >= policy.organic && asset.priceChange24h >= -policy.drawdown && (!policy.verified || asset.verified));
+          for (const asset of matches) {
+            const key = policy.id + ':' + asset.mint;
+            if (now - (sent[key] || 0) < 24 * 60 * 60 * 1000) continue;
+            if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+              new Notification(asset.symbol + ' matches ' + policy.name, {
+                body: 'Score ' + asset.score + ' · Liquidity ' + String.fromCharCode(36) + Math.round(asset.liquidityUsd).toLocaleString() + '. Review the live signal before taking any action.',
+                tag: key,
+              });
+              sent[key] = now;
+              notifications += 1;
+            }
+          }
+        }
+        if (notifications) {
+          try { localStorage.setItem('welp-watch-alerts-sent', JSON.stringify(sent)); } catch {}
+          setMessage(notifications + ' new browser alert' + (notifications === 1 ? '' : 's') + ' sent. No order was created.');
+        }
+      } catch (error) {
+        if (active) setMessage(error instanceof Error ? error.message : 'Live alert scan failed.');
+      } finally { scanning = false; }
+    }
+    void scanPolicies();
+    const timer = window.setInterval(() => void scanPolicies(), 60_000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [monitoring, policies]);
+
+  async function toggleMonitoring() {
+    if (monitoring) { setMonitoring(false); setMessage('Live browser alerts paused.'); return; }
+    if (typeof Notification === 'undefined') { setMessage('This browser does not support desktop notifications.'); return; }
+    const permission = Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission;
+    if (permission !== 'granted') { setMessage('Notification permission was not granted. No alerts will be sent.'); return; }
+    if (!policies.length) { setMessage('Save at least one policy before starting live alerts.'); return; }
+    setMonitoring(true);
+    setMessage('Live alerts are active while this page stays open. Scans run every 60 seconds.');
+  }
+
+
   function choosePreset(value: string) {
     setPreset(value);
     if (value === 'Momentum') { setLiquidity('250000'); setOrganic('65'); setDrawdown('18'); setVerified(false); }
