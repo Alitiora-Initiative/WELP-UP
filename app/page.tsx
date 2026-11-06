@@ -1,5 +1,3 @@
-import { HomePage } from '@/components/HomePage';
+import { TerminalHome } from '@/components/TerminalHome';
 
-export default function Home() {
-  return <HomePage />;
-}
+export default function Home() { return <TerminalHome />; }

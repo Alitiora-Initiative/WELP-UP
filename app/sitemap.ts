@@ -4,14 +4,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const base = 'https://welpup.fun';
   const now = new Date();
   const routes = [
-    '', '/dashboard', '/signals', '/swap', '/safety',
-    '/activity', '/profile', '/autonomous', '/vault', '/settings',
-    '/docs', '/whitepaper', '/terms', '/privacy',
+    '', '/markets', '/signals', '/swap', '/portfolio', '/profile', '/settings',
+    '/automation', '/agent', '/autonomous', '/vault', '/strategy-marketplace',
+    '/history', '/activity-logs', '/governance', '/risk-dashboard', '/api-keys',
+    '/referral', '/token-explorer', '/support', '/system-status', '/docs',
+    '/whitepaper', '/safety', '/terms', '/privacy',
   ];
   return routes.map((path) => ({
     url: `${base}${path}`,
     lastModified: now,
     changeFrequency: 'daily' as const,
-    priority: path === '' ? 1 : 0.7,
+    priority: path === '' ? 1 : path === '/markets' || path === '/swap' ? 0.9 : 0.7,
   }));
 }

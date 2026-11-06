@@ -1,5 +1,2 @@
-import { AutonomousPage } from '@/components/AutonomousPage';
-
-export default function AutonomousRoute() {
-  return <AutonomousPage />;
-}
+import { TerminalFeaturePage } from '@/components/TerminalFeaturePages';
+export default function AutonomousPage() { return <TerminalFeaturePage kind="autonomous" />; }
