@@ -34,7 +34,7 @@ WELP UP! is a Solana market research and wallet-approved trading interface. It r
 - `/swap` — Jupiter order preparation and wallet-signed execution.
 - `/portfolio`, `/profile`, `/history` — wallet summary, public transaction history, and portfolio views.
 - `/activity-logs` — browser-local activity log; it is not a complete transaction ledger.
-- `/automation`, `/agent`, `/autonomous` — automation policies and agent status; no unattended execution is enabled.
+- `/automation`, `/agent`, `/autonomous`, `/agent-monitor` — automation policies and agent status; no unattended execution is enabled. `/agent-monitor` is a direct route to the same fail-closed runtime status surface.
 - `/vault` — vault launch status; funding is not enabled.
 - `/strategy-marketplace`, `/governance`, `/referral` — status pages; marketplace settlement, governance execution, and referral payouts are not enabled.
 - `/risk-dashboard`, `/token-explorer`, `/api-keys`, `/support`, `/system-status` — risk, token, account-service, support, and service-status interfaces.
@@ -66,6 +66,6 @@ Optional environment variables are documented in `.env.example`. Keep API keys s
 
 ## Release and security gates
 
-See [docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md), [docs/vault/ARCHITECTURE.md](docs/vault/ARCHITECTURE.md), [docs/vault/THREAT_MODEL.md](docs/vault/THREAT_MODEL.md), [LIMITS.md](LIMITS.md), and [ROADMAP.md](ROADMAP.md). A successful frontend build is not a security audit or authorization to accept deposits.
+See [docs/PRODUCTION_ENGINEERING_REVIEW.md](docs/PRODUCTION_ENGINEERING_REVIEW.md), [docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md), [docs/vault/ARCHITECTURE.md](docs/vault/ARCHITECTURE.md), [docs/vault/THREAT_MODEL.md](docs/vault/THREAT_MODEL.md), [LIMITS.md](LIMITS.md), and [ROADMAP.md](ROADMAP.md). A successful frontend build is not a security audit or authorization to accept deposits.
 
 WELP UP does not promise profits, capital protection, liquidity, or uninterrupted execution. On-chain transactions are irreversible in many circumstances and users can lose all funds they trade.
