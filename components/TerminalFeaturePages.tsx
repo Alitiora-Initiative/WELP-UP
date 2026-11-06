@@ -182,6 +182,26 @@ function ExplorerPage() {
   </main>;
 }
 
+function StrategyMarketplacePage() {
+  const templates = [
+    { name: 'Momentum Drift', risk: 'MOMENTUM', summary: 'Watch high-organic-score pools that retain depth across consecutive feed snapshots.', rules: ['Score ≥ 90', 'Organic ≥ 85', 'Liquidity ≥ $250k', '24h drawdown under 18%'] },
+    { name: 'Mean Revert Lite', risk: 'LOWER TURNOVER', summary: 'Review verified, deeper pools after short-term price dislocations.', rules: ['Verified assets', 'Liquidity ≥ $500k', 'Impact below 0.4%', 'Tight spread'] },
+    { name: 'Whale Tail', risk: 'CONCENTRATION WATCH', summary: 'Track concentration changes and holder distribution before considering any route.', rules: ['Top holders below 55%', 'Organic ≥ 90', 'Score ≥ 92', 'Review warnings'] },
+    { name: 'Calm Carry', risk: 'LOW VOLATILITY FILTER', summary: 'Focus research on calmer verified assets with more stable turnover.', rules: ['Verified assets', 'Calm ≥ 90', 'Turnover below 1.2×', 'Read liquidity'] },
+  ];
+  return <main className="terminal-page feature-page">
+    <Heading eyebrow="STRATEGY MARKETPLACE · RULE TEMPLATES" title={<>Strategies to inspect, <span>not blindly copy.</span></>} detail="Explore four research templates that can guide your own watch policies. They are not verified bots, backtests, live portfolios or promises of return." action={<span className="status-pill warning"><i /> COPY TRADING OFF</span>} />
+    <div className="feature-stats"><Stat label="RULE TEMPLATES" value="4" detail="Research presets only" /><Stat label="LIVE STRATEGY OWNERS" value="0" detail="No verified bot identities" /><Stat label="COPY EXECUTION" value="OFF" detail="No delegated trade flow" /><Stat label="PROFIT SHARE" value="OFF" detail="No fee or reward settlement" /></div>
+    <div className="feature-grid two">{templates.map((template, index) => <article className="terminal-panel strategy-template" key={template.name}>
+      <div className="strategy-template-top"><span>0{index + 1}</span><b>{template.risk}</b></div>
+      <h2>{template.name}</h2><p>{template.summary}</p>
+      <div className="strategy-rule-list">{template.rules.map((rule) => <span key={rule}>{rule}</span>)}</div>
+      <Link className="text-link" href="/automation">Build a watch policy <ArrowUpRight size={13} /></Link>
+    </article>)}</div>
+    <div className="notice-block"><ShieldAlert size={18} /><div><strong>Copy trading is not active.</strong><p>No strategy owner identity, verified live track record, subscription payment, profit-share ledger or vault execution is configured in this release. Nothing on this page copies a trade or charges a fee.</p></div></div>
+  </main>;
+}
+
 function SupportPage() {
   const faqs = [
     ['Why can the vault not be funded yet?', 'No mainnet vault program address is configured and independently audited. The console fails closed and does not offer a funding address.'],
@@ -261,6 +281,7 @@ export function TerminalFeaturePage({ kind }: { kind: FeatureKind }) {
   if (kind === 'history') return <HistoryPage />;
   if (kind === 'activity') return <ActivityLogsPage />;
   if (kind === 'status') return <StatusPage />;
+  if (kind === 'marketplace') return <StrategyMarketplacePage />;
   if (kind === 'support') return <SupportPage />;
   if (kind === 'risk') return <RiskPage />;
   if (kind === 'explorer') return <ExplorerPage />;

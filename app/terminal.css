@@ -400,3 +400,12 @@ button { cursor: pointer; }
   .home-candidate a { grid-column: 1 / -1; }
   .home-safety-banner { align-items: flex-start; flex-direction: column; }
 }
+
+.strategy-template { display: flex; min-height: 220px; flex-direction: column; }
+.strategy-template-top { display: flex; align-items: center; justify-content: space-between; color: #75826b; font: 9px var(--terminal-mono); }
+.strategy-template-top b { padding: 5px 8px; border: 1px solid #37432b; border-radius: 20px; background: #1a2013; color: #bbce92; font: 8px var(--terminal-mono); }
+.strategy-template h2 { margin: 17px 0 7px; color: #edf2e8; font: 600 20px var(--terminal-display); }
+.strategy-template p { max-width: 480px; margin: 0; color: #899482; font-size: 10px; line-height: 1.7; }
+.strategy-rule-list { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 17px; }
+.strategy-rule-list span { padding: 6px 8px; border: 1px solid #30392a; border-radius: 5px; background: #141910; color: #aebd9a; font: 8px var(--terminal-mono); }
+.strategy-template .text-link { margin-top: auto; padding-top: 19px; }
