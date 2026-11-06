@@ -727,3 +727,52 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
   .home-tool-card, .terminal-site button, .terminal-site a { transition: none !important; }
 }
+
+
+/* Ensure the shared glass treatment wins over legacy per-button declarations. */
+.terminal-site :is(
+  button:not(.text-action):not(.sort-heading):not(.watch-button):not(.mobile-nav-toggle):not(.leaderboard-modal-close):not(.icon-button),
+  .primary-action, .outline-button, .desk-link, .connect-button,
+  .primary-button, .profile-copy-button, .refresh-button,
+  .vault-secondary-button, .vault-danger-button, .studio-create-button,
+  .leaderboard-copy-button, .leaderboard-cancel-button
+) {
+  border-color: rgba(215, 232, 255, .24);
+  background: linear-gradient(145deg, rgba(255,255,255,.12), rgba(255,255,255,.035) 52%, rgba(131,217,255,.045)), rgba(255,255,255,.055);
+  color: #edf5ff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.40), inset 0 -1px 0 rgba(0,0,0,.24), 0 5px 16px rgba(0,0,0,.25), 0 2px 16px rgba(131,217,255,.055);
+  backdrop-filter: blur(14px) saturate(155%);
+  -webkit-backdrop-filter: blur(14px) saturate(155%);
+}
+.terminal-site :is(
+  button:not(.text-action):not(.sort-heading):not(.watch-button):not(.mobile-nav-toggle):not(.leaderboard-modal-close):not(.icon-button),
+  .primary-action, .outline-button, .desk-link, .connect-button,
+  .primary-button, .profile-copy-button, .refresh-button,
+  .vault-secondary-button, .vault-danger-button, .studio-create-button,
+  .leaderboard-copy-button, .leaderboard-cancel-button
+)::before { z-index: 0; }
+.terminal-site :is(
+  button:not(.text-action):not(.sort-heading):not(.watch-button):not(.mobile-nav-toggle):not(.leaderboard-modal-close):not(.icon-button),
+  .primary-action, .outline-button, .desk-link, .connect-button,
+  .primary-button, .profile-copy-button, .refresh-button,
+  .vault-secondary-button, .vault-danger-button, .studio-create-button,
+  .leaderboard-copy-button, .leaderboard-cancel-button
+):hover:not(:disabled) {
+  border-color: rgba(192,224,255,.46);
+  background-color: rgba(255,255,255,.11);
+  color: #f5f9ff;
+  transform: translateY(-2px);
+  box-shadow: 0 0 15px rgba(131,217,255,.18), inset 0 1px 0 rgba(255,255,255,.48), 0 9px 24px rgba(0,0,0,.32);
+  backdrop-filter: blur(19px) saturate(175%);
+}
+.terminal-site :is(
+  button:not(.text-action):not(.sort-heading):not(.watch-button):not(.mobile-nav-toggle):not(.leaderboard-modal-close):not(.icon-button),
+  .primary-action, .outline-button, .desk-link, .connect-button,
+  .primary-button, .profile-copy-button, .refresh-button,
+  .vault-secondary-button, .vault-danger-button, .studio-create-button,
+  .leaderboard-copy-button, .leaderboard-cancel-button
+):active:not(:disabled) {
+  transform: scale(.97);
+  filter: brightness(.94);
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.22), 0 1px 4px rgba(0,0,0,.2);
+}
