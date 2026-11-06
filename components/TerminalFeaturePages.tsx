@@ -215,7 +215,6 @@ export function TerminalFeaturePage({ kind }: { kind: FeatureKind }) {
   if (kind === 'explorer') return <ExplorerPage />;
   return <GenericUnavailable kind={kind} />;
 }
- + activeBalance.solPrice.toFixed(2) : 'Reading public balance'} /><Stat label="TOKEN VALUE" value={balance ? '$' + balance.stableUsd.toFixed(2) : '—'} detail="USDC and USDT snapshot" /><Stat label="TOTAL READ" value={balance ? '$' + balance.equityUsd.toFixed(2) : '—'} detail="Estimated SOL + stablecoin value" /></div>{error ? <div className="feed-error">{error}</div> : null}<TransactionHistory owner={owner} /></> : <div className="empty-panel centered"><Wallet size={24} /><strong>Open a wallet session</strong><p>Connect a Solana wallet to read balances and on-chain transaction history.</p></div>}
   </main>;
 }
 
@@ -223,7 +222,7 @@ function ActivityLogsPage() {
   const connected = useConnectedWallet(client);
   const owner = connected?.account.address ?? '';
   const [history, setHistory] = useState<WalletHistory>({ events: [], points: [] });
-  useEffect(() => { setHistory(owner ? getWalletHistory(owner) : { events: [], points: [] }); }, [owner]);
+  useEffect(() => { const timer = window.setTimeout(() => setHistory(owner ? getWalletHistory(owner) : { events: [], points: [] }), 0); return () => window.clearTimeout(timer); }, [owner]);
   return <main className="terminal-page feature-page"><Heading eyebrow="ACTIVITY LOGS · BROWSER-LOCAL" title={<>A record of <span>this browser’s activity.</span></>} detail="These supplemental events are stored locally per wallet. They are not a tamper-proof audit ledger or a complete list of on-chain actions." action={<WalletConnectionControl />} />
     {owner ? <Panel title="Recorded events" eyebrow="LOCAL STORAGE">{history.events.length ? history.events.map((event) => <div className="gate-row" key={event.id}><span className="gate-state">{event.type.toUpperCase()}</span><div><strong>{event.title}</strong><small>{event.detail} · {new Date(event.at).toLocaleString()}</small>{event.signature ? <a href={'https://explorer.solana.com/tx/' + event.signature} target="_blank" rel="noreferrer">View transaction <ExternalLink size={12} /></a> : null}</div></div>) : <div className="empty-panel">No local activity recorded for this wallet in this browser.</div>}</Panel> : <div className="empty-panel centered"><Wallet size={24} /><strong>Connect a wallet</strong><p>Local activity is scoped to the connected public wallet address.</p></div>}
   </main>;
@@ -283,7 +282,6 @@ export function TerminalFeaturePage({ kind }: { kind: FeatureKind }) {
   if (kind === 'explorer') return <ExplorerPage />;
   return <GenericUnavailable kind={kind} />;
 }
- + activeBalance.solPrice.toFixed(2) : 'Reading public balance'} /><Stat label="TOKEN VALUE" value={balance ? '$' + balance.stableUsd.toFixed(2) : '—'} detail="USDC and USDT snapshot" /><Stat label="TOTAL READ" value={balance ? '$' + balance.equityUsd.toFixed(2) : '—'} detail="Estimated SOL + stablecoin value" /></div>{error ? <div className="feed-error">{error}</div> : null}<TransactionHistory owner={owner} /></> : <div className="empty-panel centered"><Wallet size={24} /><strong>Open a wallet session</strong><p>Connect a Solana wallet to read balances and on-chain transaction history.</p></div>}
   </main>;
 }
 
@@ -351,7 +349,6 @@ export function TerminalFeaturePage({ kind }: { kind: FeatureKind }) {
   if (kind === 'explorer') return <ExplorerPage />;
   return <GenericUnavailable kind={kind} />;
 }
- + activeBalance.solPrice.toFixed(2) : 'Reading public balance'} /><Stat label="TOKEN VALUE" value={balance ? '$' + balance.stableUsd.toFixed(2) : '—'} detail="USDC and USDT snapshot" /><Stat label="TOTAL READ" value={balance ? '$' + balance.equityUsd.toFixed(2) : '—'} detail="Estimated SOL + stablecoin value" /></div>{error ? <div className="feed-error">{error}</div> : null}<TransactionHistory owner={owner} /></> : <div className="empty-panel centered"><Wallet size={24} /><strong>Open a wallet session</strong><p>Connect a Solana wallet to read balances and on-chain transaction history.</p></div>}
   </main>;
 }
 
@@ -419,7 +416,6 @@ export function TerminalFeaturePage({ kind }: { kind: FeatureKind }) {
   if (kind === 'explorer') return <ExplorerPage />;
   return <GenericUnavailable kind={kind} />;
 }
- + activeBalance.solPrice.toFixed(2) : 'Reading public balance'} /><Stat label="TOKEN VALUE" value={balance ? '$' + balance.stableUsd.toFixed(2) : '—'} detail="USDC and USDT snapshot" /><Stat label="TOTAL READ" value={balance ? '$' + balance.equityUsd.toFixed(2) : '—'} detail="Estimated SOL + stablecoin value" /></div>{error ? <div className="feed-error">{error}</div> : null}<TransactionHistory owner={owner} /></> : <div className="empty-panel centered"><Wallet size={24} /><strong>Open a wallet session</strong><p>Connect a Solana wallet to read balances and on-chain transaction history.</p></div>}
   </main>;
 }
 
