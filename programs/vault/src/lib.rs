@@ -23,9 +23,6 @@ pub use welp_vault_checks::{
     DEFAULT_PER_POSITION_MAX as DEFAULT_PER_POSITION, MIN_POSITION_LAMPORTS as MIN_POSITION,
 };
 
-/// 100 SOL in lamports — aggregate deposit cap per vault.
-const AGGREGATE_CAP_LAMPORTS: u64 = 100_000_000_000;
-
 fn map_err(err: CheckError) -> VaultError {
     match err {
         CheckError::CapTooSmall => VaultError::CapTooSmall,
@@ -173,15 +170,6 @@ pub mod welp_vault {
             require!(
                 vault.state == VaultState::Funded || vault.state == VaultState::Active,
                 VaultError::InvalidState
-            );
-            // Enforce 100 SOL aggregate cap
-            require!(
-                vault
-                    .total_deposited_lamports
-                    .checked_add(amount)
-                    .ok_or(VaultError::Overflow)?
-                    <= AGGREGATE_CAP_LAMPORTS,
-                VaultError::AggregateCap
             );
         }
 
@@ -1137,8 +1125,6 @@ pub enum VaultError {
     InvalidState,
     #[msg("Vault has outstanding shares, cannot close")]
     SharesOutstanding,
-    #[msg("Would exceed 100 SOL aggregate cap")]
-    AggregateCap,
     #[msg("Creator fee basis points exceeds maximum 3000 (30%)")]
     FeeTooHigh,
     #[msg("Invalid or non-positive oracle price")]
