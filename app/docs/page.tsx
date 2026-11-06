@@ -85,6 +85,7 @@ export default function DocsPage() {
                 ['/swap', 'Swap desk', 'Jupiter route review and explicit wallet-signing handoff.'],
                 ['/portfolio', 'Portfolio', 'Public wallet balances and transaction history.'],
                 ['/automation', 'Automation policies', 'Browser-local watch policies; no order execution.'],
+                ['/agent-monitor', 'Agent monitor', 'Production runtime status; no deployed executor is currently enabled.'],
                 ['/agent', 'Market agent', 'Analysis surface; no unattended trading runtime.'],
                 ['/vault', 'Vault console', 'Program status and policy design; not a deposit product.'],
                 ['/safety', 'Safety', 'Risk limits, threat model and product boundaries.'],

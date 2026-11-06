@@ -9,6 +9,11 @@ type WalletTransaction = {
   blockTime: number | null;
   failed: boolean;
   confirmationStatus: 'processed' | 'confirmed' | 'finalized' | null;
+  type?: string;
+  nativeDeltaSol?: number | null;
+  feeLamports?: number | null;
+  tokenDeltas?: Array<{ mint: string; decimals: number; rawDelta: string; direction: string }>;
+  detailsAvailable?: boolean;
 };
 
 type HistoryResponse = { transactions: WalletTransaction[]; hasMore: boolean; nextBefore: string | null };
@@ -87,7 +92,7 @@ export function TransactionHistory({ owner }: { owner: string }) {
         <div><p className="eyebrow">ON-CHAIN · THIS WALLET ADDRESS</p><h2>Transaction history</h2></div>
         <label className="history-page-size"><span>Rows</span><select value={pageSize} onChange={(event) => changePageSize(Number(event.target.value))} aria-label="Transactions per page">{PAGE_SIZES.map((size) => <option value={size} key={size}>{size} per page</option>)}</select></label>
       </div>
-      <p className="wallet-history-caption">History is fetched from Solana for this public address. Select up to 100 transactions per page; use Explorer for token amounts and full instruction details.</p>
+      <p className="wallet-history-caption">History is fetched from Solana mainnet RPC. Balance changes are decoded where transaction metadata is available; classifications are indicative, not a complete ledger or verified P&L.</p>
       {error ? <div className="inline-error history-error" role="alert">{error}<button className="text-button" onClick={() => { setData(null); setLoadedFor(''); setPageIndex(0); setCursors([null]); }}>Try again</button></div> : null}
       {loading ? <div className="history-loading"><LoaderCircle className="spin" size={18} /> Loading wallet transactions…</div> : null}
       {!loading && visibleData?.transactions.length === 0 ? <div className="history-empty">No transactions were returned for this wallet.</div> : null}
@@ -95,12 +100,14 @@ export function TransactionHistory({ owner }: { owner: string }) {
         <>
           <div className="history-table-wrap">
             <table className="history-table">
-              <thead><tr><th scope="col">Transaction</th><th scope="col">Time</th><th scope="col">Status</th><th scope="col"><span className="sr-only">Details</span></th></tr></thead>
+              <thead><tr><th scope="col">Transaction</th><th scope="col">Time</th><th scope="col">Activity</th><th scope="col">SOL change</th><th scope="col">Status</th><th scope="col"><span className="sr-only">Details</span></th></tr></thead>
               <tbody>
                 {visibleData.transactions.map((transaction, index) => (
                   <tr key={transaction.signature}>
                     <td><span className="history-index">{pageIndex * pageSize + index + 1}</span><code title={transaction.signature}>{shortSignature(transaction.signature)}</code></td>
                     <td>{formatTimestamp(transaction.blockTime)}</td>
+                    <td><span>{transaction.type ?? 'Details unavailable'}</span>{transaction.tokenDeltas?.length ? <small className="history-token-deltas">{transaction.tokenDeltas.map((delta) => `${delta.direction} ${delta.mint.slice(0, 5)}…`).join(' · ')}</small> : null}</td>
+                    <td>{typeof transaction.nativeDeltaSol === 'number' ? `${transaction.nativeDeltaSol > 0 ? '+' : ''}${transaction.nativeDeltaSol.toFixed(6)} SOL` : '—'}</td>
                     <td><span className={`history-status${transaction.failed ? ' history-status-failed' : ''}`}>{transaction.failed ? 'Failed' : transaction.confirmationStatus ?? 'Unknown'}</span></td>
                     <td><a href={`https://explorer.solana.com/tx/${encodeURIComponent(transaction.signature)}`} target="_blank" rel="noreferrer" aria-label={`Open transaction ${shortSignature(transaction.signature)} in Solana Explorer`}><ExternalLink size={14} /></a></td>
                   </tr>

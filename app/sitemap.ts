@@ -5,7 +5,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
   const routes = [
     '', '/markets', '/signals', '/swap', '/portfolio', '/profile', '/settings',
-    '/automation', '/agent', '/autonomous', '/vault', '/strategy-marketplace',
+    '/automation', '/agent', '/autonomous', '/agent-monitor', '/vault', '/strategy-marketplace',
     '/history', '/activity-logs', '/governance', '/risk-dashboard', '/api-keys',
     '/referral', '/token-explorer', '/support', '/system-status', '/docs',
     '/whitepaper', '/safety', '/terms', '/privacy',
