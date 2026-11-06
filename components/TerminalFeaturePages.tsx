@@ -143,6 +143,12 @@ function AutomationPage() {
     <div className="feature-grid two">
       <Panel title="Signal policies" eyebrow="LOCAL WATCH RULES">
         <p className="muted-copy">Build a policy. It takes effect when you evaluate it against the latest feed.</p>
+        <div className="inline-actions" style={{ margin: '12px 0 16px' }}>
+          <button className={monitoring ? 'outline-button small' : 'primary-action'} onClick={() => void toggleMonitoring()} disabled={!policies.length && !monitoring}>
+            {monitoring ? 'Pause browser alerts' : 'Enable browser alerts'}
+          </button>
+          <span className="muted-copy">{monitoring ? 'Active while this page stays open · checks every 60 seconds' : 'Optional notifications · no trades are placed'}</span>
+        </div>
         {policies.length ? <div className="policy-list">{policies.map((policy) => <article key={policy.id}><div><strong>{policy.name}</strong><small>{policy.preset} · Liquidity {policy.liquidity.toLocaleString()} · Organic {policy.organic}+ · Drawdown {policy.drawdown}%</small></div><div className="inline-actions"><button className="outline-button small" onClick={() => void evaluate(policy)} disabled={working}>{working ? <LoaderCircle className="spin" size={13} /> : 'Evaluate'}</button><button className="text-action" onClick={() => removePolicy(policy.id)}>Remove</button></div></article>)}</div> : <div className="empty-panel">No policies yet. Build one on the right.</div>}
       </Panel>
       <Panel title="New policy" eyebrow="POLICY COMPOSER">
