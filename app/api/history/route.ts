@@ -110,14 +110,13 @@ export async function GET(request: NextRequest) {
           record.signature,
           { encoding: 'jsonParsed', commitment: 'confirmed', maxSupportedTransactionVersion: 0 },
         ]);
-        if (!detail?.meta) return { ...record, failed: record.err != null, type: 'Details unavailable', nativeDeltaLamports: null, feeLamports: null, tokenDeltas: [], detailsAvailable: false };
+        if (!detail?.meta) return { ...record, failed: record.err != null, type: 'Details unavailable', nativeDeltaLamports: null, nativeDeltaSol: null, feeLamports: null, tokenDeltas: [], detailsAvailable: false };
         const keys = detail.transaction.message.accountKeys.map(keyString);
         const ownerIndex = keys.indexOf(owner);
         const nativeDelta = ownerIndex >= 0
           ? (detail.meta.postBalances[ownerIndex] ?? 0) - (detail.meta.preBalances[ownerIndex] ?? 0)
           : 0;
-        const fee = ownerIndex >= 0 && keys.slice(0, detail.transaction.message.accountKeys.length).includes(owner)
-          ? detail.meta.fee : 0;
+        const fee = ownerIndex === 0 ? detail.meta.fee : 0;
         const tokens = tokenDeltas(owner, detail);
         return {
           ...record,
