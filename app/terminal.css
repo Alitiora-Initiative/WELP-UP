@@ -409,3 +409,23 @@ button { cursor: pointer; }
 .strategy-rule-list { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 17px; }
 .strategy-rule-list span { padding: 6px 8px; border: 1px solid #30392a; border-radius: 5px; background: #141910; color: #aebd9a; font: 8px var(--terminal-mono); }
 .strategy-template .text-link { margin-top: auto; padding-top: 19px; }
+
+/* Exchange-style grouped product navigation, adapted to WELP UP branding. */
+.site-header{position:sticky}.site-nav{gap:3px}
+.site-nav-trigger{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 13px;border:0;border-radius:8px;background:transparent;color:#a4aa9c;font-size:12px;cursor:pointer;transition:background .16s,color .16s}
+.site-nav-trigger:hover,.site-nav-trigger.is-active,.site-nav-trigger.is-expanded{background:#1a1d17;color:#f3f6ed}
+.site-nav-trigger.is-expanded svg{transform:rotate(180deg)}.site-nav-trigger svg{transition:transform .16s}
+.mega-menu{position:absolute;z-index:70;top:100%;left:0;right:0;border-bottom:1px solid #30352b;background:rgba(15,17,14,.985);box-shadow:0 22px 50px #0009;backdrop-filter:blur(20px);animation:mega-menu-in .14s ease-out}
+@keyframes mega-menu-in{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+.mega-menu-inner{display:grid;grid-template-columns:minmax(160px,.8fr) minmax(360px,2fr) minmax(180px,.85fr);gap:clamp(20px,3vw,48px);width:min(100% - 64px,1320px);margin:0 auto;padding:26px 0 30px}
+.mega-menu-kicker{color:var(--terminal-accent);font:9px var(--terminal-mono);letter-spacing:.13em}
+.mega-menu-heading h2{margin:12px 0 8px;font:700 28px var(--terminal-display);letter-spacing:-.04em}
+.mega-menu-heading p,.mega-menu-aside p{max-width:240px;margin:0;color:#8d9786;font-size:11px;line-height:1.7}
+.mega-menu-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 12px}
+.mega-menu-link{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:68px;padding:11px 13px;border:1px solid transparent;border-radius:9px;text-decoration:none;transition:background .16s,border-color .16s}
+.mega-menu-link:hover{border-color:#343b2b;background:#1a1e16}
+.mega-menu-link strong,.mega-menu-link small{display:block}.mega-menu-link strong{margin-bottom:5px;color:#e9eee3;font-size:11px}.mega-menu-link small{color:#899382;font-size:9px;line-height:1.5}.mega-menu-link>svg{flex:0 0 auto;color:#8d9b78}
+.mega-menu-aside{display:flex;flex-direction:column;align-items:flex-start;gap:11px;padding:17px;border:1px solid #30372a;border-radius:11px;background:radial-gradient(circle at 100% 0,#28331966,transparent 65%),#11140f}
+.mega-menu-aside>strong{color:#f0f4e9;font:600 17px var(--terminal-display)}.mega-menu-aside a{display:inline-flex;align-items:center;gap:7px;margin-top:auto;color:var(--terminal-accent);font-size:10px;text-decoration:none}
+@media(max-width:980px){.site-header{gap:10px}.site-nav-trigger{padding:0 8px;font-size:11px}.mega-menu-inner{grid-template-columns:150px 1fr}.mega-menu-aside{display:none}}
+@media(max-width:720px){.site-nav{display:none}.site-nav.is-open{position:absolute;top:100%;left:0;right:0;display:flex;flex-direction:column;align-items:stretch;padding:10px 16px;border-bottom:1px solid var(--terminal-border);background:#0b0d0a}.site-nav.is-open .site-nav-trigger{justify-content:space-between;width:100%;min-height:44px}.mobile-nav-toggle{display:grid}.desk-link{display:none}.mega-menu{position:static;width:100%;border-top:1px solid var(--terminal-border-soft);box-shadow:none}.mega-menu-inner{display:block;width:auto;padding:14px 16px 18px}.mega-menu-heading{display:none}.mega-menu-links{grid-template-columns:1fr;gap:2px}.mega-menu-link{min-height:58px;padding:9px 10px}}
