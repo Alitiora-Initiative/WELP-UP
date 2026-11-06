@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -61,7 +62,7 @@ export function TerminalShell({ children }: { children: ReactNode }) {
  const activeGroup=navGroups.find(group=>group.label===activeMenu);
  return <div className="terminal-site">
   <header className="site-header" onMouseLeave={()=>setActiveMenu(null)}>
-   <Link href="/" className="site-brand" onClick={()=>{setOpen(false);setActiveMenu(null);}}><img className="site-brand-mark" src="/welp-up-logo.svg" alt="" width="38" height="38" /><strong>WELP UP!</strong><span className="network-badge"><i/> MAINNET</span></Link>
+   <Link href="/" className="site-brand" onClick={()=>{setOpen(false);setActiveMenu(null);}}><Image className="site-brand-mark" src="/welp-up-logo.svg" alt="" width={38} height={38} priority /><strong>WELP UP!</strong><span className="network-badge"><i/> MAINNET</span></Link>
    <nav className={'site-nav'+(open?' is-open':'')} aria-label="Main navigation">
     {navGroups.map(group=><button key={group.label} type="button" className={'site-nav-trigger'+(isActive(group.items)?' is-active':'')+(activeMenu===group.label?' is-expanded':'')} aria-expanded={activeMenu===group.label} onMouseEnter={()=>setActiveMenu(group.label)} onFocus={()=>setActiveMenu(group.label)} onClick={()=>setActiveMenu(current=>current===group.label?null:group.label)}>{group.label}<ChevronDown size={12}/></button>)}
    </nav>
