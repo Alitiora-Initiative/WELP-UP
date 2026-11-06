@@ -577,9 +577,7 @@ pub mod welp_vault {
         // invoke_signed looks up accounts by pubkey so order matters only for the instruction metas.
         #[allow(clippy::redundant_clone)]
         let cpi_account_infos: Vec<AccountInfo> = {
-            let mut v: Vec<AccountInfo> = Vec::with_capacity(
-                ctx.remaining_accounts.len() + 4,
-            );
+            let mut v: Vec<AccountInfo> = Vec::with_capacity(ctx.remaining_accounts.len() + 4);
             for a in ctx.remaining_accounts {
                 v.push(a.clone());
             }
