@@ -31,7 +31,7 @@ The repository contains substantial UI and program scaffolding, but the presence
 | Contract security | Program scaffold includes SOL accounting, legacy entry points and creator-fee accounting; no independent audit evidence in repo | Complete code-level review, adversarial tests and independent audit before deployment |
 | Executor controls | Some legacy executor functions are compatibility stubs; no production agent key service is configured | Do not expose delegated signing or unattended execution |
 | Swap history | Execute endpoint returns a successful Jupiter signature; no durable server-side execution ledger is established by that endpoint | Reconcile signatures from chain; do not call browser-local events a complete ledger |
-| Transaction history | RPC history endpoint lists signatures and confirmation metadata | Parse transaction details and token balance changes before claiming trade/deposit/withdrawal classification or complete P&L |
+| Transaction history | History API now fetches confirmed transaction details and decodes owner SOL/token balance deltas where RPC metadata is available; bounded concurrency and explicit unavailable states | Still address-scoped and RPC-retention-limited; classifications are indicative, not a complete ledger. Build a durable indexer and reconciliation pipeline before claiming complete deposits/withdrawals or P&L |
 | P&L | Current balance snapshots do not establish cost basis or complete transfer history | No verified realized/unrealized P&L claims until an indexed, reconciled ledger exists |
 | Copy trading | No production follower consent, replication engine or profit-share settlement | Keep copying and subscriptions disabled |
 | Strategy performance | No verified deployed bot execution records | Never show invented ROI, win rate, TVL, followers or agent counts |
@@ -107,7 +107,7 @@ Do not enable fee collection until the treasury address, token account derivatio
 
 - **Prices:** retain provider identity, observation time and stale/error status.
 - **Charts:** plot only provider-returned candle/price points or on-chain indexed vault events. Empty data must render an empty state, not a fabricated flat line.
-- **Wallet history:** a signature list is not a decoded ledger. Parse confirmed transactions, account keys, pre/post balances, token balance changes and failed status.
+- **Wallet history:** the API now parses confirmed transaction metadata, account keys, pre/post SOL balances, owner token-balance changes and failed status when the RPC provider retains transaction details. This remains a partial address-history view, not a durable complete ledger; parse inner instructions/program events and reconcile historical coverage before financial accounting.
 - **P&L:** distinguish realized from unrealized; include fees, slippage, token decimals, transfers and missing-price treatment. Do not calculate from partial snapshots.
 - **Vault history:** source from program events and transaction metadata after deployment; browser localStorage is supplemental only.
 - **Agent charts:** source from confirmed execution records, not backtests or strategy claims.
