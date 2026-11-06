@@ -9,11 +9,16 @@ import { WalletConnectionControl } from '@/components/WalletConnectionControl';
 
 type Ticker = { mint: string; symbol: string; priceUsd: number; priceChange24h: number };
 type Feed = { assets?: Ticker[] };
-const nav = [
-  { label: 'Markets', href: '/markets' }, { label: 'Trade', href: '/swap' },
-  { label: 'Automate', href: '/automation' }, { label: 'Vault', href: '/vault' },
-  { label: 'Console', href: '/portfolio' }, { label: 'Docs', href: '/docs' },
-];
+type NavItem = { label: string; href: string; description: string };
+type NavGroup = { label: string; items: NavItem[] };
+const navGroups: NavGroup[] = [
+ {label:'Markets',items:[['Market overview','/markets','Live Solana assets, liquidity and turnover'],['Token explorer','/token-explorer','Search tokens and inspect on-chain details'],['Signal engine','/signals','Transparent scoring and eligibility rules'],['Risk dashboard','/risk-dashboard','Review exposure and published risk checks'],['Leaderboard','/leaderboard','Compare tracked market activity']]},
+ {label:'Trade',items:[['Swap desk','/swap','Review a Jupiter route and approve in your wallet'],['Safety limits','/safety','Execution checks, limits and wallet handoff'],['Transaction history','/history','Inspect public wallet transactions']]},
+ {label:'Automate',items:[['Signal policies','/automation','Save watch rules and browser alerts'],['AI analyst','/agent','Market commentary and analysis boundaries'],['Agent monitor','/autonomous','Runtime status; no unattended execution'],['Strategy marketplace','/strategy-marketplace','Explore strategy listings and their status']]},
+ {label:'Vault',items:[['Vault console','/vault','Authority model, gates and launch readiness'],['Vault cap chart','/dashboard','Review vault dashboard and cap snapshots'],['Architecture','/whitepaper','PDA design, threat model and authority flow']]},
+ {label:'Console',items:[['Profile','/profile','Wallet overview and local preferences'],['Portfolio','/portfolio','Public balances and wallet snapshots'],['Activity logs','/activity-logs','Browser-local policy and activity trail'],['System status','/system-status','Live Solana, Jupiter and service checks'],['Support centre','/support','FAQs and troubleshooting'],['Referral programme','/referral','Referral programme status and information']]},
+ {label:'Docs',items:[['Documentation','/docs','Architecture, limits, roadmap and runbook'],['Whitepaper','/whitepaper','The WELP UP design and technical record'],['Terms','/terms','Published service terms'],['Privacy','/privacy','How data is handled'],['API keys','/api-keys','API access status and guidance']]}
+].map(group=>({...group,items:group.items.map(([label,href,description])=>({label,href,description}))}));
 const tickerSymbols = ['SOL', 'USDC', 'PUMP', 'USDT', 'WBTC', 'TTWO', 'HYPE', 'JUP', 'BONK', 'cbBTC'];
 function price(value: number) {
   if (value >= 1000) return '$' + value.toLocaleString('en-US', { maximumFractionDigits: 2 });
@@ -49,19 +54,22 @@ function TickerStrip() {
 }
 
 export function TerminalShell({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
-  const [open, setOpen] = useState(false);
-  const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href + '/'));
-  return <div className="terminal-site">
-    <header className="site-header">
-      <Link href="/" className="site-brand"><span className="site-brand-mark">W</span><strong>WELP UP!</strong><span className="network-badge"><i /> MAINNET</span></Link>
-      <nav className={'site-nav' + (open ? ' is-open' : '')} aria-label="Main navigation">
-        {nav.map((item) => <Link key={item.href} href={item.href} onClick={() => setOpen(false)} className={isActive(item.href) ? 'is-active' : ''}>{item.label}{item.label === 'Console' || item.label === 'Docs' ? <ChevronDown size={12} /> : null}</Link>)}
-      </nav>
-      <div className="site-header-actions"><Link className="desk-link" href="/swap">Open trade desk <ArrowUpRight size={14} /></Link><WalletConnectionControl /><button className="mobile-nav-toggle" onClick={() => setOpen((value) => !value)} aria-label={open ? 'Close navigation' : 'Open navigation'}>{open ? <X size={18} /> : <Menu size={18} />}</button></div>
-    </header>
-    <TickerStrip />
-    <div className="site-main">{children}</div>
+ const pathname=usePathname();
+ const [open,setOpen]=useState(false);
+ const [activeMenu,setActiveMenu]=useState<string|null>(null);
+ const isActive=(items:NavItem[])=>items.some(item=>pathname===item.href||(item.href!=='/'&&pathname.startsWith(item.href+'/')));
+ const activeGroup=navGroups.find(group=>group.label===activeMenu);
+ return <div className="terminal-site">
+  <header className="site-header" onMouseLeave={()=>setActiveMenu(null)}>
+   <Link href="/" className="site-brand" onClick={()=>{setOpen(false);setActiveMenu(null);}}><span className="site-brand-mark">W</span><strong>WELP UP!</strong><span className="network-badge"><i/> MAINNET</span></Link>
+   <nav className={'site-nav'+(open?' is-open':'')} aria-label="Main navigation">
+    {navGroups.map(group=><button key={group.label} type="button" className={'site-nav-trigger'+(isActive(group.items)?' is-active':'')+(activeMenu===group.label?' is-expanded':'')} aria-expanded={activeMenu===group.label} onMouseEnter={()=>setActiveMenu(group.label)} onFocus={()=>setActiveMenu(group.label)} onClick={()=>setActiveMenu(current=>current===group.label?null:group.label)}>{group.label}<ChevronDown size={12}/></button>)}
+   </nav>
+   <div className="site-header-actions"><Link className="desk-link" href="/swap">Open trade desk <ArrowUpRight size={14}/></Link><WalletConnectionControl/><button className="mobile-nav-toggle" onClick={()=>{setOpen(value=>!value);setActiveMenu(null);}} aria-label={open?'Close navigation':'Open navigation'}>{open?<X size={18}/>:<Menu size={18}/>}</button></div>
+   {activeGroup?<div className="mega-menu" role="region" aria-label={activeGroup.label+' menu'} onMouseEnter={()=>setActiveMenu(activeGroup.label)}><div className="mega-menu-inner"><div className="mega-menu-heading"><span className="mega-menu-kicker">WELP UP! / {activeGroup.label.toUpperCase()}</span><h2>{activeGroup.label}</h2><p>Explore the tools and information available in this workspace.</p></div><div className="mega-menu-links">{activeGroup.items.map(item=><Link key={item.href} href={item.href} className="mega-menu-link" onClick={()=>{setActiveMenu(null);setOpen(false);}}><span><strong>{item.label}</strong><small>{item.description}</small></span><ArrowUpRight size={15}/></Link>)}</div><div className="mega-menu-aside"><span className="mega-menu-kicker">MARKET ACCESS</span><strong>One desk. Clear controls.</strong><p>Live market data, transparent rules and wallet-approved transactions. No custody or unattended trading.</p><Link href="/safety" onClick={()=>setActiveMenu(null)}>Review safety model <ArrowUpRight size={13}/></Link></div></div></div>:null}
+  </header>
+  <TickerStrip/>
+  <div className="site-main">{children}</div>
     <footer className="site-footer">
       <div className="footer-brand"><span className="site-brand-mark">W</span><div><strong>WELP UP!</strong><p>A Solana market console. Live pools, published rules, wallet-approved execution. WELP never holds keys and never trades on your behalf.</p><small>Operator · Alitiora Initiative · Kenya</small></div></div>
       <div className="footer-column"><strong>PRODUCT</strong><Link href="/markets">Market board</Link><Link href="/signals">Signal engine</Link><Link href="/swap">Swap desk</Link><Link href="/portfolio">Portfolio</Link><Link href="/token-explorer">Token explorer</Link></div>
