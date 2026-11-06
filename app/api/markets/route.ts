@@ -73,7 +73,7 @@ export async function GET() {
   try {
     const headers: Record<string, string> = { Accept: 'application/json' };
     if (process.env.JUPITER_API_KEY) headers['x-api-key'] = process.env.JUPITER_API_KEY;
-    const response = await fetch(FEED, { headers, cache: 'no-store', signal: AbortSignal.timeout(15_000) });
+    const response = await fetch(FEED, { headers, cache: 'force-cache', next: { revalidate: 60 }, signal: AbortSignal.timeout(15_000) });
     if (!response.ok) return NextResponse.json({ error: 'Jupiter market feed returned ' + response.status + '.' }, { status: 502 });
     const payload: unknown = await response.json();
     if (!Array.isArray(payload)) return NextResponse.json({ error: 'Jupiter returned an unexpected market-feed format.' }, { status: 502 });
