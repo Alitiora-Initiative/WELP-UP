@@ -12,7 +12,7 @@ type Feed = { assets?: Ticker[] };
 const nav = [
   { label: 'Markets', href: '/markets' }, { label: 'Trade', href: '/swap' },
   { label: 'Automate', href: '/automation' }, { label: 'Vault', href: '/vault' },
-  { label: 'Console', href: '/dashboard' }, { label: 'Docs', href: '/docs' },
+  { label: 'Console', href: '/portfolio' }, { label: 'Docs', href: '/docs' },
 ];
 const tickerSymbols = ['SOL', 'USDC', 'PUMP', 'USDT', 'WBTC', 'TTWO', 'HYPE', 'JUP', 'BONK', 'cbBTC'];
 function price(value: number) {
@@ -64,10 +64,11 @@ export function TerminalShell({ children }: { children: ReactNode }) {
     <div className="site-main">{children}</div>
     <footer className="site-footer">
       <div className="footer-brand"><span className="site-brand-mark">W</span><div><strong>WELP UP!</strong><p>A Solana market console. Live pools, published rules, wallet-approved execution. WELP never holds keys and never trades on your behalf.</p><small>Operator · Alitiora Initiative · Kenya</small></div></div>
-      <div className="footer-column"><strong>PRODUCT</strong><Link href="/markets">Market board</Link><Link href="/signals">Signal engine</Link><Link href="/swap">Swap desk</Link><Link href="/portfolio">Portfolio</Link></div>
+      <div className="footer-column"><strong>PRODUCT</strong><Link href="/markets">Market board</Link><Link href="/signals">Signal engine</Link><Link href="/swap">Swap desk</Link><Link href="/portfolio">Portfolio</Link><Link href="/token-explorer">Token explorer</Link></div>
       <div className="footer-column"><strong>AUTOMATION</strong><Link href="/automation">Signal policies</Link><Link href="/agent">Market agent</Link><Link href="/vault">Vault console</Link><Link href="/strategy-marketplace">Strategy marketplace</Link></div>
       <div className="footer-column"><strong>CONSOLE</strong><Link href="/profile">Profile</Link><Link href="/history">Transaction history</Link><Link href="/activity-logs">Activity logs</Link><Link href="/support">Support centre</Link><Link href="/system-status">System status</Link></div>
       <div className="footer-column"><strong>RECORD</strong><Link href="/docs">Documentation</Link><Link href="/whitepaper">Whitepaper</Link><Link href="/safety">Safety limits</Link><Link href="/terms">Terms</Link><Link href="/privacy">Privacy</Link></div>
+      <div className="footer-column"><strong>MORE TOOLS</strong><Link href="/settings">Account settings</Link><Link href="/autonomous">Agent monitor</Link><Link href="/governance">Governance</Link><Link href="/risk-dashboard">Risk dashboard</Link><Link href="/api-keys">API keys</Link><Link href="/referral">Referral programme</Link></div>
       <div className="footer-bottom"><span>© 2026 WELP UP! · MIT licensed interface source.</span><span>Not investment advice. Digital assets can lose all value.</span><span>Solana mainnet · non-custodial</span></div>
     </footer>
   </div>;
