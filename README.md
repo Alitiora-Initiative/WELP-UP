@@ -16,7 +16,7 @@ WELP UP! is a Solana market research and wallet-approved trading interface. It r
 
 ## Important limitations
 
-- **No live AI execution:** the AI Bot Studio does not have a production agent runtime, delegated signing authority, or live strategy execution. Bot ROI, TVL, and copier statistics must not be represented as live performance.
+- **No live AI execution:** the Automation, Agent, and Autonomous pages are policy/status interfaces. There is no production agent runtime, delegated signing authority, or live strategy execution. The former browser paper-bot simulator was removed; no bot ROI, TVL, or copier statistics should be represented as live performance.
 - **No production vault:** the Anchor program ID in source is a placeholder. The program is not deployed or independently audited on mainnet. Vault deposits, withdrawals, and automated trading must remain disabled.
 - **No copy trading:** there is no production bot-owner identity, follower consent, trade replication, or profit-share settlement system.
 - **No account backend:** preferences and activity stored in localStorage are specific to one browser. There is no authenticated user account, server-side profile, secure API-key manager, or multi-device sync.
@@ -27,17 +27,18 @@ WELP UP! is a Solana market research and wallet-approved trading interface. It r
 
 ## Pages
 
-- `/` — product overview.
-- `/dashboard` — market and wallet console.
-- `/signals` — rule-based market scanner.
+- `/` — WELP UP terminal home and product overview.
+- `/markets` — live Jupiter-powered market board; `/dashboard` redirects here.
+- `/signals` — rule-based market scanner with visible warnings and blockers.
 - `/swap` — Jupiter order preparation and wallet-signed execution.
-- `/profile` — connected wallet summary and public on-chain history.
-- `/activity` — browser-local activity and balance snapshots.
-- `/settings` — local appearance preferences.
+- `/portfolio`, `/profile`, `/history` — wallet summary, public transaction history, and portfolio views.
+- `/activity-logs` — browser-local activity log; it is not a complete transaction ledger.
+- `/automation`, `/agent`, `/autonomous` — automation policies and agent status; no unattended execution is enabled.
 - `/vault` — vault launch status; funding is not enabled.
-- `/autonomous` — agent launch status; live agent execution is not enabled.
-- `/docs` — product and integration documentation.
-- `/whitepaper` — official technical/product whitepaper.
+- `/strategy-marketplace`, `/governance`, `/referral` — status pages; marketplace settlement, governance execution, and referral payouts are not enabled.
+- `/risk-dashboard`, `/token-explorer`, `/api-keys`, `/support`, `/system-status` — risk, token, account-service, support, and service-status interfaces.
+- `/settings` — local appearance preferences.
+- `/docs`, `/whitepaper` — product and integration documentation.
 - `/terms`, `/privacy`, `/safety` — legal and safety information.
 
 ## Architecture
