@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowDownWideNarrow, ArrowUpRight, ChevronLeft, ChevronRight, CircleHelp, Download, LoaderCircle, RefreshCw, Search, Star } from 'lucide-react';
@@ -14,6 +16,7 @@ type Filter = 'All' | 'Eligible' | 'Blocked' | 'Score 90+' | 'Verified';
 const compact = (value: number) => value >= 1e9 ? '$' + (value / 1e9).toFixed(1) + 'B' : value >= 1e6 ? '$' + (value / 1e6).toFixed(1) + 'M' : value >= 1e3 ? '$' + (value / 1e3).toFixed(value >= 1e5 ? 0 : 1) + 'K' : '$' + value.toFixed(2);
 const price = (value: number) => value >= 1000 ? '$' + value.toLocaleString('en-US', { maximumFractionDigits: 2 }) : value >= 1 ? '$' + value.toFixed(2) : value >= .01 ? '$' + value.toFixed(4) : '$' + value.toPrecision(4);
 const short = (value: string) => value.slice(0, 5) + '…' + value.slice(-5);
+const EMPTY_ASSETS: Asset[] = [];
 
 export function MarketBoard() {
   const [feed, setFeed] = useState<Feed | null>(null);
@@ -50,7 +53,7 @@ export function MarketBoard() {
     return () => { window.clearTimeout(initial); window.clearInterval(interval); document.removeEventListener('visibilitychange', visible); };
   }, [refresh]);
 
-  const assets = feed?.assets ?? [];
+  const assets = feed?.assets ?? EMPTY_ASSETS;
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const filteredRows = assets.filter((asset) => {

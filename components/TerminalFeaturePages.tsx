@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useConnectedWallet } from '@solana/kit-plugin-wallet/react';
-import { ArrowUpRight, ExternalLink, LoaderCircle, LockKeyhole, RefreshCw, Search, ShieldAlert, ShieldCheck, Wallet } from 'lucide-react';
+import { ArrowUpRight, ExternalLink, LoaderCircle, LockKeyhole, RefreshCw, Search, ShieldAlert, Wallet } from 'lucide-react';
 import { client } from '@/components/Providers';
 import { WalletConnectionControl } from '@/components/WalletConnectionControl';
 import { TransactionHistory } from '@/components/TransactionHistory';
@@ -181,7 +181,7 @@ function PortfolioPage() {
   const [error, setError] = useState('');
   useEffect(() => { if (!owner) return; let active = true; fetch('/api/wallet?owner=' + encodeURIComponent(owner), { cache: 'no-store' }).then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Wallet read failed.'); if (active) { setBalance({ ...data, owner }); setError(''); } }).catch((caught) => { if (active) setError(caught instanceof Error ? caught.message : 'Wallet read failed.'); }); return () => { active = false; }; }, [owner]);
   return <main className="terminal-page feature-page"><Heading eyebrow="PORTFOLIO · PUBLIC MAINNET DATA" title={<>Your wallet, <span>as it actually is.</span></>} detail="Balances are read from Solana for the connected public address. WELP never asks for a seed phrase or stores private keys." action={<WalletConnectionControl />} />
-    {owner ? <><div className="feature-stats"><Stat label="SOL BALANCE" value={activeBalance ? activeBalance.sol.toFixed(4) + ' SOL' : '—'} detail={activeBalance ? 'SOL at  /><Stat label="TOKEN VALUE" value={activeBalance ? ' detail="USDC and USDT snapshot" /><Stat label="TOTAL READ" value={activeBalance ? ' detail="Estimated SOL + stablecoin value" /></div>{error ? <div className="feed-error">{error}</div> : null}<TransactionHistory owner={owner} /></> : <div className="empty-panel centered"><Wallet size={24} /><strong>Open a wallet session</strong><p>Connect a Solana wallet to read balances and on-chain transaction history.</p></div>}
+    {owner ? <><div className="feature-stats"><Stat label="SOL BALANCE" value={activeBalance ? activeBalance.sol.toFixed(4) + ' SOL' : '—'} detail={activeBalance ? 'SOL at $' + activeBalance.solPrice.toFixed(2) : 'Reading public balance'} /><Stat label="TOKEN VALUE" value={activeBalance ? '$' + activeBalance.stableUsd.toFixed(2) : '—'} detail="USDC and USDT snapshot" /><Stat label="TOTAL READ" value={activeBalance ? '$' + activeBalance.equityUsd.toFixed(2) : '—'} detail="Estimated SOL + stablecoin value" /></div>{error ? <div className="feed-error">{error}</div> : null}<TransactionHistory owner={owner} /></> : <div className="empty-panel centered"><Wallet size={24} /><strong>Open a wallet session</strong><p>Connect a Solana wallet to read balances and on-chain transaction history.</p></div>}
   </main>;
 }
 
