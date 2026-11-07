@@ -32,7 +32,7 @@ A wallet signature is meaningful authorization. Users should inspect each transa
 
 ## Fees and treasury
 
-WELP's target protocol fee is **0.50% of gross input** on every swap that executes through a WELP-controlled, fee-enforcing on-chain instruction. The fee is split 60% to the published developer/operator wallet and 40% to the WELP treasury. There is no separate fixed $0.10 trade fee, $0.10 transfer fee, $0.50 launch-creation fee or creator-configurable fee under this policy.
+WELP's target protocol fee is **0.50% of gross input** on every swap that executes through a WELP-controlled, fee-enforcing on-chain instruction. 100% of the fee is credited to treasury at collection; after a minimum 14-day epoch, 60% of eligible new fees is released to the published developer/operator wallet and 40% remains as protected treasury reserve. The split is applied once. There is no separate fixed $0.10 trade fee, $0.10 transfer fee, $0.50 launch-creation fee or creator-configurable fee under this policy.
 
 The policy is documented in docs/FEES_AND_TREASURY.md. The server policy and client/Rust fee arithmetic are not proof of fee collection. The current launchpad program has not been deployed or source-verified on mainnet, generic SPL input-token fee vaults and the launchpad buy/sell instructions are not implemented, and the Jupiter order/execute path cannot append the required fee transfers. Order and execute endpoints therefore remain fail-closed. Do not send assets to the sample program ID or a PDA derived from it.
 
@@ -58,7 +58,7 @@ The policy is documented in docs/FEES_AND_TREASURY.md. The server policy and cli
 - docs/ — protocol design, threat models, release gates, fee policy and runbooks.
 - [Launchpad protocol specification](docs/LAUNCHPAD_PROTOCOL_SPEC.md) — custom supply/decimals, curve, escrow, anti-snipe, CPMM, fees, indexing and release design; not a live deployment.
 - [Launchpad and platform hardening backlog](docs/LAUNCHPAD_AND_SECURITY_BACKLOG.md) — implementation checklist and release gates; not a live launch contract.
-- [Treasury and creator-fee design](docs/TREASURY_AND_CREATOR_FEES.md) — two-week epoch, retained 40% reserve, 0–3% creator fee and Raydium integration limits.
+- [Treasury and creator-fee design](docs/TREASURY_AND_CREATOR_FEES.md) — two-week treasury epoch, retained reserve, 50-bps protocol fee and Raydium integration limits.
 
 ## Local development
 
