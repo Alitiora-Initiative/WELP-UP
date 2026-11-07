@@ -166,6 +166,12 @@ test('disabled creation-fee instruction does not pull unused Pyth SDK', () => {
 
 test('Anchor SBF build preserves pinned Cargo lockfiles', () => {
   const workflow = readFileSync(new URL('../.github/workflows/anchor-sbf.yml', import.meta.url), 'utf8');
+  const compatibilityScript = readFileSync(new URL('../scripts/pin-sbf-compatible-locks.sh', import.meta.url), 'utf8');
+  assert.match(compatibilityScript, /pin_if_present "\$manifest" blake3 1\.8\.2/);
+  assert.match(compatibilityScript, /pin_if_present "\$manifest" constant_time_eq 0\.3\.1/);
+  assert.match(compatibilityScript, /pin_if_present "\$manifest" base64ct 1\.7\.3/);
+  assert.match(compatibilityScript, /pin_if_present "\$manifest" indexmap 2\.11\.4/);
+  assert.ok(workflow.includes('bash scripts/pin-sbf-compatible-locks.sh'));
   assert.match(workflow, /anchor build -- -- --locked/);
   assert.match(workflow, /Refresh Cargo metadata and normalize the SBF lockfile/);
   assert.ok(workflow.includes('if [[ "\\${1:-}" == "metadata" ]]; then'));
