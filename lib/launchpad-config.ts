@@ -1,16 +1,18 @@
-
 /**
- * Pure launchpad configuration rules shared by the creator UI and tests.
- * This module validates user-selected whole-token supply and decimal precision.
- * It does not build or submit transactions and does not imply a deployed program.
+ * Exact, client-side launch parameter validation.
+ *
+ * These helpers are previews only; the Anchor program must repeat every
+ * validation and must be the authority for all token/fee accounting.
  */
 export const MIN_TOTAL_SUPPLY_WHOLE = 0n;
 export const MAX_TOTAL_SUPPLY_WHOLE = 1_000_000_000n;
-export const SUPPORTED_TOKEN_DECIMALS = [0, 6, 9] as const;
+export const SUPPORTED_TOKEN_DECIMALS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 export type SupportedTokenDecimals = (typeof SUPPORTED_TOKEN_DECIMALS)[number];
+
 export const U64_MAX = (1n << 64n) - 1n;
-const BPS_DENOMINATOR = 10_000n;
-const EARLY_WALLET_LIMIT_BPS = 500n;
+export const BASIS_POINTS_DENOMINATOR = 10_000n;
+export const MAX_CREATOR_FEE_BPS = 300;
+export const TREASURY_SHARE_OF_CREATOR_FEE_BPS = 50n;
 
 export type LaunchSupplyValidation =
   | {
@@ -25,8 +27,16 @@ export type LaunchSupplyValidation =
     }
   | { ok: false; error: string };
 
+export type CreatorFeeRoute = {
+  creatorFeeLamports: bigint;
+  treasuryShareLamports: bigint;
+  creatorRewardLamports: bigint;
+  nextRemainder: bigint;
+};
+
 /**
  * Accepts whole tokens, never a JavaScript floating-point amount.
+ * Zero is previewable but is not a launchable mint/sale.
  * 200000000 is one valid creator choice, not a platform-wide default.
  */
 export function validateLaunchSupply(
@@ -50,12 +60,13 @@ export function validateLaunchSupply(
   }
   if (
     decimalsInput === null ||
-    !SUPPORTED_TOKEN_DECIMALS.some((value) => value === decimalsInput)
+    !Number.isInteger(decimalsInput) ||
+    decimalsInput < 0 ||
+    decimalsInput > 9
   ) {
-    return { ok: false, error: 'Choose 0, 6, or 9 decimals.' };
+    return { ok: false, error: 'Choose a decimal precision from 0 through 9.' };
   }
 
-  // The runtime check above proves membership in the supported literal set.
   const decimals = decimalsInput as SupportedTokenDecimals;
   const scale = 10n ** BigInt(decimals);
   const maxSupplyBaseUnits = wholeSupply * scale;
@@ -65,7 +76,7 @@ export function validateLaunchSupply(
 
   // Floor the exact 5% basis-point calculation. Never use floating point.
   const earlyWalletLimitBaseUnits =
-    (maxSupplyBaseUnits * EARLY_WALLET_LIMIT_BPS) / BPS_DENOMINATOR;
+    (maxSupplyBaseUnits * 500n) / BASIS_POINTS_DENOMINATOR;
 
   return {
     ok: true,
@@ -76,12 +87,54 @@ export function validateLaunchSupply(
     earlyWalletLimitBaseUnits,
     earlyWalletLimitWholeTokens: formatBaseUnits(earlyWalletLimitBaseUnits, decimals),
     // If 5% is below one indivisible token unit, early-window buys must fail;
-    // do not round the limit up and silently exceed 5%.
-    earlyWindowPurchasesBlockedByGranularity: earlyWalletLimitBaseUnits === 0n,
+    // do not round the cap up and silently exceed 5%.
+    earlyWindowPurchasesBlockedByGranularity: wholeSupply > 0n && earlyWalletLimitBaseUnits === 0n,
   };
 }
 
-/** Format raw SPL units without converting through floating point. */
+/**
+ * Creator fee is a 0–3% rate on an eligible WELP-routed swap volume.
+ * The treasury receives 0.5% of the *creator-fee amount*, not 0.5% of gross
+ * volume. The remainder is the creator reward. Carrying the remainder makes
+ * the cumulative split exact at lamport precision over repeated collections.
+ *
+ * This is a calculation helper only. It does not prove that a swap occurred,
+ * sign a transaction, or move funds.
+ */
+export function calculateCreatorFeeRoute(
+  swapVolumeLamports: bigint,
+  creatorFeeBps: number,
+  priorRemainder = 0n,
+): CreatorFeeRoute {
+  if (swapVolumeLamports < 0n) throw new RangeError('Swap volume cannot be negative.');
+  if (
+    !Number.isInteger(creatorFeeBps) ||
+    creatorFeeBps < 0 ||
+    creatorFeeBps > MAX_CREATOR_FEE_BPS
+  ) {
+    throw new RangeError('Creator fee must be an integer from 0 to 300 basis points.');
+  }
+  if (priorRemainder < 0n || priorRemainder >= BASIS_POINTS_DENOMINATOR) {
+    throw new RangeError('Fee-share remainder must be between 0 and 9,999.');
+  }
+
+  const creatorFeeLamports =
+    (swapVolumeLamports * BigInt(creatorFeeBps)) / BASIS_POINTS_DENOMINATOR;
+  const shareNumerator =
+    creatorFeeLamports * TREASURY_SHARE_OF_CREATOR_FEE_BPS + priorRemainder;
+  const treasuryShareLamports = shareNumerator / BASIS_POINTS_DENOMINATOR;
+  const nextRemainder = shareNumerator % BASIS_POINTS_DENOMINATOR;
+  const creatorRewardLamports = creatorFeeLamports - treasuryShareLamports;
+
+  return {
+    creatorFeeLamports,
+    treasuryShareLamports,
+    creatorRewardLamports,
+    nextRemainder,
+  };
+}
+
+/** Format raw units without converting through floating point. */
 export function formatBaseUnits(amount: bigint, decimals: number): string {
   if (amount < 0n) throw new RangeError('Token amount cannot be negative.');
   if (!Number.isInteger(decimals) || decimals < 0 || decimals > 9) {
