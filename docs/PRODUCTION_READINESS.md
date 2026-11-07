@@ -24,6 +24,8 @@ This checklist distinguishes working public-data and wallet-approved features fr
 - [x] Added a per-vault ExecutorPolicy PDA with owner-only configure/rotate/revoke instructions, max trade, daily cap, slippage ceiling, and policy versioning.
 - [x] Added pure Rust daily-spend authorization checks and UTC-day rollover tests. These checks are not yet wired into a swap instruction; no executor can trade.
 - [x] Disabled the unsafe legacy amount-based withdrawal, no-op executor setters, and first-caller global configuration initializer.
+- [x] Validated bot registry strategy hash, position allocation, slippage and fee parameters.
+- [x] Bound user-slot creation to an enabled bot registry and snapshot the owner-approved strategy hash, registry version and risk limits.
 - [ ] Add Anchor local-validator integration tests for deposit, partial/full withdrawal, paused-vault recovery, repeated deposits after withdrawals, direct SOL donations, and rent preservation.
 - [ ] Run all GitHub CI checks for the latest branch commit and resolve any failures.
 - [ ] Run Anchor 0.30.1 SBF build, IDL validation, local-validator transaction tests for deposit/withdraw/policy configure/revoke, and independent security audit. These remain outstanding.
@@ -40,7 +42,7 @@ See [AI_AGENT_RUNTIME.md](AI_AGENT_RUNTIME.md) and [VAULT_PROGRAM_SECURITY_REVIE
 - [ ] Property, fuzz, invariant, and adversarial tests for share accounting, rounding, rent, token accounts, CPI account validation, re-entrancy-like composition risks, and emergency paths.
 - [ ] SPL-token deposits and withdrawals implemented and tested, not just SOL.
 - [ ] Jupiter CPI route validation and token accounting implemented. The current scaffold intentionally disables swap execution.
-- [ ] Wire executor policy into an audited swap instruction so per-trade, daily spend, slippage, policy version, nonce, and available-balance limits are enforced atomically. UI limits alone are not security controls.
+- [ ] Wire executor policy and each user-slot strategy/risk snapshot into an audited swap instruction so per-trade, daily spend, slippage, policy version, nonce, and available-balance limits are enforced atomically. UI limits alone are not security controls.
 - [ ] Verify owner pause, implemented executor-policy revocation, and share-withdrawal recovery under local-validator failure conditions.
 - [ ] Upgrade authority policy selected, documented, and secured (prefer a reviewed multisig or immutable deployment after upgrade window).
 - [ ] Monitoring, incident response, pause authority, recovery runbook, and independent RPC/indexer redundancy.
