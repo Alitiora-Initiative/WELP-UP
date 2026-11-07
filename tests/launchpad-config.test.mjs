@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   MAX_TOTAL_SUPPLY_WHOLE,
   U64_MAX,
-  calculateCreatorFeeRoute,
+  calculateProtocolSwapFee,
   formatBaseUnits,
   validateLaunchSupply,
 } from '../lib/launchpad-config.ts';
@@ -69,40 +69,34 @@ test('raw base-unit formatting remains exact for 0, 6 and 9 decimals', () => {
   assert.equal(formatBaseUnits(1_000_000_000n, 9), '1');
 });
 
-test('creator fee route sends 0.5% of the creator-fee amount to treasury', () => {
-  const route = calculateCreatorFeeRoute(1_000_000_000n, 300);
-  assert.equal(route.creatorFeeLamports, 30_000_000n);
-  assert.equal(route.treasuryShareLamports, 150_000n);
-  assert.equal(route.creatorRewardLamports, 29_850_000n);
-  assert.equal(route.treasuryShareLamports + route.creatorRewardLamports, route.creatorFeeLamports);
+test('protocol swap fee is 0.50% of gross input and splits 60/40', () => {
+  const route = calculateProtocolSwapFee(1_000_000_000n);
+  assert.equal(route.grossInputBaseUnits, 1_000_000_000n);
+  assert.equal(route.protocolFeeBaseUnits, 5_000_000n);
+  assert.equal(route.developerFeeBaseUnits, 3_000_000n);
+  assert.equal(route.treasuryFeeBaseUnits, 2_000_000n);
+  assert.equal(route.netSwapInputBaseUnits, 995_000_000n);
+  assert.equal(
+    route.developerFeeBaseUnits + route.treasuryFeeBaseUnits,
+    route.protocolFeeBaseUnits,
+  );
+  assert.equal(
+    route.netSwapInputBaseUnits + route.protocolFeeBaseUnits,
+    route.grossInputBaseUnits,
+  );
 });
 
-test('zero creator fee does not route protocol or creator rewards', () => {
-  const route = calculateCreatorFeeRoute(1_000_000_000n, 0);
-  assert.equal(route.creatorFeeLamports, 0n);
-  assert.equal(route.treasuryShareLamports, 0n);
-  assert.equal(route.creatorRewardLamports, 0n);
-});
-
-test('fee remainder carry yields exactly 0.5% over repeated tiny creator fees', () => {
-  let remainder = 0n;
-  let treasuryTotal = 0n;
-  let creatorTotal = 0n;
-
-  // 34 lamports at a 3% creator fee produces a 1-lamport creator fee.
-  for (let index = 0; index < 10_000; index += 1) {
-    const route = calculateCreatorFeeRoute(34n, 300, remainder);
-    treasuryTotal += route.treasuryShareLamports;
-    creatorTotal += route.creatorRewardLamports;
-    remainder = route.nextRemainder;
+test('protocol swap fee rejects zero, negative, overflow and amounts below fee precision', () => {
+  for (const amount of [0n, -1n, U64_MAX + 1n, 1n]) {
+    assert.throws(() => calculateProtocolSwapFee(amount));
   }
-
-  assert.equal(treasuryTotal, 50n);
-  assert.equal(creatorTotal, 9_950n);
-  assert.equal(remainder, 0n);
 });
 
-test('creator fee above 3% and invalid remainder are rejected', () => {
-  assert.throws(() => calculateCreatorFeeRoute(100n, 301), /0 to 300/);
-  assert.throws(() => calculateCreatorFeeRoute(100n, 100, 10_000n), /remainder/);
+test('protocol fee uses integer rounding with no floating point', () => {
+  const route = calculateProtocolSwapFee(10_000n);
+  assert.equal(route.protocolFeeBaseUnits, 50n);
+  assert.equal(route.developerFeeBaseUnits, 30n);
+  assert.equal(route.treasuryFeeBaseUnits, 20n);
+  assert.equal(route.netSwapInputBaseUnits, 9_950n);
 });
+
