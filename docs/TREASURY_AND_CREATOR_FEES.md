@@ -12,15 +12,15 @@ Every swap that passes through a WELP-controlled, fee-enforcing instruction is c
 
 The fee is calculated in the input asset's raw base units. The former creator-configurable 0–3% fee, the 0.5%-of-creator-fee model and the fixed $0.10/$0.50 USDC charges are removed.
 
-The fee allocation is 60% developer/operator and 40% WELP protocol treasury, applied exactly once. The public developer destination is ETuGxX6Znxr9q59THJtcYDJKt6RvCfN7wp79tRnbG1xG; it is a receiving address only, not a signing key.
+At collection, 100% of the 0.50% fee is credited to treasury. After a minimum 14-day epoch, 60% of eligible new inflows is released to the developer/operator and 40% is added to the protected treasury reserve. This allocation is applied exactly once. The public developer destination is ETuGxX6Znxr9q59THJtcYDJKt6RvCfN7wp79tRnbG1xG; it is a receiving address only, not a signing key.
 
 WELP cannot intercept arbitrary swaps sent directly to another DEX or wallet program. Only WELP-controlled swap instructions can enforce this fee.
 
 ## 2. Atomic fee settlement
 
-A live swap must calculate the fee from gross input and execute the swap plus both fee transfers in a single transaction. A failure in any leg rolls back the entire transaction. The fee recipient token accounts must be derived for the actual input mint; the program must not accept caller-selected destination accounts.
+A live swap must calculate the fee from gross input and credit 100% of it to the treasury vault in the same transaction as the swap. A failure in any leg rolls back the entire transaction. The treasury vault must match the actual input mint; the program must not accept caller-selected destination accounts. The separate 14-day epoch releases 60% of eligible new inflows to the developer and protects the remaining 40%.
 
-Each operation requires a unique receipt or nonce, checked integer math, validated token program/mint/authority, and an event with payer, input mint, gross input, fee amount, split and slot. The wallet review must show the fee and recipients before signing.
+Each operation requires a unique receipt or nonce, checked integer math, validated token program/mint/authority, and an event with payer, input mint, gross input, fee amount and slot. The wallet review must show the 0.50% fee and explain the treasury epoch waterfall before signing.
 
 The current helper in lib/launchpad-config.ts and the Rust math primitive are calculations only; neither moves funds. The Jupiter /order + /execute integration does not allow WELP to append arbitrary instructions after the order has been assembled. A composable transaction-building route and a production on-chain settlement instruction are required before trade execution can be enabled.
 
@@ -28,7 +28,7 @@ The current helper in lib/launchpad-config.ts and the Rust math primitive are ca
 
 The existing local Anchor design derives a state PDA from the treasury-v1 seed and a SOL System Program vault PDA from the treasury-vault-v1 seed. A successful epoch release requires at least 1,209,600 seconds (14 days) since the stored distribution timestamp. Clock reversal is rejected.
 
-The 40% reserve must be separately accounted and protected from later disbursements. The deployed policy must specify whether the 60% developer allocation is transferred at collection time or at epoch maturity. The same fee must never be split twice.
+The 40% reserve must be separately accounted and protected from later disbursements. At collection, 100% of the fee is credited to treasury. At epoch maturity, 60% of eligible new inflows is transferred to the developer recipient and the remaining 40% is added to the protected reserve. The same fee must never be split twice.
 
 **Important asset limitation:** the current treasury vault is a SOL System Program PDA. It is not a generic SPL-token vault. A 0.50% fee on an SPL-token input requires a token account owned by the treasury PDA for that exact mint (and a verified developer recipient account for that mint). That generic token-account path is not implemented. No arbitrary token should be transferred into an unverified or guessed address.
 
