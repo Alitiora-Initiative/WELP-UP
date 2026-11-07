@@ -18,7 +18,7 @@
 
 ## Important implementation status
 
-The existing app has live public market reads, wallet connection, Jupiter Swap API v2 order preparation, wallet-approved swap execution and RPC-derived wallet history. Those capabilities do not mean every feature in the product roadmap is deployed.
+The existing app has live public market reads, wallet connection and RPC-derived wallet history. Swap order and execution endpoints are now deliberately fail-closed until the disclosed fee can be included atomically in the wallet-approved transaction.
 
 The Anchor vault program remains an unlaunched scaffold. Its current program ID is a placeholder; it has not been deployed or independently audited. Automated swaps, fee settlement and production launchpad operations are not enabled. Do not deposit funds into a purported WELP safe until the exact mainnet program, source, upgrade authority, instructions, fees and security review are independently verified.
 
