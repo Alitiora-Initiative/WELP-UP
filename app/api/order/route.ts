@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requestOrder } from '@/lib/jupiter';
 import { SOL_MINT } from '@/lib/constants';
+import { WELP_FEE_POLICY } from '@/lib/server/fee-policy';
 
 export const runtime = 'nodejs';
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
 export async function POST(request: NextRequest) {
+  if (!WELP_FEE_POLICY.collectionEnabled) {
+    return NextResponse.json({ error: 'Trading is temporarily unavailable until the disclosed WELP fee is included atomically in the wallet-approved transaction.' }, { status: 503 });
+  }
   let body: Record<string, unknown>;
   try {
     body = await request.json();
