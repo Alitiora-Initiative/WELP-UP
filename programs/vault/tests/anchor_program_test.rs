@@ -1,5 +1,5 @@
 use anchor_lang::{AccountDeserialize, InstructionData, ToAccountMetas};
-use solana_program_test::{processor, ProgramTest, ProgramTestContext};
+use solana_program_test::{ProgramTest, ProgramTestContext};
 use solana_sdk::{
     instruction::Instruction,
     signature::{Keypair, Signer},
@@ -35,7 +35,7 @@ async fn start_program() -> ProgramTestContext {
     ProgramTest::new(
         "welp_vault",
         welp_vault::id(),
-        processor!(welp_vault::entry),
+        None,
     )
     .start_with_context()
     .await
