@@ -200,6 +200,7 @@ function VaultPage() {
         <div className="gate-row"><span className="gate-state partial">SOURCE</span><div><strong>Owner-signed SOL deposits</strong><small>System Program transfer with proportional shares priced against current accounted assets.</small></div></div>
         <div className="gate-row"><span className="gate-state partial">SOURCE</span><div><strong>Share-based SOL withdrawals</strong><small>Owner-only redemption with checked accounting and rent reserve protection.</small></div></div>
         <div className="gate-row"><span className="gate-state partial">SOURCE</span><div><strong>Executor configuration and revocation</strong><small>Per-vault policy PDA; owner signs configuration and can revoke without executor cooperation.</small></div></div>
+        <div className="gate-row"><span className="gate-state partial">SOURCE</span><div><strong>Bot strategy consent snapshot</strong><small>Creating a user slot requires an enabled bot registry and snapshots its strategy hash, version and risk limits.</small></div></div>
       </Panel>
       <Panel title="Stored executor guardrails" eyebrow="NOT YET USED BY TRADING">
         <div className="gate-row"><span className="gate-state">LIMIT</span><div><strong>Per-trade minimum and maximum</strong><small>At least 0.001 SOL; owner-selected maximum cannot exceed the daily allowance.</small></div></div>
