@@ -53,7 +53,9 @@ The supported launch presets are:
 | Decimals | Meaning |
 |---:|---|
 | 0 | Indivisible whole-token units |
+| 1–5 | The selected number of fractional decimal places |
 | 6 | Six fractional decimal places |
+| 7–8 | The selected number of fractional decimal places |
 | 9 | Nine fractional decimal places |
 
 The creator chooses one value. It is written into the mint at initialization and cannot be edited later.
