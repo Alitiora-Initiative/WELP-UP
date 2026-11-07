@@ -12,10 +12,16 @@ function instruction(name, nextMarker) {
   return source.slice(start, end);
 }
 
-test('vault funding is fail-closed', () => {
+test('vault deposits require owner-signed SOL transfer and mint proportional shares', () => {
   const body = instruction('pub fn fund_vault(', '/// Owner pauses their vault');
-  assert.match(body, /err!\(VaultError::FundingDisabled\)/);
-  assert.doesNotMatch(body, /system_program::transfer/);
+  assert.match(body, /amount > 0/);
+  assert.match(body, /VaultState::Funded \|\| vault\.state == VaultState::Active/);
+  assert.match(body, /compute_shares\(/);
+  assert.match(body, /system_program::transfer/);
+  assert.match(body, /available_lamports[\s\S]*checked_add\(amount\)/);
+  assert.match(body, /total_shares[\s\S]*checked_add\(shares\)/);
+  assert.doesNotMatch(body, /invoke_signed/);
+  assert.doesNotMatch(body, /FundingDisabled/);
 });
 
 test('automated swaps are fail-closed', () => {
