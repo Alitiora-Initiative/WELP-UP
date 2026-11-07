@@ -103,6 +103,6 @@ test('fee remainder carry yields exactly 0.5% over repeated tiny creator fees', 
 });
 
 test('creator fee above 3% and invalid remainder are rejected', () => {
-  assert.throws(() => calculateCreatorFeeRoute(100n, 301), /0 and 300/);
+  assert.throws(() => calculateCreatorFeeRoute(100n, 301), /0 to 300/);
   assert.throws(() => calculateCreatorFeeRoute(100n, 100, 10_000n), /remainder/);
 });
