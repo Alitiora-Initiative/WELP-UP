@@ -298,16 +298,15 @@ The burn amount, LP mint, source account and authority are validated. The burn i
 
 WELP's fee policy is **0.50% (50 basis points) of gross input** for each swap that actually executes through a WELP-controlled on-chain instruction. It is not 0.5% of a creator fee and is not a fixed USDC charge.
 
-| Allocation | Share of protocol fee |
-|---|---:|
-| Developer/operator | 60% |
-| Protocol treasury | 40% |
+At collection, **100% of the 0.50% fee is credited to the protocol treasury**. After at least 14 days, the epoch releases 60% of eligible new fee inflows to the published developer/operator recipient and adds the remaining 40% to the protected treasury reserve. This allocation happens once at epoch maturity; do not split the fee a second time at collection.
 
-Calculate the fee from the input asset's raw base units using checked integer arithmetic. Derive both recipient accounts for that exact input mint; never accept arbitrary fee destinations from a caller. The swap, fee transfers, receipt/nonce and launch accounting must commit atomically. If any leg fails, the entire transaction must roll back.
+Calculate the fee from the input asset's raw base units using checked integer arithmetic. A successful swap and treasury credit must commit atomically. If any leg fails, the entire transaction must roll back. Each operation requires a unique receipt/nonce to prevent duplicate collection.
+
+The current treasury vault is a SOL System Program PDA. It is not a generic SPL-token vault. SPL-token input assets require per-mint treasury token accounts and token-program CPI settlement, which are not yet implemented. The existing epoch-distribution code tracks SOL lamports only.
 
 WELP cannot intercept ordinary wallet-to-wallet SPL transfers or swaps routed directly to another DEX. A fee applies only to WELP-controlled instructions. Post-graduation Raydium swaps cannot be described as taxed by WELP unless a reviewed adapter or other supported on-chain mechanism actually receives and routes the fee.
 
-**Current status:** the fee policy and integer calculations are in application source, but the launchpad program is not deployed, generic input-token fee accounts and a buy/sell instruction are absent, and the current Jupiter order/execute path cannot accept extra custom fee instructions. Trading stays fail-closed until a composable transaction route and on-chain settlement are deployed, verified and audited.
+**Current status:** the fee policy and integer calculations are in application and Rust source, but the launchpad program is not deployed, per-mint token vaults and a buy/sell instruction are absent, and the current Jupiter order/execute path cannot accept extra custom fee instructions. Trading stays fail-closed until a composable transaction route and on-chain settlement are deployed, verified and audited.
 
 ## 9. Frontend and transaction service
 
