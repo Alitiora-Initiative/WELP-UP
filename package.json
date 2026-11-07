@@ -13,7 +13,8 @@
     "test:charts": "node --experimental-strip-types --test tests/chart-providers.test.mjs",
     "test:security": "node --experimental-strip-types --test tests/security.test.mjs",
     "indexnow": "node --env-file=.env.local scripts/indexnow.mjs",
-    "test:agent": "node --experimental-strip-types --test tests/agent.test.mjs"
+    "test:agent": "node --experimental-strip-types --test tests/agent.test.mjs",
+    "test:program-gates": "node --experimental-strip-types --test tests/program-gates.test.mjs"
   },
   "dependencies": {
     "@solana/kit": "8.5.0",
