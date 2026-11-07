@@ -337,13 +337,22 @@ pub mod welp_vault {
     pub fn create_user_slot(ctx: Context<CreateUserSlot>, bot_account: Pubkey) -> Result<()> {
         let registry = &ctx.accounts.bot_registry;
         require!(registry.enabled, VaultError::BotDisabled);
-        require!(registry.bot_account == bot_account, VaultError::InvalidBotRegistry);
-        require!(registry.strategy_hash != [0u8; 32], VaultError::InvalidStrategyHash);
+        require!(
+            registry.bot_account == bot_account,
+            VaultError::InvalidBotRegistry
+        );
+        require!(
+            registry.strategy_hash != [0u8; 32],
+            VaultError::InvalidStrategyHash
+        );
         require!(
             registry.max_position_bps > 0 && registry.max_position_bps <= 10_000,
             VaultError::InvalidPositionLimit
         );
-        require!(registry.max_slippage_bps <= 1_000, VaultError::InvalidSlippage);
+        require!(
+            registry.max_slippage_bps <= 1_000,
+            VaultError::InvalidSlippage
+        );
 
         let slot = &mut ctx.accounts.user_slot;
         slot.owner = ctx.accounts.owner.key();
