@@ -8,9 +8,7 @@
 
 use anchor_lang::prelude::*;
 use pyth_solana_receiver_sdk::price_update::PriceUpdateV2;
-use welp_vault_checks::{
-    check_initialize, check_withdraw, compute_redeem, CheckError,
-};
+use welp_vault_checks::{check_initialize, check_withdraw, compute_redeem, CheckError};
 
 declare_id!("US517G5965aydkZ46HS38QLi7UQiSojurfbQfKCELFx"); // undeployed placeholder; replace after `anchor keys list`
 
@@ -46,7 +44,6 @@ fn map_err(err: CheckError) -> VaultError {
         CheckError::MintNotAllowed => VaultError::MintNotAllowed,
     }
 }
-
 
 // ── Enums ─────────────────────────────────────────────────────────────────
 
@@ -421,7 +418,6 @@ pub mod welp_vault {
     pub fn charge_creation_fee(_ctx: Context<ChargeCreationFee>, _bot_nonce: u64) -> Result<()> {
         err!(VaultError::FeeSettlementDisabled)
     }
-
 }
 
 // ── Errors ────────────────────────────────────────────────────────────────
