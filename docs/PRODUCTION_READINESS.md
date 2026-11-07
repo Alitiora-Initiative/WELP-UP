@@ -48,19 +48,15 @@ No live bot performance, ROI, TVL, active-agent count, or copier count may be sh
 
 ## Fees and treasury
 
-The requested commercial policy is a flat **US$0.10 per successful trade, vault deposit, and vault withdrawal**, with collected fees allocated 60% to the operator wallet and 40% to a platform treasury. The operator address supplied for planning is:
+**Fee policy from the staged build specification (not enabled):**
 
-`6uyKhdb2iT8kWhk6SKyJjudWthYLESrVj3G7WHHydoEQ`
-
-The treasury address has not been supplied. The fee flow is **not implemented or enabled**. Before enabling it:
-
-- Publish the treasury address and fee policy in the UI and terms.
-- Specify the USDC mint, pricing/oracle source, rounding, payer, and transaction atomicity.
-- Collect the fee in the same user-reviewed transaction where possible; do not silently swap user assets or charge a separate wallet transaction.
-- Define whether a fee is due only after a confirmed successful action; failed, expired, or reverted operations must not be charged.
-- Ensure the 60/40 split is enforced by verifiable program logic or an independently auditable settlement service.
-- Add reconciliation, duplicate prevention, refund handling, and fee receipts.
-- Do not impose arbitrary UI-only deposit/withdrawal ceilings. Any required safety cap must be an explicit, user-visible, audited on-chain risk control.
+- Bot creation/activation fee: **US$0.10 per personal or public bot**, once per successful creation/activation.
+- Allocation: **40% to a verified, explicitly configured recipient and 60% to the platform Treasury PDA** derived from `b"website-treasury"`.
+- Creator performance share: separately configurable from **0–30% of realized positive net profit**, only after trusted on-chain accounting and settlement exist.
+- The setup fee and creator share are separate; prevent double charging.
+- The payout address in the planning specification (`EDZjEbRAtqyC8z6ta6PYHX161Xynt13tWpd7orKERkbz`) is an **unverified candidate**, not an approved recipient or on-chain constant. Validate it and confirm configuration before use.
+- Fee collection, treasury routing, and creator payouts are **disabled**. No fee may be collected until the USDC mint/denomination, conversion/rounding, recipient, treasury PDA, atomic settlement, receipts, reconciliation, duplicate prevention, and refund behavior are reviewed and tested.
+- Do not implement a per-trade, per-deposit, or per-withdrawal charge unless the product specification is explicitly revised and approved. Existing documents previously described a conflicting fee model; this section supersedes that obsolete wording.
 
 ## Production operations
 
