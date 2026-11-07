@@ -1,146 +1,88 @@
-# WELP UP!
+# WELP UP
 
-**WELP UP! is a non-custodial Solana market and trading console.** The product direction is to combine live market intelligence, explainable signal analysis, wallet-approved swaps, and a user-controlled on-chain vault architecture for bots.
+**WELP UP is an independent Solana application for market discovery, wallet-approved trading, user-created on-chain safes, token launches and portfolio intelligence.**
 
-- **Website:** https://welpup.fun/
-- **Repository:** https://github.com/Alitiora-Initiative/WELP-UP
-- **Network target:** Solana Mainnet-Beta for production market reads and wallet-approved swaps
-- **Source blueprint:** [`welp-original-source`](./welp-original-source) — the recovered Base44 application source archive supplied as the rebuild reference (coverage and omissions are documented in [the source audit](docs/BASE44_SOURCE_AUDIT.md))
+- Website: https://welpup.fun/
+- Repository: https://github.com/Alitiora-Initiative/WELP-UP
+- Network: Solana Mainnet-Beta for supported live data and wallet-approved operations
 
-> **Important — current production boundary:** WELP UP is not currently an autonomous real-funds trading platform, and its vault is not open for deposits. The recovered Base44 source defines the product blueprint and expected experience; it is not proof that every feature is implemented, deployed, audited, or safe to fund. No bot performance, TVL, ROI, user balances, vault activity, or AI execution should be fabricated or presented as live.
+## Product
 
-## Product direction
+1. **Markets** — live Solana token and pool discovery.
+2. **Signals** — deterministic scoring with visible rules and blockers.
+3. **Trade desk** — swap preparation, fee disclosure and explicit wallet approval.
+4. **Personal safes** — each user creates and controls their own on-chain safe, chooses what to fund and signs its setup, permissions, deposits and withdrawals. The application operator has no user seed phrase or unilateral signing key.
+5. **Launchpad** — creator-configured token supply and decimals, verified mint creation, launch records, market discovery and creator-reward accounting.
+6. **Portfolio** — wallet-derived balances, transaction history, allocation and P&L only where the underlying data supports a defensible calculation.
+7. **Security Lab** — reproducible static analysis, dependency scanning, adversarial tests and AI-assisted review with evidence-linked findings.
 
-The recovered source archive is the primary reference for product requirements, page structure, workflows, design language, and intended mechanics. It contains 134 captured file sections against 150 paths in its table of contents; see [the source audit](docs/BASE44_SOURCE_AUDIT.md) for the exact gaps. The rebuild should preserve its intent while replacing the Base44 runtime with the repository's maintainable Next.js, React, Solana, and server-side architecture.
+## Important implementation status
 
-The intended product areas are:
+The existing app has live public market reads, wallet connection, Jupiter Swap API v2 order preparation, wallet-approved swap execution and RPC-derived wallet history. Those capabilities do not mean every feature in the product roadmap is deployed.
 
-1. **Markets** — current Solana token and pool data, market discovery, watchlists, and transparent asset context.
-2. **Signals** — deterministic, inspectable scoring and explicit eligibility blockers. A score is not a probability of profit or a prediction.
-3. **Trade desk** — Jupiter-powered route preparation, visible transaction details, risk checks, and explicit wallet approval.
-4. **Automation and agents** — user-configured strategies, monitoring, and AI-assisted market analysis. Agent commentary must be distinguished from deterministic rules; no agent may sign with a user's secret or silently submit a trade.
-5. **Vault** — per-owner on-chain accounting and narrowly scoped, revocable execution authority, only after the program and all release gates are independently verified.
-6. **Portfolio, history, and activity** — wallet-derived public data and clearly labelled local or indexed records, never invented P&L.
-7. **Strategy marketplace** — bot discovery, owner consent, follower permissions, and profit-share settlement only after the required on-chain identity, accounting, and payout systems exist.
-8. **Documentation and safety** — architecture, risk limits, operational status, whitepaper, terms, privacy, and release gates kept consistent with shipped behavior.
+The Anchor vault program remains an unlaunched scaffold. Its current program ID is a placeholder; it has not been deployed or independently audited. Automated swaps, fee settlement and production launchpad operations are not enabled. Do not deposit funds into a purported WELP safe until the exact mainnet program, source, upgrade authority, instructions, fees and security review are independently verified.
 
-## What is currently available
+No fake token listings, simulated volume, placeholder transactions, fabricated balances, TVL, performance, audit scores or P&L are permitted. Empty or unavailable data must be shown as empty or unavailable.
 
-The existing Next.js application currently provides the following documented capabilities. Availability still depends on configured providers, network connectivity, and wallet support.
+## User-controlled safe model
 
-- Connect an external Solana wallet and read its public address and balance.
-- Retrieve public market/token information from configured data providers.
-- Display transparent, rule-based signal scores and their blocking conditions.
-- Prepare Jupiter Swap API v2 orders and require the connected wallet to review and sign before execution.
-- Read public on-chain wallet and transaction information through Solana RPC.
-- Store certain watch policies, appearance preferences, and activity snapshots locally in the browser.
-- Show product, system, safety, and vault launch documentation.
+WELP is software and protocol infrastructure, not a bank. Users create their own personal safe and sign every setup, permission, funding, withdrawal and other supported operation with their connected wallet. Assets deposited into a safe reside in a program-derived on-chain account and are governed by the deployed program's code; they are not held in a WELP operator wallet. Users must inspect the program, its permissions, upgrade authority and terms before funding. No server or AI agent may receive a user's seed phrase or private key.
 
-Browser-local records are not a complete on-chain ledger, verified account history, or audited profit-and-loss statement. Market-data outages or missing fields must be shown as unavailable rather than replaced with sample values.
+A wallet signature is meaningful authorization. Users should inspect each transaction's program IDs, account addresses, amounts, fee recipients and permissions before signing.
 
-## Not enabled — do not represent as live
+## Fees and treasury
 
-- Autonomous mainnet bot execution or an AI agent with transaction-signing authority. The current read-only analyst is not an execution agent.
-- A production vault that accepts deposits, holds user funds, or executes swaps.
-- Copy trading, follower allocation, public bot settlement, or creator profit-share payouts.
-- Production user accounts, multi-device sync, or a secure hosted API-key manager.
-- Governance execution, referral attribution, or referral reward payments.
-- Production bot-creation fees, treasury routing, or fee distribution.
-- Fiat on-ramps, perpetual futures, tokenized-stock execution, or centralized-exchange trading.
+The target fee schedule is documented in docs/FEES_AND_TREASURY.md:
 
-The Anchor vault source now includes owner-signed SOL deposits with proportional shares, owner-only share redemption, owner pause/resume, and a per-vault executor policy PDA with owner-controlled configuration and revocation. It remains unlaunched: no program ID, deployment, source verification, audit, or release evidence is approved. Executor policy is configuration only; swap execution, settlement, and fee instructions remain fail-closed. Legacy direct withdrawal is disabled to protect share accounting. Never invite users to deposit based on a UI, a source file, a local validator, or a successful frontend build.
+- 0.10 USD-equivalent per supported trade or transfer.
+- 0.50 USD-equivalent launchpad creation fee.
+- 60% of protocol fees to the published developer/operator wallet.
+- 40% to the WELP protocol treasury PDA.
+- Creator rewards are a separately accounted stream and may only be paid from a disclosed, funded creator allocation.
 
-## Non-negotiable security and product rules
+The configured developer fee destination is a public Solana address, not a signing key. Fee collection remains disabled until the treasury PDA, stablecoin accounts, atomic transaction composition, on-chain enforcement and user disclosures are implemented and verified. The website must never silently deduct a fee.
 
-These rules come from the supplied source and build blueprint and govern all future implementation:
+## Security rules
 
-- **Never collect wallet secrets.** Do not request, accept, store, transmit, log, or require a seed phrase, mnemonic, private key, wallet export, or centralized-exchange API key.
-- **External wallet approval stays explicit.** The connected wallet signs setup, funding, permission changes, withdrawals, and ordinary swaps. No hidden transaction, silent retry, or server-side use of a user's signing secret.
-- **Fail closed.** Missing program IDs, unverified accounts, stale quotes, unavailable RPC/data, failed checks, or incomplete security gates must disable the affected action and explain why.
-- **On-chain state is authoritative.** Vault balances, bot slots, spending limits, fees, and settlement must not be sourced from a Web2 database. An indexer may provide read-only history only and must reconcile against on-chain state/events.
-- **Delegated authority must be narrow and revocable.** Any future automated instruction must use a constrained program-derived authority, with owner-controlled pause, revoke, and withdrawal paths. The AI/server must never possess the owner's wallet secret.
-- **No centralized exchange execution.** Market-data integrations are read-only; do not add exchange credentials or user API-key trading.
-- **No invented data or simulated production claims.** Fixtures and validator tests may be used in development only and must be unmistakably labelled. Never publish fabricated balances, TVL, volume, users, bot results, AI activity, or transaction history.
-- **Fees require verified configuration and atomic settlement.** Do not collect the proposed bot setup fee or creator share until the recipient, treasury PDA, fee calculation, disclosures, reconciliation, and on-chain payment path are validated and tested.
-- **No mainnet fund movement before release approval.** A UI implementation, unit test, host Rust check, or frontend build is not an Anchor security audit or authorization to accept deposits.
-
-## Intended vault and bot model
-
-The blueprint describes user-created personal or public bots backed by an owner-controlled vault. The intended model includes:
-
-- A per-owner vault PDA and explicit owner identity.
-- A bounded total allocation/spend cap and a per-position maximum.
-- A paused-by-default execution path.
-- Optional allowed-mint restrictions and explicit strategy parameters.
-- Owner-controlled pause, revoke, and withdrawal instructions.
-- Execution restricted to a narrowly scoped, revocable program authority.
-- On-chain accounting for deposits, withdrawals, positions, realized results, fees, and settlement.
-- A public strategy marketplace only after bot ownership, follower consent, allocation limits, and settlement are enforceable.
-- A distinct, disclosed bot activation fee and creator share of realized positive net profit, with no double charging.
-
-These are **target requirements**, not a statement that the functionality is deployed. The exact fee recipient and treasury configuration must be validated before any fee route is enabled. Do not hard-code an unverified address from a planning document.
+- Never request, accept, store, transmit or log seed phrases, private keys or wallet exports.
+- All money-moving actions require explicit wallet authorization.
+- Server-side configuration and provider credentials must not use browser-exposed environment variables.
+- Program IDs, mint addresses, token-program IDs and account ownership must be validated on-chain.
+- Fee transfers must be atomic with the operation they charge for and visible in the wallet prompt.
+- The on-chain program is the source of truth for fees and treasury accounting; the backend may prepare transactions but cannot override protocol rules.
+- Missing program IDs, stale quotes, unavailable data, failed checks or unverified accounts must fail closed.
+- An AI-generated security finding is a hypothesis until independently reproduced. AI review is not an independent audit.
 
 ## Architecture
 
-The production repository is a Next.js App Router application using React and Solana tooling. The recovered source is a Vite/React application that depended on Base44 SDK services and browser routing. Its components and mechanics must be ported deliberately rather than reintroducing Base44 as a runtime dependency.
-
-- **Web application:** Next.js App Router and React.
-- **Wallet:** external Solana wallet connection; the application handles public addresses and wallet-approved transactions.
-- **Swaps:** Jupiter Swap API v2, subject to quote freshness, risk checks, and wallet approval.
-- **Chain reads:** Solana RPC for public account and transaction data.
-- **On-chain program:** Anchor/Rust vault scaffold under `programs/vault`; not a production vault until verified and audited.
-- **Research/agent code:** Python modules under `welp/`; their presence does not mean a hosted production agent is running.
-- **Persistence:** distinguish browser-local preferences/activity from verified on-chain state. Do not treat local storage as custody or accounting.
-
-The Base44 source archive is the reference for the intended product. The existing Next.js implementation and current runtime evidence determine what is actually shipped. When they disagree, document the gap and implement the blueprint safely; never copy an old claim into production documentation without verifying it.
-
-## Repository guide
-
-- `app/` — Next.js routes and layouts.
-- `components/` — terminal, market, wallet, vault, and shared UI components.
-- `lib/` — market, wallet, risk, and vault client logic.
-- `programs/vault/` — Anchor/Rust vault program scaffold.
-- `welp/` — Python research and agent modules.
-- `docs/` — architecture, threat model, production-readiness, runbooks, and release documentation.
-- `welp-original-source` — recovered Base44 source archive used as the product blueprint; see [the source audit](docs/BASE44_SOURCE_AUDIT.md) for completeness notes.
+- app/ — Next.js App Router pages and API routes.
+- components/ — application UI and wallet components.
+- lib/ — market, wallet, risk and protocol client logic.
+- programs/vault/ — Anchor/Rust on-chain program scaffold.
+- programs/vault-checks/ — host-side pure Rust invariants.
+- docs/ — protocol design, threat models, release gates, fee policy and runbooks.
 
 ## Local development
 
-Requirements: Node.js and npm. From the repository root:
+Requirements: Node.js and npm. Install dependencies with npm ci, start the development server with npm run dev, and run npm run lint, npm run typecheck and npm run build before submitting changes.
 
-```bash
-npm ci
-npm run dev
-```
+Run the relevant test suite for every changed subsystem. Anchor/SBF builds, ProgramTest, static analysis, independent audits and deployment verification must be reported separately. A green frontend build is not proof that an on-chain program is safe.
 
-Run the repository checks before submitting changes:
+Keep provider credentials server-side. Never commit wallet secrets, private keys, seed phrases, RPC credentials or API tokens.
 
-```bash
-npm run lint
-npm run typecheck
-npm run build
-```
+## Mainnet release gates
 
-Additional tests and Rust checks are defined by the repository scripts and CI workflow. Run the relevant tests for every changed subsystem. Anchor/SBF builds, validator tests, audits, and deployment verification must be reported separately; do not imply they passed if the required toolchain or environment was unavailable.
+Before enabling any new fund-moving instruction:
 
-Keep provider credentials server-side and out of source control. Never commit wallet secrets, private keys, seed phrases, RPC credentials, or provider tokens.
-
-## Release checklist
-
-Before enabling any real-funds vault or automated execution:
-
-1. Port and review the required workflows from the recovered source without carrying forward Base44-only runtime assumptions.
-2. Finalize the vault account model, instruction constraints, token/position accounting, and migration strategy.
-3. Build with a pinned, compatible Solana/Anchor toolchain and run local-validator integration tests.
-4. Independently audit the program and remediate all findings.
-5. Verify the deployed Mainnet-Beta program ID, source, upgrade authority, and configuration.
-6. Test wallet setup, funding, execution limits, pause, revoke, withdrawal, failure recovery, and accounting reconciliation.
-7. Verify fee recipients and atomic fee settlement; publish clear fee disclosures.
-8. Verify data-provider behavior, monitoring, incident response, and user-facing status reporting.
-9. Obtain explicit release approval before enabling deposits or automated mainnet fund movement.
-
-See the [AI analyst runtime guide](docs/AI_AGENT_RUNTIME.md), [recovered-source porting matrix](docs/BASE44_PORTING_MATRIX.md), [the source completeness audit](docs/BASE44_SOURCE_AUDIT.md), and the [staged vault/bot build specification](docs/WELPUP_BUILD_BLUEPRINT.md), alongside the engineering and vault documents in `docs/`. A green web build is necessary but not sufficient.
+1. Build the reviewed Anchor source and generate the IDL.
+2. Run unit, SBF-backed ProgramTest, adversarial account-composition and invariant tests.
+3. Run dependency and static-analysis tools and remediate findings.
+4. Generate and verify a deployment keypair securely outside chat; never expose its secret key.
+5. Deploy to Devnet first, then verify the program ID, binary, upgrade authority and configuration.
+6. Verify fee recipient, treasury PDA, token accounts, fee splits and atomic settlement.
+7. Complete independent Solana/Anchor review before public deposits or automated execution.
+8. Publish transaction-level evidence and accurate status before enabling the UI.
 
 ## Risk disclosure
 
-Solana transactions may be irreversible, swaps can execute at worse prices than quoted or fail while consuming network fees, market data can be delayed or unavailable, and users can lose some or all of the assets they trade. WELP UP does not promise profit, capital protection, liquidity, or uninterrupted execution. Nothing in the interface or documentation is investment advice.
+Digital assets are volatile and can lose all value. Transactions may be irreversible. Quotes, liquidity and token metadata may be incomplete or manipulated. WELP does not promise profit, capital protection, liquidity or uninterrupted operation. Nothing in the interface is investment, legal, tax or accounting advice.
