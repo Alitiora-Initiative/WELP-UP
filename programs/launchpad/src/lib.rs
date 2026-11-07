@@ -7,12 +7,20 @@
 //! crate yet; creator-fee math below is a tested primitive for those flows.
 
 use anchor_lang::{prelude::*, system_program};
+use anchor_spl::token::{self, Mint, Token, TokenAccount, TransferChecked};
 
 declare_id!("BrcdB9sV7z9DvF9rDHG263HUxXgJM3iCQdF36TcxbFEn");
 
 pub const TREASURY_SEED: &[u8] = b"treasury-v1";
 pub const TREASURY_VAULT_SEED: &[u8] = b"treasury-vault-v1";
+pub const FEE_RECEIPT_SEED: &[u8] = b"fee-receipt-v1";
 pub const DEVELOPER_WALLET: Pubkey = pubkey!("ETuGxX6Znxr9q59THJtcYDJKt6RvCfN7wp79tRnbG1xG");
+pub const PLATFORM_USDC_MINT: Pubkey = pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+pub const PLATFORM_TRADE_FEE_USDC: u64 = 100_000; // $0.10, six-decimal USDC
+pub const PLATFORM_TRANSFER_FEE_USDC: u64 = 100_000; // $0.10, six-decimal USDC
+pub const PLATFORM_LAUNCH_FEE_USDC: u64 = 500_000; // $0.50, six-decimal USDC
+pub const PLATFORM_DEVELOPER_SHARE_BPS: u128 = 6_000;
+pub const PLATFORM_TREASURY_SHARE_BPS: u128 = 4_000;
 
 pub const BASIS_POINTS_DENOMINATOR: u128 = 10_000;
 pub const CREATOR_FEE_PROTOCOL_SHARE_BPS: u128 = 50; // 0.5% of the creator fee
@@ -39,6 +47,9 @@ pub mod welp_launchpad {
         treasury.locked_reserve_lamports = 0;
         treasury.last_distribution_timestamp = now;
         treasury.creator_fee_share_remainder = 0;
+        treasury.total_platform_usdc_fees_collected = 0;
+        treasury.total_platform_usdc_developer_paid = 0;
+        treasury.total_platform_usdc_treasury_paid = 0;
         treasury.bump = ctx.bumps.treasury;
         treasury.vault_bump = ctx.bumps.treasury_vault;
 
@@ -46,6 +57,132 @@ pub mod welp_launchpad {
             developer_wallet: DEVELOPER_WALLET,
             treasury_vault: treasury.treasury_vault,
             timestamp: now,
+        });
+        Ok(())
+    }
+
+    /// Perform an SPL Token transfer and collect the fixed WELP transfer
+    /// fee in canonical Mainnet USDC in the same atomic transaction.
+    ///
+    /// This is a real transfer instruction, not a standalone fee invoice:
+    /// the source transfer and both USDC fee legs either all commit or all
+    /// roll back. The fee receipt PDA makes each payer/operation_id pair
+    /// one-time and auditable.
+    pub fn supported_transfer_with_fee(
+        ctx: Context<SupportedTransferWithFee>,
+        operation_id: [u8; 32],
+        amount: u64,
+    ) -> Result<()> {
+        require!(amount > 0, TreasuryError::ZeroTransferAmount);
+        require!(operation_id != [0_u8; 32], TreasuryError::InvalidOperationId);
+        require!(
+            ctx.accounts.recipient.key() != ctx.accounts.payer.key(),
+            TreasuryError::SelfTransferNotSupported
+        );
+        require!(
+            ctx.accounts.source_token_account.key() != ctx.accounts.destination_token_account.key(),
+            TreasuryError::InvalidTransferAccounts
+        );
+
+        let clock = Clock::get()?;
+        let transfer_mint = ctx.accounts.source_mint.key();
+
+        // Execute the actual supported token transfer first. If either fee
+        // transfer below fails, Solana transaction atomicity rolls this back.
+        token::transfer_checked(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                TransferChecked {
+                    from: ctx.accounts.source_token_account.to_account_info(),
+                    mint: ctx.accounts.source_mint.to_account_info(),
+                    to: ctx.accounts.destination_token_account.to_account_info(),
+                    authority: ctx.accounts.payer.to_account_info(),
+                },
+            ),
+            amount,
+            ctx.accounts.source_mint.decimals,
+        )?;
+
+        let developer_fee = mul_div_floor_u64(
+            PLATFORM_TRANSFER_FEE_USDC,
+            PLATFORM_DEVELOPER_SHARE_BPS,
+            BASIS_POINTS_DENOMINATOR,
+        )?;
+        let treasury_fee = PLATFORM_TRANSFER_FEE_USDC
+            .checked_sub(developer_fee)
+            .ok_or(TreasuryError::ArithmeticUnderflow)?;
+
+        // Developer and treasury destinations are canonical USDC ATAs,
+        // constrained in the account context to fixed authorities and mint.
+        token::transfer_checked(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                TransferChecked {
+                    from: ctx.accounts.payer_usdc_account.to_account_info(),
+                    mint: ctx.accounts.usdc_mint.to_account_info(),
+                    to: ctx.accounts.developer_usdc_account.to_account_info(),
+                    authority: ctx.accounts.payer.to_account_info(),
+                },
+            ),
+            developer_fee,
+            6,
+        )?;
+        token::transfer_checked(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                TransferChecked {
+                    from: ctx.accounts.payer_usdc_account.to_account_info(),
+                    mint: ctx.accounts.usdc_mint.to_account_info(),
+                    to: ctx.accounts.treasury_usdc_account.to_account_info(),
+                    authority: ctx.accounts.payer.to_account_info(),
+                },
+            ),
+            treasury_fee,
+            6,
+        )?;
+
+        let treasury = &mut ctx.accounts.treasury;
+        treasury.total_platform_usdc_fees_collected = treasury
+            .total_platform_usdc_fees_collected
+            .checked_add(PLATFORM_TRANSFER_FEE_USDC)
+            .ok_or(TreasuryError::ArithmeticOverflow)?;
+        treasury.total_platform_usdc_developer_paid = treasury
+            .total_platform_usdc_developer_paid
+            .checked_add(developer_fee)
+            .ok_or(TreasuryError::ArithmeticOverflow)?;
+        treasury.total_platform_usdc_treasury_paid = treasury
+            .total_platform_usdc_treasury_paid
+            .checked_add(treasury_fee)
+            .ok_or(TreasuryError::ArithmeticOverflow)?;
+
+        let receipt = &mut ctx.accounts.fee_receipt;
+        receipt.payer = ctx.accounts.payer.key();
+        receipt.operation_id = operation_id;
+        receipt.source_mint = transfer_mint;
+        receipt.recipient = ctx.accounts.recipient.key();
+        receipt.transfer_amount = amount;
+        receipt.total_fee_usdc = PLATFORM_TRANSFER_FEE_USDC;
+        receipt.developer_fee_usdc = developer_fee;
+        receipt.treasury_fee_usdc = treasury_fee;
+        receipt.timestamp = clock.unix_timestamp;
+        receipt.slot = clock.slot;
+        receipt.operation_kind = PlatformFeeOperation::SupportedTransfer;
+        receipt.bump = ctx.bumps.fee_receipt;
+
+        emit!(PlatformFeeCollected {
+            payer: receipt.payer,
+            operation_id,
+            operation_kind: receipt.operation_kind,
+            source_mint: transfer_mint,
+            transfer_amount: amount,
+            fee_mint: PLATFORM_USDC_MINT,
+            total_fee_usdc: PLATFORM_TRANSFER_FEE_USDC,
+            developer_wallet: DEVELOPER_WALLET,
+            developer_fee_usdc: developer_fee,
+            treasury: treasury.key(),
+            treasury_fee_usdc: treasury_fee,
+            timestamp: clock.unix_timestamp,
+            slot: clock.slot,
         });
         Ok(())
     }
@@ -190,6 +327,67 @@ pub struct InitializeTreasury<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(operation_id: [u8; 32])]
+pub struct SupportedTransferWithFee<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [TREASURY_SEED],
+        bump = treasury.bump,
+        has_one = developer_wallet @ TreasuryError::InvalidDeveloperWallet
+    )]
+    pub treasury: Account<'info, TreasuryAccount>,
+    #[account(
+        init,
+        payer = payer,
+        space = FeeReceipt::SPACE,
+        seeds = [FEE_RECEIPT_SEED, payer.key().as_ref(), operation_id.as_ref()],
+        bump
+    )]
+    pub fee_receipt: Account<'info, FeeReceipt>,
+    pub source_mint: Account<'info, Mint>,
+    #[account(
+        mut,
+        token::mint = source_mint,
+        token::authority = payer
+    )]
+    pub source_token_account: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        token::mint = source_mint,
+        constraint = destination_token_account.owner == recipient.key() @ TreasuryError::InvalidTransferAccounts
+    )]
+    pub destination_token_account: Account<'info, TokenAccount>,
+    /// CHECK: this key must own the destination token account.
+    pub recipient: UncheckedAccount<'info>,
+    #[account(address = PLATFORM_USDC_MINT @ TreasuryError::InvalidUsdcMint)]
+    pub usdc_mint: Account<'info, Mint>,
+    #[account(
+        mut,
+        associated_token::mint = usdc_mint,
+        associated_token::authority = payer
+    )]
+    pub payer_usdc_account: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        associated_token::mint = usdc_mint,
+        associated_token::authority = developer_wallet
+    )]
+    pub developer_usdc_account: Account<'info, TokenAccount>,
+    #[account(address = DEVELOPER_WALLET @ TreasuryError::InvalidDeveloperWallet)]
+    pub developer_wallet: SystemAccount<'info>,
+    #[account(
+        mut,
+        associated_token::mint = usdc_mint,
+        associated_token::authority = treasury
+    )]
+    pub treasury_usdc_account: Account<'info, TokenAccount>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
 pub struct DisburseTreasuryFunds<'info> {
     /// Any caller may trigger a matured epoch; the caller receives no funds.
     pub caller: Signer<'info>,
@@ -231,12 +429,44 @@ pub struct TreasuryAccount {
     /// Carries sub-lamport 0.5% remainders across creator fee collections.
     /// Invariant: value is always less than 10,000.
     pub creator_fee_share_remainder: u64,
+    /// Fixed-fee accounting uses canonical six-decimal USDC units, not lamports.
+    pub total_platform_usdc_fees_collected: u64,
+    pub total_platform_usdc_developer_paid: u64,
+    pub total_platform_usdc_treasury_paid: u64,
     pub bump: u8,
     pub vault_bump: u8,
 }
 
 impl TreasuryAccount {
-    pub const SPACE: usize = 8 + 32 + 32 + (8 * 6) + 2;
+    pub const SPACE: usize = 8 + 32 + 32 + (8 * 9) + 2;
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PlatformFeeOperation {
+    LaunchCreation,
+    SupportedTrade,
+    SupportedTransfer,
+}
+
+#[account]
+pub struct FeeReceipt {
+    pub payer: Pubkey,
+    pub operation_id: [u8; 32],
+    pub source_mint: Pubkey,
+    pub recipient: Pubkey,
+    pub transfer_amount: u64,
+    pub total_fee_usdc: u64,
+    pub developer_fee_usdc: u64,
+    pub treasury_fee_usdc: u64,
+    pub timestamp: i64,
+    pub slot: u64,
+    pub operation_kind: PlatformFeeOperation,
+    pub bump: u8,
+}
+
+impl FeeReceipt {
+    // discriminator + four pubkeys/ids + six u64 values + enum tag + bump
+    pub const SPACE: usize = 8 + (32 * 4) + (8 * 6) + 1 + 1;
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -346,6 +576,23 @@ fn mul_div_floor_u64(value: u64, numerator: u128, denominator: u128) -> Result<u
 }
 
 #[event]
+pub struct PlatformFeeCollected {
+    pub payer: Pubkey,
+    pub operation_id: [u8; 32],
+    pub operation_kind: PlatformFeeOperation,
+    pub source_mint: Pubkey,
+    pub transfer_amount: u64,
+    pub fee_mint: Pubkey,
+    pub total_fee_usdc: u64,
+    pub developer_wallet: Pubkey,
+    pub developer_fee_usdc: u64,
+    pub treasury: Pubkey,
+    pub treasury_fee_usdc: u64,
+    pub timestamp: i64,
+    pub slot: u64,
+}
+
+#[event]
 pub struct TreasuryInitialized {
     pub developer_wallet: Pubkey,
     pub treasury_vault: Pubkey,
@@ -380,6 +627,16 @@ pub enum TreasuryError {
     CreatorFeeTooHigh,
     #[msg("Creator fee remainder is outside the valid basis-point range.")]
     InvalidFeeRemainder,
+    #[msg("The source or destination token accounts do not match the requested transfer.")]
+    InvalidTransferAccounts,
+    #[msg("The platform fee mint must be the canonical Mainnet USDC mint.")]
+    InvalidUsdcMint,
+    #[msg("A transfer operation must move a positive amount.")]
+    ZeroTransferAmount,
+    #[msg("The operation id cannot be all zeroes.")]
+    InvalidOperationId,
+    #[msg("WELP does not charge a platform transfer fee for a self-transfer.")]
+    SelfTransferNotSupported,
     #[msg("Checked arithmetic overflow.")]
     ArithmeticOverflow,
     #[msg("Checked arithmetic underflow.")]
@@ -486,6 +743,7 @@ mod tests {
 
     #[test]
     fn treasury_account_space_includes_anchor_discriminator_and_fields() {
-        assert_eq!(TreasuryAccount::SPACE, 122);
+        assert_eq!(TreasuryAccount::SPACE, 146);
+        assert_eq!(FeeReceipt::SPACE, 186);
     }
 }
