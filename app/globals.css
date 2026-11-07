@@ -1248,3 +1248,30 @@ h2 { margin: 0; font: 600 17px var(--display); letter-spacing: -.02em; }
     transition: none;
   }
 }
+
+/* Consistent rounded green actions across the app shell. */
+.connect-button, .primary-button, .studio-create-button {
+  border-radius:999px!important;
+  background:linear-gradient(180deg,#d5ff8b 0%,#b9f36d 58%,#9fdf52 100%)!important;
+  border-color:#78a943!important;
+  color:#10180b!important;
+  box-shadow:inset 0 1px 0 #ffffffa8,inset 0 -1px 0 #507b2d55,0 4px 13px #8bc64a22;
+}
+.connect-button:hover:not(:disabled), .primary-button:hover:not(:disabled), .studio-create-button:hover:not(:disabled) {
+  background:#d5ff8b!important; color:#10180b!important;
+}
+.topbar .connect-button { min-height:38px; padding-inline:17px; }
+.brand-mark { overflow:hidden; width:38px; height:38px; padding:0; border-radius:10px; background:transparent; box-shadow:none; object-fit:cover; }
+.light .topbar { color:var(--text); }
+.light .breadcrumb strong { color:#1b2b1d; }
+.light .welcome-row h1, .light .welcome-row h1 em { color:#18281b; }
+.light .welcome-copy { color:#536456; }
+.light .settings-panel, .light .settings-reset-panel { background:#fff; border-color:var(--border); }
+.light .settings-panel .panel-heading, .light .settings-reset-panel .panel-heading { border-bottom-color:var(--border-soft); }
+.light .settings-reset-button { background:#e7f3df; color:#2f6819; }
+.light .settings-reset-button:hover { background:#d7edca; color:#245515; }
+.light .agent-status { background:#f5f8f4; border-color:var(--border); }
+.light .agent-status strong { color:#1d2d20; }
+.light .agent-status small, .light .sidebar-note, .light .build-label { color:#5c6c5e; }
+.light .network-chip { background:#eaf2e7; }
+.light .connect-button { color:#10180b!important; }
