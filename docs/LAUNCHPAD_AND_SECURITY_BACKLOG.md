@@ -198,6 +198,7 @@ Design and current implementation detail: [TREASURY_AND_CREATOR_FEES.md](./TREAS
 - [x] Add the remaining 40% to \`locked_reserve_lamports\` and exclude it from every future harvest, preventing repeated 60/40 calls from slowly draining the reserve.
 - [x] Test fee math, remainder carry, exact epoch boundary, backwards clock, 60/40 split and treasury account sizing.
 - [x] Keep host-only ProgramTest dependencies outside the Anchor SBF workspace in `programs/program-tests`.
+- [x] Keep host-only ProgramTest dependencies outside the Anchor SBF workspace in `programs/program-tests`.
 - [ ] Connect the tested creator-fee helper to a verified buy/sell instruction and atomically transfer the treasury/creator amounts.
 - [ ] Add operation receipt/nonces, replay tests and event reconciliation for each fee-bearing swap.
 - [x] Add treasury ProgramTest integration coverage for rent preservation, unauthorized destination substitution, unsolicited donations, fee-ledger reconciliation, premature withdrawal rollback and repeated epochs in `programs/program-tests/tests/treasury_program_test.rs`.
