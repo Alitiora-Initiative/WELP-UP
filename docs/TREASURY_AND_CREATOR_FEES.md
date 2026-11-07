@@ -180,7 +180,7 @@ The 0.02% initial buy must be an explicit, disclosed, creator-signed purchase in
 - [ ] Connect \`calculate_creator_fee_route\` to a real launch buy/sell instruction and atomic lamport transfers.
 - [ ] Increment \`total_fees_collected\`, \`total_creator_fees_processed\` and \`creator_fee_share_remainder\` in the same transaction as those transfers.
 - [ ] Add a unique operation/receipt nonce to every fee-bearing trade.
-- [ ] Add Anchor ProgramTest for treasury initialization, fee collection, premature-distribution rollback, 14-day boundary, repeated epochs, recipient substitution and rent protection.
+- [ ] Add Anchor ProgramTest for treasury initialization, fee collection, premature-distribution rollback, 14-day boundary, repeated epochs, recipient substitution, unsolicited donations, fee-ledger reconciliation and rent protection.
 - [ ] Implement launch mint creation, 80/20 inventory split, buyer positions, curve, escrow and refund instructions.
 - [ ] Resolve the 85 SOL / supply-scaled curve economics before enabling the funding target.
 - [ ] Pin the exact Raydium CPMM version and implement/test pool initialization, creator-fee configuration, creator-fee collection and WELP treasury routing.
