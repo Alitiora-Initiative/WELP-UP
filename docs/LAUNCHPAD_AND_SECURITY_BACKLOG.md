@@ -165,7 +165,7 @@ Official references:
 - [ ] Anchor/SBF ProgramTest for creation, mint authority revocation, SOL/WSOL and USDC escrow, purchase, fee settlement, refund, CPMM CPI, LP burn and rollback.
 - [ ] Adversarial tests for spoofed creator, wrong PDA/bump, wrong mint, wrong Token Program, fake ATA, changed AMM program, substituted pool vault, duplicate nonce, unauthorized writable accounts and split-order attacks.
 - [ ] TypeScript tests for supply validation, decimal conversion, PDA derivation, instruction order, ATA idempotency, fee/curve display, priority-fee bounds and RPC errors.
-- [ ] Devnet end-to-end test with dedicated test wallet/authority and no production secrets.
+- [ ] Run controlled Mainnet integration checks only after production program deployment, source verification and independent audit; each transaction requires an explicit wallet signature and uses a separately identified test asset.
 - [ ] Verify program ID, deployed binary/source hash, IDL, mint/freeze authority state, treasury ATA, developer recipient, Raydium CPMM program/config, pool and LP burn.
 - [ ] Independent Solana security audit; remediate all critical/high issues.
 - [ ] Confirm upgrade-authority / multisig controls, monitoring, outage runbooks, incident response and recovery.
@@ -174,7 +174,7 @@ Official references:
 ## Current facts and boundaries
 
 - \`app/launchpad/page.tsx\` is the existing route; the prior version was a locked discovery/status page.
-- The current Anchor workspace contains \`programs/vault\`; no deployable launchpad crate or verified launchpad program ID exists yet.
+- The current Anchor workspace contains \`programs/vault\` and a local \`programs/launchpad\` treasury-only crate. The launchpad crate has no production program ID or deployment keypair and does not implement token minting or buy/sell instructions.
 - The current client uses Solana Kit. \`@solana/web3.js\` and wallet-adapter hooks are not current project dependencies.
 - Tailwind is not currently configured.
 - The fee policy is documented but not collected on-chain.
@@ -182,7 +182,7 @@ Official references:
 - No production launchpad, bonding curve, quote escrow, refund program, CPMM CPI, LP burn or launch execution is claimed by this backlog.
 
 
-## 13. Treasury epochs and creator-fee routing
+## 13. Treasury epochs and protocol-fee routing
 
 Design and current implementation detail: [TREASURY_AND_CREATOR_FEES.md](./TREASURY_AND_CREATOR_FEES.md).
 
