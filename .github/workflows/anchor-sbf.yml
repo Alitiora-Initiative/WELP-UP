@@ -106,6 +106,9 @@ jobs:
         run: |
           anchor build -- -- --locked
           grep -qx 'version = 3' programs/vault/Cargo.lock
+        env:
+          # Anchor resolves Cargo through this variable before invoking metadata.
+          CARGO: ${{ runner.temp }}/cargo-wrapper/cargo
 
       - name: Run Solana ProgramTest against the built SBF binary
         run: cargo test --manifest-path programs/vault/Cargo.toml --test anchor_program_test
