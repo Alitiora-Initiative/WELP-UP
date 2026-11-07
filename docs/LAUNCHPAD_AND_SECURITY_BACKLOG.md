@@ -199,7 +199,7 @@ Design and current implementation detail: [TREASURY_AND_CREATOR_FEES.md](./TREAS
 - [x] Test fee math, remainder carry, exact epoch boundary, backwards clock, 60/40 split and treasury account sizing.
 - [ ] Connect the tested creator-fee helper to a verified buy/sell instruction and atomically transfer the treasury/creator amounts.
 - [ ] Add operation receipt/nonces, replay tests and event reconciliation for each fee-bearing swap.
-- [ ] Add Anchor ProgramTest for rent preservation, unauthorized destination substitution, premature withdrawal rollback and multiple epoch cycles.
+- [ ] Add Anchor ProgramTest for rent preservation, unauthorized destination substitution, unsolicited donations, fee-ledger reconciliation, premature withdrawal rollback and multiple epoch cycles.
 - [ ] Complete an immutable-program or explicit multisig-upgrade policy before marketing the retained reserve as permanently locked.
 
 ### Creator fee design
