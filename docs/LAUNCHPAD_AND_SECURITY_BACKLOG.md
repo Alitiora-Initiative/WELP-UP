@@ -96,13 +96,15 @@ Official sources:
 
 ## 7. WELP protocol swap-fee settlement
 
-Source of truth: docs/FEES_AND_TREASURY.md. Target fee is **0.50% of gross input** on each WELP-controlled swap. Split the collected fee 60% to the developer/operator receiving wallet and 40% to the protocol treasury.
+Source of truth: docs/FEES_AND_TREASURY.md. Target fee is **0.50% of gross input** on each WELP-controlled swap.
+
+At collection, 100% of the protocol fee is credited to treasury. After at least 14 days, 60% of eligible new SOL inflows is released to the developer/operator receiving wallet and 40% is added to the protected reserve. The split must occur once at epoch maturity, never twice.
 
 - [ ] Enforce 50 basis points of gross input in the on-chain buy/sell/swap instruction, with checked integer math and explicit rounding.
-- [ ] Support only explicitly allowed input assets and derive the developer and treasury token accounts for the exact input mint.
-- [ ] Atomically execute the swap, both fee transfers, state updates and fee receipt/nonce; any failure must roll back the full transaction.
-- [ ] Prevent duplicate fee collection with a unique operation receipt, and emit an event containing payer, mint, gross input, fee amount, recipient split and slot.
-- [ ] Show the exact 0.50% fee, input asset and recipients before wallet signing.
+- [ ] Credit 100% of the fee into the correct input-asset treasury vault in the same atomic transaction as the swap.
+- [ ] Implement per-mint treasury token accounts and token CPI settlement before accepting SPL-token input routes; the current treasury vault holds SOL only.
+- [ ] Prevent duplicate fee collection with a unique operation receipt, and emit an event containing payer, mint, gross input, fee amount and slot.
+- [ ] Show the exact 0.50% fee and the 14-day 60/40 treasury waterfall before wallet signing.
 - [ ] Do not imply that WELP taxes arbitrary SPL transfers or swaps that bypass WELP.
 - [ ] Keep swap endpoints fail-closed until composable transaction building, deployed program verification and SBF-backed adversarial tests pass.
 
@@ -115,7 +117,7 @@ The prior fixed $0.10/$0.50 USDC charge schedule and creator-configurable 0–3%
 - [ ] Implement \`lib/launchpad-service.ts\` using the existing Kit wallet stack; do not import \`@solana/wallet-adapter-react\`.
 - [ ] Keep transaction messages, addresses, raw amount types and signatures type-safe; use bigint for supply, token amounts and fee math.
 - [ ] Derive launch, escrow, position, inventory, quote and fee receipt PDAs using the program ID and documented seeds.
-- [ ] Compose ATA creation, launch instruction, fixed fees and bounded Compute Budget instructions in the correct order.
+- [ ] Compose ATA creation, launch instruction, protocol fee and bounded Compute Budget instructions in the correct order.
 - [ ] Clamp server-provided priority fees and compute-unit limits.
 - [ ] Verify program ID, all accounts, token mints, quote amount, min output, fee destinations and blockhash before prompting the user to sign.
 - [ ] Distinguish prepared, rejected, submitted, confirmed, finalized and failed transaction statuses.
