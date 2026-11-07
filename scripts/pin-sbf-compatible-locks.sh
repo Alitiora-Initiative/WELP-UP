@@ -52,6 +52,10 @@ for manifest in "$@"; do
   pin_if_present "$manifest" blake3 1.8.7 1.8.2
   pin_if_present "$manifest" constant_time_eq 0.4.2 0.3.1
 
+  # Borsh 1.8.1 allows proc-macro-crate 3.x. Pin away from 3.5.0
+  # (MSRV 1.82, toml_edit 0.25) to 3.2.0 (toml_edit 0.22).
+  pin_if_present "$manifest" proc-macro-crate 3.5.0 3.2.0
+
   # Newer crypto/TOML transitive releases also exceed the bundled Cargo.
   pin_if_present "$manifest" base64ct 1.8.3 1.7.3
   # Keep only the incompatible indexmap 2.x release constrained; indexmap 1.x
@@ -65,7 +69,8 @@ for manifest in "$@"; do
     "blake3:1.8.7" \
     "constant_time_eq:0.4.2" \
     "base64ct:1.8.3" \
-    "indexmap:2.14.2"; do
+    "indexmap:2.14.2" \
+    "proc-macro-crate:3.5.0"; do
     package="${entry%%:*}"
     version="${entry##*:}"
     if package_version_exists "$lockfile" "$package" "$version"; then
