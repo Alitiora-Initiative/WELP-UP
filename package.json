@@ -15,7 +15,8 @@
     "indexnow": "node --env-file=.env.local scripts/indexnow.mjs",
     "test:agent": "node --experimental-strip-types --test tests/agent.test.mjs",
     "test:program-gates": "node --experimental-strip-types --test tests/program-gates.test.mjs",
-    "test:market-scoring": "node --experimental-strip-types --test tests/market-scoring.test.mjs"
+    "test:market-scoring": "node --experimental-strip-types --test tests/market-scoring.test.mjs",
+    "test:vercel-deploy-gate": "node --experimental-strip-types --test tests/vercel-ignore-build.test.mjs"
   },
   "dependencies": {
     "@solana/kit": "8.5.0",

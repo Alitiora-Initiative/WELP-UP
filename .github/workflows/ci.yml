@@ -50,6 +50,7 @@ jobs:
       - run: npm run test:agent
       - run: npm run test:program-gates
       - run: npm run test:market-scoring
+      - run: npm run test:vercel-deploy-gate
       - run: npm run build
       - name: Audit for high/critical vulnerabilities
         run: npm audit --audit-level=high
