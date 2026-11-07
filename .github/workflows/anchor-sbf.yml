@@ -107,10 +107,17 @@ jobs:
           exec "$REAL_CARGO" "\$@"
           EOF
           chmod +x "$RUNNER_TEMP/cargo-wrapper/cargo"
+          # Resolve ProgramTest dev-dependencies with host Cargo, then downgrade
+          # the generated lockfile before Solana 1.18 bundled Cargo reads it.
+          "$RUNNER_TEMP/cargo-wrapper/cargo" metadata --manifest-path programs/vault/Cargo.toml --format-version 1 >/dev/null
+          sed -i 's/^version = 4$/version = 3/' programs/vault/Cargo.lock
+          grep -qx 'version = 3' programs/vault/Cargo.lock
           echo "$RUNNER_TEMP/cargo-wrapper" >> "$GITHUB_PATH"
 
       - name: Build Solana BPF/SBF program and IDL
         run: |
+          sed -i 's/^version = 4$/version = 3/' programs/vault/Cargo.lock
+          grep -qx 'version = 3' programs/vault/Cargo.lock
           anchor build -- -- --locked
           grep -qx 'version = 3' programs/vault/Cargo.lock
         env:

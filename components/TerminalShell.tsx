@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -16,7 +17,7 @@ const navGroups: NavGroup[] = [
  {label:'Trade',items:[['Swap desk','/swap','Review a Jupiter route and approve in your wallet'],['Safety limits','/safety','Execution checks, limits and wallet handoff'],['Transaction history','/history','Inspect public wallet transactions']]},
  {label:'Automate',items:[['Signal policies','/automation','Save watch rules and browser alerts'],['AI analyst','/agent','Market commentary and analysis boundaries'],['Agent monitor','/autonomous','Runtime status; no unattended execution'],['Strategy marketplace','/strategy-marketplace','Explore strategy listings and their status']]},
  {label:'Vault',items:[['Vault console','/vault','Authority model, gates and launch readiness'],['Vault cap chart','/dashboard','Review vault dashboard and cap snapshots'],['Architecture','/whitepaper','PDA design, threat model and authority flow']]},
- {label:'Console',items:[['Profile','/profile','Wallet overview and local preferences'],['Portfolio','/portfolio','Public balances and wallet snapshots'],['Activity logs','/activity-logs','Browser-local policy and activity trail'],['System status','/system-status','Live Solana, Jupiter and service checks'],['Support centre','/support','FAQs and troubleshooting'],['Referral programme','/referral','Referral programme status and information']]},
+ {label:'Console',items:[['Profile','/profile','Wallet overview and local preferences'],['Appearance','/settings','Dark, light and system display preferences'],['Portfolio','/portfolio','Public balances and wallet snapshots'],['Activity logs','/activity-logs','Browser-local policy and activity trail'],['System status','/system-status','Live Solana, Jupiter and service checks'],['Support centre','/support','FAQs and troubleshooting'],['Referral programme','/referral','Referral programme status and information']]},
  {label:'Docs',items:[['Documentation','/docs','Architecture, limits, roadmap and runbook'],['Whitepaper','/whitepaper','The WELP UP design and technical record'],['Terms','/terms','Published service terms'],['Privacy','/privacy','How data is handled'],['API keys','/api-keys','API access status and guidance']]}
 ].map(group=>({...group,items:group.items.map(([label,href,description])=>({label,href,description}))}));
 const tickerSymbols = ['SOL', 'USDC', 'PUMP', 'USDT', 'WBTC', 'TTWO', 'HYPE', 'JUP', 'BONK', 'cbBTC'];
@@ -61,7 +62,7 @@ export function TerminalShell({ children }: { children: ReactNode }) {
  const activeGroup=navGroups.find(group=>group.label===activeMenu);
  return <div className="terminal-site">
   <header className="site-header" onMouseLeave={()=>setActiveMenu(null)}>
-   <Link href="/" className="site-brand" onClick={()=>{setOpen(false);setActiveMenu(null);}}><span className="site-brand-mark" aria-hidden="true">W</span><strong>WELP UP!</strong><span className="network-badge"><i/> MAINNET</span></Link>
+   <Link href="/" className="site-brand" onClick={()=>{setOpen(false);setActiveMenu(null);}}><Image className="site-brand-mark" src="/welp-up-logo.svg" alt="WELP UP" width={40} height={40} priority /><strong>WELP UP!</strong><span className="network-badge"><i/> MAINNET</span></Link>
    <nav className={'site-nav'+(open?' is-open':'')} aria-label="Main navigation">
     {navGroups.map(group=><button key={group.label} type="button" className={'site-nav-trigger'+(isActive(group.items)?' is-active':'')+(activeMenu===group.label?' is-expanded':'')} aria-expanded={activeMenu===group.label} onMouseEnter={()=>setActiveMenu(group.label)} onFocus={()=>setActiveMenu(group.label)} onClick={()=>setActiveMenu(current=>current===group.label?null:group.label)}>{group.label}<ChevronDown size={12}/></button>)}
    </nav>
@@ -71,7 +72,7 @@ export function TerminalShell({ children }: { children: ReactNode }) {
   <TickerStrip/>
   <div className="site-main">{children}</div>
     <footer className="site-footer">
-      <div className="footer-brand"><span className="footer-brand-mark" aria-hidden="true">W</span><div><strong>WELP UP!</strong><p>A Solana market console. Live pools, published rules, wallet-approved execution. WELP never holds keys and never trades on your behalf.</p></div></div>
+      <div className="footer-brand"><Image className="footer-brand-mark" src="/welp-up-logo.svg" alt="" width={42} height={42} /><div><strong>WELP UP!</strong><p>A Solana market console. Live pools, published rules, wallet-approved execution. WELP never holds keys and never trades on your behalf.</p></div></div>
       <div className="footer-column"><strong>PRODUCT</strong><Link href="/markets">Market board</Link><Link href="/signals">Signal engine</Link><Link href="/swap">Swap desk</Link><Link href="/portfolio">Portfolio</Link><Link href="/token-explorer">Token explorer</Link></div>
       <div className="footer-column"><strong>AUTOMATION</strong><Link href="/automation">Signal policies</Link><Link href="/agent">Market agent</Link><Link href="/vault">Vault console</Link><Link href="/strategy-marketplace">Strategy marketplace</Link></div>
       <div className="footer-column"><strong>CONSOLE</strong><Link href="/profile">Profile</Link><Link href="/history">Transaction history</Link><Link href="/activity-logs">Activity logs</Link><Link href="/support">Support centre</Link><Link href="/system-status">System status</Link></div>
