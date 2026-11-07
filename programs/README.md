@@ -28,3 +28,25 @@ anchor test
 ```
 
 The checked-in Anchor configuration targets a local validator only. It intentionally does not configure a Devnet or Mainnet provider. Any later deployment must be a separately reviewed release with a final program ID, verified source, independent audit, secure upgrade authority, monitoring, and a documented recovery process.
+
+## welp-launchpad
+
+A new Anchor 0.30.1 crate is present at \`programs/launchpad\`. The current implementation slice contains:
+
+- a single \`treasury-v1\` PDA with the hardcoded developer recipient;
+- \`initialize_treasury\`, which records the Solana Clock timestamp;
+- \`disburse_treasury_funds\`, a permissionless harvest gated by at least 1,209,600 seconds;
+- a protected 40% reserve counter excluded from later epoch distributions;
+- checked Rust math and unit tests for the 0–3% creator fee, the 0.5%-of-creator-fee split and remainder carry.
+
+**Deployment status: local source only; not deployed to Devnet or Mainnet.** The program ID in \`lib.rs\` is a sample local ID with no deployment keypair. Do not derive a production PDA or send funds to it. The fee routing helper is not yet called by a launch buy/sell handler and does not transfer any funds. Mint initialization, purchases, curve, escrow, refunds, Raydium CPMM CPI, LP burn and production indexing are not implemented.
+
+Run the host-side unit tests with:
+
+\`\`\`bash
+cargo fmt --check --manifest-path programs/launchpad/Cargo.toml
+cargo clippy --manifest-path programs/launchpad/Cargo.toml -- -D warnings
+cargo test --manifest-path programs/launchpad/Cargo.toml
+\`\`\`
+
+The 40% reserve is only permanently inaccessible if the final deployed program is immutable or subject to the explicitly disclosed upgrade-governance policy. Do not describe it as irrevocably locked while an unrestricted upgrade authority remains.
