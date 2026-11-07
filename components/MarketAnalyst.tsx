@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
 import { ArrowUpRight, Bot, LoaderCircle, LockKeyhole, RefreshCw, Sparkles } from 'lucide-react';
 
 type AgentStatus = {
@@ -52,7 +53,7 @@ export function MarketAnalyst() {
     return () => window.clearTimeout(timer);
   }, []);
 
-  async function ask(event: React.FormEvent<HTMLFormElement>) {
+  async function ask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
     setAnalysis(null);
