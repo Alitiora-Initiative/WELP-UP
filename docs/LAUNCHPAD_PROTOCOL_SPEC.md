@@ -527,7 +527,7 @@ The local crate now contains \`initialize_treasury\` and \`disburse_treasury_fun
 
 ### 14.3 Raydium creator-fee limits
 
-Raydium CPMM treats the trade fee and creator fee as separate buckets. Its creator-fee rate is sourced from the AMM configuration tier; pools can enable/disable the fee and choose a fee side, but the per-pool rate is not an arbitrary custom 0–3% setting when pools share a single tier. Its creator-fee share is applied at collection time and routed to Raydium's protocol-fee bucket, not automatically to the WELP Treasury PDA. See [Raydium CPMM fees](https://github.com/raydium-io/raydium-docs-v1/blob/main/products/cpmm/fees.mdx).
+Raydium CPMM has separate trade-fee and creator-fee buckets. The creator-fee rate comes from `AmmConfig.creator_fee_rate` and is shared by pools using that config, while each pool stores an enable flag and fee side. A `CreatorFeeShare` PDA can override the creator's share rate for a specific creator/config pair; that split is applied at collection and the shared amount is moved to Raydium's protocol-fee bucket. That bucket is not the WELP Treasury PDA. See [Raydium CPMM fees](https://github.com/raydium-io/raydium-docs-v1/blob/main/products/cpmm/fees.mdx) and [creator-fee flow](https://github.com/raydium-io/raydium-docs-v1/blob/main/user-flows/how-creator-fees-work.mdx).
 
 WELP must not claim that its own instructions intercept post-graduation Raydium swaps. A reviewed collection adapter must be designed to route the accrued creator-fee proceeds to a launch-controlled account and split them to WELP treasury/creator. If that is not possible for the selected pool path, the custom fee must be disabled post-graduation.
 
