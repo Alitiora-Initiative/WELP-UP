@@ -320,6 +320,7 @@ pub enum TreasuryError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::str::FromStr;
 
     #[test]
     fn developer_wallet_constant_is_the_published_recipient() {
@@ -355,7 +356,7 @@ mod tests {
         // Across 10,000 one-lamport creator fees, exactly 50 lamports are
         // routed to the treasury, with no per-transaction dust loss.
         for _ in 0..10_000 {
-            let route = calculate_creator_fee_route(1, 10_000, remainder).unwrap();
+            let route = calculate_creator_fee_route(34, 300, remainder).unwrap();
             total_to_treasury += route.treasury_share_lamports;
             remainder = route.next_remainder;
         }
