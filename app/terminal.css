@@ -906,3 +906,79 @@ html, body { background: #080908 !important; color: #f0f3ec !important; }
 }
 .terminal-site :where(.market-tabs button.selected b) { background: #c6ff3e !important; color: #11150a !important; }
 .terminal-site :where(a, button, input, select, textarea):focus-visible { outline-color: #c6ff3e !important; }
+
+/* Tactile, glass-highlighted action surfaces */
+.primary-action,
+.connect-button {
+  position: relative;
+  overflow: hidden;
+  min-height: 40px;
+  border: 1px solid #e4ff9a !important;
+  border-radius: 999px !important;
+  background: linear-gradient(180deg, #efffc9 0%, #d8ff83 22%, #b8ed4b 58%, #88b92d 100%) !important;
+  color: #17200b !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.82),
+    inset 0 -2px 4px rgba(42,68,10,.24),
+    0 5px 14px rgba(151,205,58,.18),
+    0 1px 0 rgba(255,255,255,.12);
+  text-shadow: 0 1px 0 rgba(255,255,255,.3);
+  transition: transform .16s ease, filter .16s ease, box-shadow .16s ease;
+}
+.primary-action::before,
+.connect-button::before {
+  position: absolute;
+  inset: 1px 1px 52%;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,0));
+  content: '';
+  pointer-events: none;
+}
+.primary-action:hover:not(:disabled),
+.connect-button:hover:not(:disabled) {
+  filter: brightness(1.06) saturate(1.04);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    inset 0 -2px 4px rgba(42,68,10,.2),
+    0 8px 19px rgba(151,205,58,.24);
+}
+.primary-action:active:not(:disabled),
+.connect-button:active:not(:disabled) {
+  filter: brightness(.98);
+  transform: translateY(1px) scale(.99);
+  box-shadow:
+    inset 0 2px 5px rgba(42,68,10,.25),
+    0 2px 5px rgba(151,205,58,.12);
+}
+.primary-action:disabled,
+.connect-button:disabled {
+  filter: saturate(.35);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25);
+}
+.outline-button,
+.desk-link,
+.mobile-nav-toggle {
+  border: 1px solid rgba(205,222,187,.2);
+  background: linear-gradient(180deg, rgba(255,255,255,.105), rgba(255,255,255,.025) 48%, rgba(0,0,0,.12));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 2px 7px rgba(0,0,0,.22);
+  transition: border-color .16s ease, background .16s ease, transform .16s ease, box-shadow .16s ease;
+}
+.outline-button:hover:not(:disabled),
+.desk-link:hover,
+.mobile-nav-toggle:hover {
+  border-color: rgba(198,255,62,.48);
+  background: linear-gradient(180deg, rgba(198,255,62,.13), rgba(255,255,255,.035));
+  transform: translateY(-1px);
+}
+.outline-button:active:not(:disabled),
+.mobile-nav-toggle:active {
+  transform: translateY(1px) scale(.99);
+  box-shadow: inset 0 2px 5px rgba(0,0,0,.25);
+}
+@media (prefers-reduced-motion: reduce) {
+  .primary-action, .connect-button, .outline-button, .desk-link, .mobile-nav-toggle {
+    transition: none;
+  }
+}
+
