@@ -80,9 +80,11 @@ jobs:
           # Solana 1.18's bundled Cargo cannot parse lockfile v4. Keep the
           # committed program dependency graph, but normalize its format immediately
           # before invoking the SBF toolchain if host metadata upgraded it.
-          for lockfile in programs/vault/Cargo.lock; do
-            sed -i 's/^version = 4$/version = 3/' "$lockfile"
-            grep -qx 'version = 3' "$lockfile"
+          for lockfile in programs/vault/Cargo.lock programs/launchpad/Cargo.lock; do
+            if [[ -f "$lockfile" ]]; then
+              sed -i 's/^version = 4$/version = 3/' "$lockfile"
+              grep -qx 'version = 3' "$lockfile"
+            fi
           done
 
       - name: Refresh Cargo metadata and normalize the SBF lockfile
@@ -112,14 +114,21 @@ jobs:
           "$RUNNER_TEMP/cargo-wrapper/cargo" metadata --manifest-path programs/vault/Cargo.toml --format-version 1 >/dev/null
           sed -i 's/^version = 4$/version = 3/' programs/vault/Cargo.lock
           grep -qx 'version = 3' programs/vault/Cargo.lock
+          "$RUNNER_TEMP/cargo-wrapper/cargo" metadata --manifest-path programs/launchpad/Cargo.toml --format-version 1 >/dev/null
+          sed -i 's/^version = 4$/version = 3/' programs/launchpad/Cargo.lock
+          grep -qx 'version = 3' programs/launchpad/Cargo.lock
           echo "$RUNNER_TEMP/cargo-wrapper" >> "$GITHUB_PATH"
 
       - name: Build Solana BPF/SBF program and IDL
         run: |
-          sed -i 's/^version = 4$/version = 3/' programs/vault/Cargo.lock
-          grep -qx 'version = 3' programs/vault/Cargo.lock
+          for lockfile in programs/vault/Cargo.lock programs/launchpad/Cargo.lock; do
+            sed -i 's/^version = 4$/version = 3/' "$lockfile"
+            grep -qx 'version = 3' "$lockfile"
+          done
           anchor build -- -- --locked
-          grep -qx 'version = 3' programs/vault/Cargo.lock
+          for lockfile in programs/vault/Cargo.lock programs/launchpad/Cargo.lock; do
+            grep -qx 'version = 3' "$lockfile"
+          done
         env:
           # Anchor resolves Cargo through this variable before invoking metadata.
           CARGO: ${{ runner.temp }}/cargo-wrapper/cargo
@@ -133,14 +142,19 @@ jobs:
         run: |
           test -s target/deploy/welp_vault.so
           test -s target/idl/welp_vault.json
+          test -s target/deploy/welp_launchpad.so
+          test -s target/idl/welp_launchpad.json
 
       - name: Upload review artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: welp-vault-anchor-0.30.1-sbf
+          name: welp-vault-and-launchpad-anchor-0.30.1-sbf
           path: |
             target/deploy/welp_vault.so
             target/idl/welp_vault.json
+            target/deploy/welp_launchpad.so
+            target/idl/welp_launchpad.json
             programs/vault/Cargo.lock
+            programs/launchpad/Cargo.lock
           if-no-files-found: error
           retention-days: 7
