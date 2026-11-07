@@ -8,7 +8,7 @@
 
 1. The browser sends a question (1–500 characters) to `POST /api/agent`.
 2. The server calls the same live Jupiter market-feed handler used by the market board. If the feed fails or has no usable timestamp, analysis stops.
-3. The server reduces the feed to at most 18 public assets and forwards only market fields needed for research. Wallet addresses, balances, private keys, local policies, and transaction details are not included.
+3. The server reduces the feed to at most 18 public assets and forwards only market fields needed for research: price changes, liquidity, volume, market cap, holder count, organic score, rule score, turnover, buy pressure, concentration, verification, suspicious-token flag, blockers and warnings. Wallet addresses, balances, private keys, local policies, and transaction details are not included.
 4. The server sends the question and snapshot to the OpenAI Responses API with `store: false`, no tools, and instructions to treat market fields as untrusted data.
 5. The server returns text plus the model and market timestamp. No conversation or model response is persisted by WELP.
 
@@ -38,7 +38,7 @@ No credential was available to this code change, so provider authentication and 
 
 ## Abuse and operational limitations
 
-The route includes a small per-process request counter (four requests per minute per observed client address) as a best-effort guard. Serverless instances do not share this memory, and forwarded IP headers may be affected by the hosting proxy. This is **not** a durable production rate limiter or billing quota. Before enabling the endpoint broadly, add a trusted edge rate limiter or shared atomic store, configure provider spend limits, and monitor provider usage without logging user secrets.
+The market scorer follows the recovered WELP weighting and gate definitions and is regression-tested against known inputs. It consumes Jupiter Token API v2 fields documented at https://developers.jup.ag/docs/tokens. The route includes a small per-process request counter (four requests per minute per observed client address) as a best-effort guard. Serverless instances do not share this memory, and forwarded IP headers may be affected by the hosting proxy. This is **not** a durable production rate limiter or billing quota. Before enabling the endpoint broadly, add a trusted edge rate limiter or shared atomic store, configure provider spend limits, and monitor provider usage without logging user secrets.
 
 The route times out upstream requests after 30 seconds. Provider errors are returned as bounded messages; API credentials are never returned. The runtime does not store a conversation history. If persistent chat is later introduced, it requires explicit privacy disclosures, retention controls, access isolation, and abuse controls.
 
