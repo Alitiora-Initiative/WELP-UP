@@ -1,0 +1,23 @@
+[package]
+name = "welp-program-integration-tests"
+version = "0.1.0"
+description = "Host-only Solana ProgramTest coverage for WELP Anchor programs"
+edition = "2021"
+license = "MIT"
+
+[dependencies]
+anchor-lang = "=0.30.1"
+solana-program-test = "=1.18.26"
+solana-banks-client = "=1.18.26"
+solana-sdk = "=1.18.26"
+tokio = { version = "1.29.1", features = ["macros", "rt-multi-thread"] }
+welp-vault = { path = "../vault" }
+welp-launchpad = { path = "../launchpad" }
+
+[[test]]
+name = "vault_program_test"
+path = "tests/vault_program_test.rs"
+
+[[test]]
+name = "treasury_program_test"
+path = "tests/treasury_program_test.rs"
