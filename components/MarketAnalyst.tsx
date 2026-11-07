@@ -98,7 +98,7 @@ export function MarketAnalyst() {
         {!status?.configured ? <div className="notice-block" style={{ marginTop: 18 }}>
           <LockKeyhole size={18} />
           <div><strong>Connect a server-side model before using the analyst.</strong>
-            <p>Add <code>OPENAI_API_KEY</code> and optionally <code>WELP_AI_MODEL</code> to the Vercel project’s server environment, then redeploy. Never use a <code>NEXT_PUBLIC_</code> prefix or place the key in browser code. Until configured, no AI answer is generated.</p>
+            <p>Add both <code>OPENAI_API_KEY</code> and <code>WELP_AI_MODEL</code> to the Vercel project’s server environment, scoped to Preview first. Choose a model enabled for your API project. Never use a <code>NEXT_PUBLIC_</code> prefix or place the key in browser code. Before enabling this publicly in Production, add durable rate limiting and provider spend controls. Until configured, no AI answer is generated.</p>
           </div>
         </div> : null}
       </div>
