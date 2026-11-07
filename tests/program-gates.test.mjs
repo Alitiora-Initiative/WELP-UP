@@ -164,24 +164,29 @@ test('disabled creation-fee instruction does not pull unused Pyth SDK', () => {
   assert.match(disabledInstruction, /FeeSettlementDisabled/);
 });
 
-test('Anchor SBF build preserves pinned Cargo lockfiles', () => {
+test('Anchor SBF build preserves Cargo 1.75-compatible lockfiles', () => {
   const workflow = readFileSync(new URL('../.github/workflows/anchor-sbf.yml', import.meta.url), 'utf8');
   const compatibilityScript = readFileSync(new URL('../scripts/pin-sbf-compatible-locks.sh', import.meta.url), 'utf8');
-  assert.match(compatibilityScript, /pin_if_present "\$manifest" blake3 1\.8\.2/);
-  assert.match(compatibilityScript, /pin_if_present "\$manifest" constant_time_eq 0\.3\.1/);
-  assert.match(compatibilityScript, /pin_if_present "\$manifest" base64ct 1\.7\.3/);
-  assert.match(compatibilityScript, /pin_if_present "\$manifest" indexmap 2\.11\.4/);
+
+  assert.match(compatibilityScript, /pin_if_present "\$manifest" blake3 1\.8\.7 1\.8\.2/);
+  assert.match(compatibilityScript, /pin_if_present "\$manifest" constant_time_eq 0\.4\.2 0\.3\.1/);
+  assert.match(compatibilityScript, /pin_if_present "\$manifest" base64ct 1\.8\.3 1\.7\.3/);
+  assert.match(compatibilityScript, /pin_if_present "\$manifest" indexmap 2\.14\.2 2\.11\.4/);
+  assert.match(compatibilityScript, /package_version_exists/);
   assert.ok(workflow.includes('bash scripts/pin-sbf-compatible-locks.sh'));
+  assert.doesNotMatch(workflow, /pin-anchor-030-sbf-deps\.sh/);
+
   assert.match(workflow, /anchor build -- -- --locked/);
   assert.match(workflow, /Refresh Cargo metadata and normalize the SBF lockfile/);
   assert.ok(workflow.includes('if [[ "\\${1:-}" == "metadata" ]]; then'));
   assert.ok(workflow.includes('"$REAL_CARGO" "\\$@"'));
   assert.ok(workflow.includes('status=\\$?'));
   assert.ok(workflow.includes('if [[ \\$status -ne 0 ]]; then exit "\\$status"; fi'));
-  assert.ok(workflow.includes(String.raw`if [[ -f "\$lockfile" ]]; then`));
-  assert.ok(workflow.includes(String.raw`sed -i 's/^version = 4$/version = 3/' "\$lockfile"`));
+  assert.ok(workflow.includes('if [[ -f "\\$lockfile" ]]; then'));
+  assert.ok(workflow.includes('sed -i \'s/^version = 4$/version = 3/\' "\\$lockfile"'));
   assert.match(workflow, /metadata --manifest-path programs\/launchpad\/Cargo\.toml/);
   assert.doesNotMatch(workflow, /--features program-test/);
+
   const ciWorkflow = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
   assert.ok(ciWorkflow.includes('cargo check --manifest-path programs/program-tests/Cargo.toml --tests'));
   assert.match(workflow, /for lockfile in programs\/vault\/Cargo\.lock programs\/launchpad\/Cargo\.lock/);
@@ -190,6 +195,7 @@ test('Anchor SBF build preserves pinned Cargo lockfiles', () => {
   assert.match(workflow, /cargo test --manifest-path programs\/program-tests\/Cargo\.toml --test vault_program_test/);
   assert.match(workflow, /cargo test --manifest-path programs\/program-tests\/Cargo\.toml --test treasury_program_test/);
   assert.match(workflow, /uses: dtolnay\/rust-toolchain@stable/);
+
   const launchpadManifest = readFileSync(new URL('../programs/launchpad/Cargo.toml', import.meta.url), 'utf8');
   const vaultManifest = readFileSync(new URL('../programs/vault/Cargo.toml', import.meta.url), 'utf8');
   const hostTestsManifest = readFileSync(new URL('../programs/program-tests/Cargo.toml', import.meta.url), 'utf8');
@@ -201,11 +207,4 @@ test('Anchor SBF build preserves pinned Cargo lockfiles', () => {
   assert.match(workflow, /CARGO: \$\{\{ runner\.temp \}\}\/cargo-wrapper\/cargo/);
   assert.match(workflow, /grep -qx 'version = 3' "\$lockfile"/);
   assert.doesNotMatch(workflow, /for lockfile in programs\/vault\/Cargo\.lock programs\/vault-checks/);
-  assert.match(workflow, /Pin Cargo 1\.75-compatible transitive dependencies/);
-  assert.ok(workflow.includes('bash scripts/pin-anchor-030-sbf-deps.sh'));
-  const pinScript = readFileSync(new URL('../scripts/pin-anchor-030-sbf-deps.sh', import.meta.url), 'utf8');
-  assert.match(pinScript, /blake3 1\.8\.7 1\.8\.2/);
-  assert.match(pinScript, /constant_time_eq 0\.4\.2 0\.3\.1/);
-  assert.match(pinScript, /base64ct 1\.8\.3 1\.7\.3/);
-  assert.match(pinScript, /indexmap 2\.14\.2 2\.11\.4/);
 });
