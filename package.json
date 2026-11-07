@@ -12,7 +12,8 @@
     "test:vault-client": "node --experimental-strip-types --test tests/vault-client.test.mjs",
     "test:charts": "node --experimental-strip-types --test tests/chart-providers.test.mjs",
     "test:security": "node --experimental-strip-types --test tests/security.test.mjs",
-    "indexnow": "node --env-file=.env.local scripts/indexnow.mjs"
+    "indexnow": "node --env-file=.env.local scripts/indexnow.mjs",
+    "test:agent": "node --experimental-strip-types --test tests/agent.test.mjs"
   },
   "dependencies": {
     "@solana/kit": "8.5.0",
