@@ -12,8 +12,21 @@ pin_if_present() {
   local lockfile
   lockfile="$(dirname "$manifest")/Cargo.lock"
 
-  if grep -qE "^name = \"$package\"$" "$lockfile" &&
-     grep -qE "^version = \"$current_version\"$" "$lockfile"; then
+  if awk -v wanted_name="$package" -v wanted_version="$current_version" '
+    /^\[\[package\]\]$/ { name = ""; version = "" }
+    /^name = / {
+      name = $0
+      sub(/^name = "/, "", name)
+      sub(/"$/, "", name)
+    }
+    /^version = / {
+      version = $0
+      sub(/^version = "/, "", version)
+      sub(/"$/, "", version)
+      if (name == wanted_name && version == wanted_version) found = 1
+    }
+    END { exit(found ? 0 : 1) }
+  ' "$lockfile"; then
     cargo update --manifest-path "$manifest" \
       -p "$package@$current_version" --precise "$target_version"
   fi
