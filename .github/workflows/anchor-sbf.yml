@@ -78,9 +78,9 @@ jobs:
       - name: Normalize Cargo lockfiles for Solana 1.18
         run: |
           # Solana 1.18's bundled Cargo cannot parse lockfile v4. Keep the
-          # committed dependency graph, but normalize the format immediately
-          # before invoking the SBF toolchain in case host metadata upgraded it.
-          for lockfile in programs/vault/Cargo.lock programs/vault-checks/Cargo.lock; do
+          # committed program dependency graph, but normalize its format immediately
+          # before invoking the SBF toolchain if host metadata upgraded it.
+          for lockfile in programs/vault/Cargo.lock; do
             sed -i 's/^version = 4$/version = 3/' "$lockfile"
             grep -qx 'version = 3' "$lockfile"
           done
