@@ -363,3 +363,10 @@
 @media (max-width: 760px) {
   .lp-stage-grid { grid-template-columns: 1fr; }
 }
+
+.lp-preview-instruction {
+  margin: 0;
+  color: #a1a1aa;
+  font-size: 11px;
+  line-height: 1.7;
+}
