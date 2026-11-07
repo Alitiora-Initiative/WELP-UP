@@ -189,7 +189,10 @@ async fn treasury_initialization_epoch_gate_distribution_and_reserve_are_enforce
     });
     let substituted_instruction = disburse_ix(caller, treasury, attacker);
     let substituted = send_as_payer(&mut context, substituted_instruction).await;
-    assert!(substituted.is_err(), "developer destination substitution must fail");
+    assert!(
+        substituted.is_err(),
+        "developer destination substitution must fail"
+    );
 
     // Exactly 14 days is sufficient. The program uses a >= check, so it
     // does not require an extra second or a privileged keeper.
@@ -226,10 +229,7 @@ async fn treasury_initialization_epoch_gate_distribution_and_reserve_are_enforce
     // but they are not recorded and can never be harvested by this instruction.
     assert_eq!(state_after_distribution.locked_reserve_lamports, 400);
     assert_eq!(state_after_distribution.total_developer_disbursed, 600);
-    assert_eq!(
-        after_distribution.lamports,
-        treasury_account.lamports - 600
-    );
+    assert_eq!(after_distribution.lamports, treasury_account.lamports - 600);
     assert_eq!(
         state_after_distribution.last_distribution_timestamp,
         matured_at
