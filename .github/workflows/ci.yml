@@ -37,7 +37,7 @@ jobs:
   node-check:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,8 +48,6 @@ jobs:
         with:
           node-version: "24"
           cache: npm
-      - name: Resolve patched transitive dependency lockfile
-        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
@@ -68,21 +66,6 @@ jobs:
           node -e 'const r=require(process.env.RUNNER_TEMP+"/npm-audit.json"); console.log("Dependency audit summary:", JSON.stringify(r.metadata?.vulnerabilities ?? {})); for (const [name,v] of Object.entries(r.vulnerabilities ?? {})) console.log(name, "|", v.severity, "| range:", v.range, "| fix:", JSON.stringify(v.fixAvailable), "| advisories:", (v.via ?? []).map(x => typeof x === "string" ? x : x.title).join("; "));'
       - name: Audit for moderate or higher vulnerabilities
         run: npm audit --audit-level=moderate
-      - name: Commit refreshed dependency lockfile
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          GH_TOKEN: ${{ github.token }}
-          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
-        run: |
-          if git diff --quiet -- package-lock.json; then
-            echo "Dependency lockfile already matches package overrides."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          git commit -m "chore(deps): lock patched minimatch security fix"
-          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${HEAD_BRANCH}"
 
   rust-checks:
     name: Rust checks (vault crates)
