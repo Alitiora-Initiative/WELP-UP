@@ -78,7 +78,12 @@ ETuGxX6Znxr9q59THJtcYDJKt6RvCfN7wp79tRnbG1xG
 
 It is a public receiving address only. It is not a signing credential.
 
-The account is a program-owned PDA and receives SOL. The disbursement calculation excludes its rent-exempt minimum before considering available fee funds.
+The implementation uses two PDAs:
+
+- `TreasuryAccount` is the program-owned state PDA derived from `["treasury-v1"]`.
+- `TreasuryVault` is a separate zero-data, System Program-owned PDA derived from `["treasury-vault-v1"]`. The state stores its address and bump. The launchpad signs the System Program transfer with those seeds during a matured disbursal.
+
+The disbursement calculation preserves the vault's rent-exempt minimum and all previously locked reserve before considering available fee funds. The state PDA's rent is independent and is never counted as treasury revenue.
 
 ## 3. Fourteen-day epoch and 60/40 release
 
