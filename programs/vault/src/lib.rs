@@ -8,7 +8,7 @@
 
 use anchor_lang::prelude::*;
 use pyth_solana_receiver_sdk::price_update::PriceUpdateV2;
-use welp_vault_checks::{check_initialize, check_withdraw, compute_redeem, CheckError};
+use welp_vault_checks::{check_initialize, check_withdraw, compute_redeem, compute_shares, CheckError};
 
 declare_id!("US517G5965aydkZ46HS38QLi7UQiSojurfbQfKCELFx"); // undeployed placeholder; replace after `anchor keys list`
 
