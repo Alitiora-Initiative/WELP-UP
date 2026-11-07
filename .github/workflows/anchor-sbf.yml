@@ -85,8 +85,27 @@ jobs:
             grep -qx 'version = 3' "$lockfile"
           done
 
+      - name: Prevent Anchor metadata from upgrading the SBF lockfile
+        run: |
+          # Anchor 0.30 invokes host `cargo metadata` before cargo-build-sbf.
+          # Cargo 1.85 upgrades v3 lockfiles to v4 during metadata resolution,
+          # but Solana 1.18's bundled Cargo cannot read v4. Keep metadata locked.
+          mkdir -p "$RUNNER_TEMP/cargo-wrapper"
+          REAL_CARGO="$(command -v cargo)"
+          cat > "$RUNNER_TEMP/cargo-wrapper/cargo" <<EOF
+          #!/usr/bin/env bash
+          if [[ "${1:-}" == "metadata" ]]; then
+            exec "$REAL_CARGO" "$@" --locked
+          fi
+          exec "$REAL_CARGO" "$@"
+          EOF
+          chmod +x "$RUNNER_TEMP/cargo-wrapper/cargo"
+          echo "$RUNNER_TEMP/cargo-wrapper" >> "$GITHUB_PATH"
+
       - name: Build Solana BPF/SBF program and IDL
-        run: anchor build -- -- --locked
+        run: |
+          anchor build -- -- --locked
+          grep -qx 'version = 3' programs/vault/Cargo.lock
 
       - name: Run Solana ProgramTest against the built SBF binary
         run: cargo test --manifest-path programs/vault/Cargo.toml --test anchor_program_test
