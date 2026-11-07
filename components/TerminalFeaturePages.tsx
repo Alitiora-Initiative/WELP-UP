@@ -172,20 +172,45 @@ function AutomationPage() {
 
 function VaultPage() {
   const gates = [
-    ['Deployed program verified executable', 'OPEN', 'No mainnet program address is configured.'],
-    ['Independent security audit', 'OPEN', 'Critical and high findings must be closed and published.'],
-    ['Adversarial cap and allowlist tests', 'OPEN', 'Spending-cap, pause, revoke and withdrawal paths need tests.'],
-    ['SOL and SPL withdrawal paths', 'OPEN', 'Owner-controlled withdrawal must be verified against the deployed program.'],
-    ['Wallet-signed consent record', 'PARTIAL', 'A future policy acknowledgement must bind the owner and exact policy hash.'],
+    ['Owner-signed SOL deposits and share accounting', 'PARTIAL', 'Implemented in Anchor source; not deployed or enabled by this website.'],
+    ['Share-based SOL withdrawal and rent protection', 'PARTIAL', 'Owner-only redemption is implemented in source; validator coverage is still required.'],
+    ['Executor policy PDA and owner revocation', 'PARTIAL', 'Owner can configure, rotate and revoke a public executor key in source. No bot can trade yet.'],
+    ['Program deployed and executable verified', 'OPEN', 'The checked-in program ID is a placeholder; no Devnet or Mainnet deployment is approved.'],
+    ['Independent security audit', 'OPEN', 'An independent Solana/Anchor audit and remediation are mandatory.'],
+    ['Jupiter CPI and token-account reconciliation', 'OPEN', 'Swap execution, SPL-token custody, settlement and P&L remain disabled.'],
   ];
   return <main className="terminal-page feature-page">
-    <Heading eyebrow="VAULT · PER-WALLET PDA · FAIL-CLOSED" title={<>Authority you can <span>revoke.</span></>} detail="The planned vault uses an isolated per-wallet address and narrow owner-controlled authority. It is not deployed or audited for mainnet use." action={<span className="status-pill warning"><i /> FUNDING DISABLED</span>} />
-    <div className="feature-stats"><Stat label="PROGRAM ADDRESS" value="UNCONFIGURED" detail="No PDA is derived" /><Stat label="MAINNET STATE" value="NOT DEPLOYED" detail="Funding disabled" /><Stat label="EXECUTOR" value="NONE" detail="No delegated authority" /><Stat label="OWNER CONTROLS" value="PLANNED" detail="Pause · revoke · rotate · withdraw" /></div>
-    <div className="feature-grid two">
-      <Panel title="Launch gates" eyebrow="SECURITY CHECKLIST">{gates.map((gate) => <div className="gate-row" key={gate[0]}><span className={'gate-state ' + (gate[1] === 'PARTIAL' ? 'partial' : '')}>{gate[1]}</span><div><strong>{gate[0]}</strong><small>{gate[2]}</small></div></div>)}</Panel>
-      <Panel title="Funding remains closed" eyebrow="PROTECT YOUR ASSETS"><div className="notice-block danger"><ShieldAlert size={18} /><div><strong>Do not send SOL or tokens to a PDA derived from the placeholder program ID.</strong><p>No mainnet vault address is published and no deposits or withdrawals are accepted by this interface.</p></div></div><p className="muted-copy">An interface setting is not an on-chain security boundary. The contract must be deployed, verified, audited, tested and published before a funding path is considered.</p><Link className="text-link" href="/docs">Read the architecture and production checklist <ArrowUpRight size={13} /></Link></Panel>
+    <Heading eyebrow="VAULT · ANCHOR / SOLANA · NOT DEPLOYED" title={<>Authority you can <span>revoke.</span></>} detail="The Anchor source now includes owner-controlled SOL share accounting and a per-vault executor policy. These are source implementations—not a deployed or audited custody service." action={<span className="status-pill warning"><i /> FUNDING DISABLED</span>} />
+    <div className="feature-stats">
+      <Stat label="PROGRAM ADDRESS" value="UNCONFIGURED" detail="Placeholder ID is not fundable" />
+      <Stat label="NETWORK STATUS" value="NOT DEPLOYED" detail="No Devnet or Mainnet release" />
+      <Stat label="EXECUTOR POLICY" value="SOURCE ONLY" detail="No executor is configured" />
+      <Stat label="OWNER RECOVERY" value="SOURCE ONLY" detail="Share redemption · pause · policy revoke" />
     </div>
-    <Panel title="Authority model" eyebrow="DESIGNED, NOT ACTIVE"><div className="authority-flow"><span>OWNER WALLET</span><b>fund · pause · revoke · withdraw</b><span className="authority-arrow">↓</span><span>PER-WALLET VAULT PDA</span><b>only a reviewed executor instruction could spend within an on-chain cap</b><span className="authority-arrow">↓</span><span>APPROVED ROUTE PROGRAMS</span></div></Panel>
+    <div className="feature-grid two">
+      <Panel title="Launch gates" eyebrow="SOURCE VS RELEASE">{gates.map((gate) => <div className="gate-row" key={gate[0]}><span className={'gate-state ' + (gate[1] === 'PARTIAL' ? 'partial' : '')}>{gate[1]}</span><div><strong>{gate[0]}</strong><small>{gate[2]}</small></div></div>)}</Panel>
+      <Panel title="Funding remains closed" eyebrow="PROTECT YOUR ASSETS">
+        <div className="notice-block danger"><ShieldAlert size={18} /><div><strong>Do not send SOL or tokens to a PDA derived from the placeholder program ID.</strong><p>No mainnet vault address is published. This interface does not accept deposits or withdrawals.</p></div></div>
+        <p className="muted-copy">A source implementation or successful frontend build is not proof of deployment, transaction safety or an independent audit. Funding stays disabled until the full release checklist is verified.</p>
+        <Link className="text-link" href="/docs">Read the architecture and production checklist <ArrowUpRight size={13} /></Link>
+      </Panel>
+    </div>
+    <div className="feature-grid two">
+      <Panel title="Implemented in Anchor source" eyebrow="NOT LIVE">
+        <div className="gate-row"><span className="gate-state partial">SOURCE</span><div><strong>Owner-signed SOL deposits</strong><small>System Program transfer with proportional shares priced against current accounted assets.</small></div></div>
+        <div className="gate-row"><span className="gate-state partial">SOURCE</span><div><strong>Share-based SOL withdrawals</strong><small>Owner-only redemption with checked accounting and rent reserve protection.</small></div></div>
+        <div className="gate-row"><span className="gate-state partial">SOURCE</span><div><strong>Executor configuration and revocation</strong><small>Per-vault policy PDA; owner signs configuration and can revoke without executor cooperation.</small></div></div>
+        <div className="gate-row"><span className="gate-state partial">SOURCE</span><div><strong>Bot strategy consent snapshot</strong><small>Creating a user slot requires an enabled bot registry and snapshots its strategy hash, version and risk limits.</small></div></div>
+      </Panel>
+      <Panel title="Stored executor guardrails" eyebrow="NOT YET USED BY TRADING">
+        <div className="gate-row"><span className="gate-state">LIMIT</span><div><strong>Per-trade minimum and maximum</strong><small>At least 0.001 SOL; owner-selected maximum cannot exceed the daily allowance.</small></div></div>
+        <div className="gate-row"><span className="gate-state">LIMIT</span><div><strong>Daily allowance</strong><small>Configured daily cap cannot exceed current accounted vault assets. Pure Rust rollover checks are tested but not wired to swaps.</small></div></div>
+        <div className="gate-row"><span className="gate-state">LIMIT</span><div><strong>Slippage ceiling</strong><small>Maximum configured slippage is capped at 10%. Jupiter execution remains disabled.</small></div></div>
+      </Panel>
+    </div>
+    <Panel title="Authority model" eyebrow="DESIGNED, NOT ACTIVE">
+      <div className="authority-flow"><span>OWNER WALLET</span><b>sign deposit · redeem shares · pause · configure/revoke executor</b><span className="authority-arrow">↓</span><span>PER-WALLET VAULT PDA</span><b>records accounted SOL and outstanding shares</b><span className="authority-arrow">↓</span><span>EXECUTOR POLICY PDA</span><b>stores a public key and spending policy; cannot trade until audited CPI is implemented</b></div>
+    </Panel>
   </main>;
 }
 

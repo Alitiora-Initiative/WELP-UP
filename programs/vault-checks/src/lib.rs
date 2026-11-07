@@ -37,6 +37,8 @@ pub enum CheckError {
     NonceTaken,
     InsufficientBalance,
     MintNotAllowed,
+    InvalidSpendLimit,
+    DailyCapExceeded,
 }
 
 pub const MAX_FEE_BPS: u64 = 3000;
@@ -113,6 +115,62 @@ pub fn authorize_spend(
         return Err(CheckError::CapExceeded);
     }
     Ok(next)
+}
+
+/// Authorize one executor trade against a rolling UTC-day spend limit.
+///
+/// This helper is deliberately separate from the legacy lifetime-cap check.
+/// It is not a substitute for wiring the result into an audited swap CPI.
+/// If the clock moves backwards, the previous day and spend counter are kept;
+/// a reset occurs only when the observed day strictly advances.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DailySpendPolicy {
+    pub enabled: bool,
+    pub executor_matches: bool,
+    pub max_trade_lamports: u64,
+    pub max_daily_lamports: u64,
+    pub spent_today_lamports: u64,
+    pub stored_day_index: i64,
+    pub current_day_index: i64,
+}
+
+/// Authorize one executor trade against a rolling UTC-day spend limit.
+///
+/// This helper is deliberately separate from the legacy lifetime-cap check.
+/// It is not a substitute for wiring the result into an audited swap CPI.
+/// If the clock moves backwards, the previous day and spend counter are kept;
+/// a reset occurs only when the observed day strictly advances.
+pub fn authorize_daily_spend(
+    amount_lamports: u64,
+    policy: DailySpendPolicy,
+) -> Result<(u64, i64), CheckError> {
+    if !policy.enabled || !policy.executor_matches {
+        return Err(CheckError::UnauthorizedExecutor);
+    }
+    if policy.max_trade_lamports < MIN_POSITION_LAMPORTS
+        || policy.max_daily_lamports < policy.max_trade_lamports
+    {
+        return Err(CheckError::InvalidSpendLimit);
+    }
+    if amount_lamports < MIN_POSITION_LAMPORTS {
+        return Err(CheckError::BelowMinPosition);
+    }
+    if amount_lamports > policy.max_trade_lamports {
+        return Err(CheckError::AbovePerPosition);
+    }
+
+    let (base_spend, day_index) = if policy.current_day_index > policy.stored_day_index {
+        (0, policy.current_day_index)
+    } else {
+        (policy.spent_today_lamports, policy.stored_day_index)
+    };
+    let next_spend = base_spend
+        .checked_add(amount_lamports)
+        .ok_or(CheckError::Overflow)?;
+    if next_spend > policy.max_daily_lamports {
+        return Err(CheckError::DailyCapExceeded);
+    }
+    Ok((next_spend, day_index))
 }
 
 /// Reduce open exposure after an exit. Lifetime `spent` is not refunded.
@@ -400,6 +458,128 @@ mod tests {
                 &route
             ),
             Err(CheckError::UnauthorizedExecutor)
+        );
+    }
+
+    #[test]
+    fn daily_executor_limit_enforces_identity_trade_cap_and_daily_cap() {
+        let policy = |spent| DailySpendPolicy {
+            enabled: true,
+            executor_matches: true,
+            max_trade_lamports: 5_000_000,
+            max_daily_lamports: 10_000_000,
+            spent_today_lamports: spent,
+            stored_day_index: 10,
+            current_day_index: 10,
+        };
+        assert_eq!(
+            authorize_daily_spend(500_000, policy(0)),
+            Err(CheckError::BelowMinPosition)
+        );
+        assert_eq!(
+            authorize_daily_spend(6_000_000, policy(0)),
+            Err(CheckError::AbovePerPosition)
+        );
+        assert_eq!(
+            authorize_daily_spend(5_000_000, policy(6_000_000)),
+            Err(CheckError::DailyCapExceeded)
+        );
+        assert_eq!(
+            authorize_daily_spend(5_000_000, policy(0)),
+            Ok((5_000_000, 10))
+        );
+        assert_eq!(
+            authorize_daily_spend(
+                1_000_000,
+                DailySpendPolicy {
+                    enabled: false,
+                    ..policy(0)
+                }
+            ),
+            Err(CheckError::UnauthorizedExecutor)
+        );
+        assert_eq!(
+            authorize_daily_spend(
+                1_000_000,
+                DailySpendPolicy {
+                    executor_matches: false,
+                    ..policy(0)
+                }
+            ),
+            Err(CheckError::UnauthorizedExecutor)
+        );
+    }
+
+    #[test]
+    fn daily_limit_rolls_over_only_when_clock_day_advances() {
+        assert_eq!(
+            authorize_daily_spend(
+                2_000_000,
+                DailySpendPolicy {
+                    spent_today_lamports: 4_000_000,
+                    current_day_index: 11,
+                    ..DailySpendPolicy {
+                        enabled: true,
+                        executor_matches: true,
+                        max_trade_lamports: 5_000_000,
+                        max_daily_lamports: 5_000_000,
+                        spent_today_lamports: 4_000_000,
+                        stored_day_index: 10,
+                        current_day_index: 10,
+                    }
+                }
+            ),
+            Ok((2_000_000, 11))
+        );
+        // A backwards clock cannot reset the spend counter.
+        assert_eq!(
+            authorize_daily_spend(
+                2_000_000,
+                DailySpendPolicy {
+                    enabled: true,
+                    executor_matches: true,
+                    max_trade_lamports: 5_000_000,
+                    max_daily_lamports: 5_000_000,
+                    spent_today_lamports: 4_000_000,
+                    stored_day_index: 10,
+                    current_day_index: 9,
+                }
+            ),
+            Err(CheckError::DailyCapExceeded)
+        );
+    }
+
+    #[test]
+    fn invalid_daily_policy_is_rejected() {
+        assert_eq!(
+            authorize_daily_spend(
+                1_000_000,
+                DailySpendPolicy {
+                    enabled: true,
+                    executor_matches: true,
+                    max_trade_lamports: 500_000,
+                    max_daily_lamports: 5_000_000,
+                    spent_today_lamports: 0,
+                    stored_day_index: 10,
+                    current_day_index: 10,
+                }
+            ),
+            Err(CheckError::InvalidSpendLimit)
+        );
+        assert_eq!(
+            authorize_daily_spend(
+                1_000_000,
+                DailySpendPolicy {
+                    enabled: true,
+                    executor_matches: true,
+                    max_trade_lamports: 5_000_000,
+                    max_daily_lamports: 4_000_000,
+                    spent_today_lamports: 0,
+                    stored_day_index: 10,
+                    current_day_index: 10,
+                }
+            ),
+            Err(CheckError::InvalidSpendLimit)
         );
     }
 

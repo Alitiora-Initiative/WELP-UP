@@ -9,7 +9,7 @@
 use anchor_lang::prelude::*;
 use pyth_solana_receiver_sdk::price_update::PriceUpdateV2;
 use welp_vault_checks::{
-    check_initialize, check_withdraw, compute_redeem, compute_shares, CheckError,
+    check_withdraw, compute_redeem, compute_shares, CheckError, MIN_POSITION_LAMPORTS,
 };
 
 declare_id!("US517G5965aydkZ46HS38QLi7UQiSojurfbQfKCELFx"); // undeployed placeholder; replace after `anchor keys list`
@@ -44,6 +44,8 @@ fn map_err(err: CheckError) -> VaultError {
         CheckError::NonceTaken => VaultError::DuplicateNonce,
         CheckError::InsufficientBalance => VaultError::InsufficientFunds,
         CheckError::MintNotAllowed => VaultError::MintNotAllowed,
+        CheckError::InvalidSpendLimit => VaultError::InvalidSpendLimit,
+        CheckError::DailyCapExceeded => VaultError::DailyCapExceeded,
     }
 }
 
@@ -95,6 +97,8 @@ pub struct VaultStateEvent {
 pub struct SlotCreatedEvent {
     pub owner: Pubkey,
     pub bot_account: Pubkey,
+    pub strategy_hash: [u8; 32],
+    pub registry_version: u32,
     pub timestamp: i64,
 }
 
@@ -105,6 +109,18 @@ pub struct SwapExecutedEvent {
     pub amount_in: u64,
     pub actual_out: u64,
     pub order_nonce: u64,
+    pub timestamp: i64,
+}
+
+#[event]
+pub struct ExecutorPolicyEvent {
+    pub owner: Pubkey,
+    pub executor: Pubkey,
+    pub max_trade_lamports: u64,
+    pub max_daily_lamports: u64,
+    pub max_slippage_bps: u16,
+    pub version: u32,
+    pub enabled: bool,
     pub timestamp: i64,
 }
 
@@ -124,20 +140,14 @@ pub mod welp_vault {
 
     // ── Global config ──────────────────────────────────────────────────
 
-    /// Creates the singleton GlobalConfig PDA. Must be called once by the
-    /// deployer before any vault activity.
+    /// Global initialization stays disabled until a deployment-specific
+    /// bootstrap authority is selected and pinned in the reviewed source.
     pub fn initialize_global_config(
-        ctx: Context<InitializeGlobalConfig>,
-        treasury_recipient: Pubkey,
-        fee_recipient: Pubkey,
+        _ctx: Context<InitializeGlobalConfig>,
+        _treasury_recipient: Pubkey,
+        _fee_recipient: Pubkey,
     ) -> Result<()> {
-        let cfg = &mut ctx.accounts.global_config;
-        cfg.authority = ctx.accounts.authority.key();
-        cfg.treasury_recipient = treasury_recipient;
-        cfg.fee_recipient = fee_recipient;
-        cfg.pause_all = false;
-        cfg.bump = ctx.bumps.global_config;
-        Ok(())
+        err!(VaultError::GlobalConfigInitDisabled)
     }
 
     // ── Vault lifecycle ────────────────────────────────────────────────
@@ -320,11 +330,36 @@ pub mod welp_vault {
 
     // ── User slots ─────────────────────────────────────────────────────
 
-    /// Creates a UserSlot PDA for the (owner, bot_account) pair.
+    /// Creates a UserSlot only for an existing, enabled bot registry.
+    /// The owner-signed creation snapshots the exact strategy and risk limits
+    /// they are consenting to; later registry changes cannot silently rewrite it.
     pub fn create_user_slot(ctx: Context<CreateUserSlot>, bot_account: Pubkey) -> Result<()> {
+        let registry = &ctx.accounts.bot_registry;
+        require!(registry.enabled, VaultError::BotDisabled);
+        require!(
+            registry.bot_account == bot_account,
+            VaultError::InvalidBotRegistry
+        );
+        require!(
+            registry.strategy_hash != [0u8; 32],
+            VaultError::InvalidStrategyHash
+        );
+        require!(
+            registry.max_position_bps > 0 && registry.max_position_bps <= 10_000,
+            VaultError::InvalidPositionLimit
+        );
+        require!(
+            registry.max_slippage_bps <= 1_000,
+            VaultError::InvalidSlippage
+        );
+
         let slot = &mut ctx.accounts.user_slot;
         slot.owner = ctx.accounts.owner.key();
         slot.bot_account = bot_account;
+        slot.strategy_hash = registry.strategy_hash;
+        slot.registry_version = registry.version;
+        slot.max_position_bps = registry.max_position_bps;
+        slot.max_slippage_bps = registry.max_slippage_bps;
         slot.principal = 0;
         slot.available = 0;
         slot.open_exposure = 0;
@@ -339,6 +374,8 @@ pub mod welp_vault {
         emit!(SlotCreatedEvent {
             owner: slot.owner,
             bot_account,
+            strategy_hash: slot.strategy_hash,
+            registry_version: slot.registry_version,
             timestamp: Clock::get()?.unix_timestamp,
         });
         Ok(())
@@ -349,6 +386,107 @@ pub mod welp_vault {
         let slot = &mut ctx.accounts.user_slot;
         require!(new_order_nonce > slot.order_nonce, VaultError::InvalidState);
         slot.order_nonce = new_order_nonce;
+        Ok(())
+    }
+
+    /// Owner configures or rotates the single delegated executor for this vault.
+    /// This only stores a policy; execute_swap remains disabled until a separately
+    /// audited Jupiter CPI consumes and updates this policy atomically.
+    pub fn configure_executor_policy(
+        ctx: Context<ConfigureExecutorPolicy>,
+        executor: Pubkey,
+        max_trade_lamports: u64,
+        max_daily_lamports: u64,
+        max_slippage_bps: u16,
+    ) -> Result<()> {
+        let owner = ctx.accounts.owner.key();
+        let vault_key = ctx.accounts.vault.key();
+        let available = ctx.accounts.vault.available_lamports;
+
+        require!(
+            executor != Pubkey::default() && executor != owner,
+            VaultError::InvalidExecutor
+        );
+        require!(
+            ctx.accounts.vault.state == VaultState::Active
+                || ctx.accounts.vault.state == VaultState::Paused,
+            VaultError::VaultNotActive
+        );
+        require!(
+            max_trade_lamports >= MIN_POSITION_LAMPORTS
+                && max_trade_lamports <= max_daily_lamports
+                && max_daily_lamports <= available,
+            VaultError::InvalidSpendLimit
+        );
+        require!(max_slippage_bps <= 1_000, VaultError::InvalidSlippage);
+
+        let now = Clock::get()?.unix_timestamp;
+        let current_day = now.div_euclid(86_400);
+        let policy = &mut ctx.accounts.executor_policy;
+        require!(
+            policy.vault == Pubkey::default() || policy.vault == vault_key,
+            VaultError::InvalidExecutorPolicy
+        );
+        require!(
+            policy.owner == Pubkey::default() || policy.owner == owner,
+            VaultError::InvalidExecutorPolicy
+        );
+
+        if policy.vault == Pubkey::default() {
+            policy.owner = owner;
+            policy.vault = vault_key;
+            policy.bump = ctx.bumps.executor_policy;
+            policy.day_index = current_day;
+            policy.daily_spent_lamports = 0;
+            policy.version = 0;
+        } else if current_day > policy.day_index {
+            policy.day_index = current_day;
+            policy.daily_spent_lamports = 0;
+        }
+
+        policy.executor = executor;
+        policy.max_trade_lamports = max_trade_lamports;
+        policy.max_daily_lamports = max_daily_lamports;
+        policy.max_slippage_bps = max_slippage_bps;
+        policy.enabled = true;
+        policy.version = policy.version.checked_add(1).ok_or(VaultError::Overflow)?;
+
+        emit!(ExecutorPolicyEvent {
+            owner,
+            executor,
+            max_trade_lamports,
+            max_daily_lamports,
+            max_slippage_bps,
+            version: policy.version,
+            enabled: true,
+            timestamp: now,
+        });
+        Ok(())
+    }
+
+    /// Owner immediately revokes the configured executor.
+    pub fn revoke_executor_policy(ctx: Context<RevokeExecutorPolicy>) -> Result<()> {
+        let now = Clock::get()?.unix_timestamp;
+        let policy = &mut ctx.accounts.executor_policy;
+        require!(policy.enabled, VaultError::ExecutorNotConfigured);
+        let previous_executor = policy.executor;
+        policy.enabled = false;
+        policy.executor = Pubkey::default();
+        policy.max_trade_lamports = 0;
+        policy.max_daily_lamports = 0;
+        policy.max_slippage_bps = 0;
+        policy.version = policy.version.checked_add(1).ok_or(VaultError::Overflow)?;
+
+        emit!(ExecutorPolicyEvent {
+            owner: policy.owner,
+            executor: previous_executor,
+            max_trade_lamports: 0,
+            max_daily_lamports: 0,
+            max_slippage_bps: 0,
+            version: policy.version,
+            enabled: false,
+            timestamp: now,
+        });
         Ok(())
     }
 
@@ -363,6 +501,17 @@ pub mod welp_vault {
     ) -> Result<()> {
         use welp_vault_checks::validate_fee_bps;
         validate_fee_bps(fee_bps as u64).map_err(|_| VaultError::FeeTooHigh)?;
+        require!(strategy_hash != [0u8; 32], VaultError::InvalidStrategyHash);
+        require!(
+            max_position_bps > 0 && max_position_bps <= 10_000,
+            VaultError::InvalidPositionLimit
+        );
+        require!(max_slippage_bps <= 1_000, VaultError::InvalidSlippage);
+        require!(
+            ctx.accounts.bot_account.key() != Pubkey::default()
+                && ctx.accounts.bot_account.key() != ctx.accounts.creator.key(),
+            VaultError::InvalidBotRegistry
+        );
 
         let reg = &mut ctx.accounts.bot_registry;
         reg.creator = ctx.accounts.creator.key();
@@ -395,34 +544,24 @@ pub mod welp_vault {
 
     // ── Legacy compatibility stubs ──────────────────────────────────────
 
-    /// Compatibility: create vault with cap/position params (delegates to create_vault logic).
+    /// Legacy initializer accepted cap values that were never stored in Vault.
+    /// It remains disabled to avoid implying that unenforced limits are active.
     pub fn initialize(
-        ctx: Context<Initialize>,
-        total_cap_lamports: u64,
-        per_position_max_lamports: u64,
+        _ctx: Context<Initialize>,
+        _total_cap_lamports: u64,
+        _per_position_max_lamports: u64,
     ) -> Result<()> {
-        check_initialize(total_cap_lamports, per_position_max_lamports).map_err(map_err)?;
-
-        let vault = &mut ctx.accounts.vault;
-        vault.owner = ctx.accounts.owner.key();
-        vault.total_deposited_lamports = 0;
-        vault.available_lamports = 0;
-        vault.total_shares = 0;
-        vault.state = VaultState::Funded;
-        vault.bump = ctx.bumps.vault;
-        vault.created_at = Clock::get()?.unix_timestamp;
-        Ok(())
+        err!(VaultError::LegacyInitializeDisabled)
     }
 
-    /// Owner sets or rotates the executor key (kept for compatibility).
+    /// Legacy executor entry point is disabled; use configure_executor_policy.
     pub fn set_executor(_ctx: Context<SetExecutor>, _executor: Pubkey) -> Result<()> {
-        // Executor management is handled per-slot in M5; this is a no-op stub.
-        Ok(())
+        err!(VaultError::ExecutorPolicyRequired)
     }
 
-    /// Owner immediately clears the executor (kept for compatibility).
+    /// Legacy executor entry point is disabled; use revoke_executor_policy.
     pub fn revoke_executor(_ctx: Context<RevokeExecutor>) -> Result<()> {
-        Ok(())
+        err!(VaultError::ExecutorPolicyRequired)
     }
 
     /// Owner pauses vault (legacy name, delegates to pause_vault logic).
@@ -459,18 +598,9 @@ pub mod welp_vault {
         err!(VaultError::TradingDisabled)
     }
 
-    /// Owner withdraws SOL (legacy direct-amount interface).
-    pub fn withdraw(ctx: Context<LegacyWithdraw>, amount: u64) -> Result<()> {
-        require!(amount > 0, VaultError::ZeroAmount);
-        let vault_info = ctx.accounts.vault.to_account_info();
-        let owner_info = ctx.accounts.owner.to_account_info();
-        let rent = Rent::get()?;
-        let min_rent = rent.minimum_balance(Vault::SPACE);
-        check_withdraw(amount, vault_info.lamports(), min_rent).map_err(map_err)?;
-
-        **vault_info.try_borrow_mut_lamports()? -= amount;
-        **owner_info.try_borrow_mut_lamports()? += amount;
-        Ok(())
+    /// Legacy direct-amount withdrawal is disabled because it bypasses share accounting.
+    pub fn withdraw(_ctx: Context<LegacyWithdraw>, _amount: u64) -> Result<()> {
+        err!(VaultError::LegacyWithdrawDisabled)
     }
 
     /// Charges a $0.10 creation fee in SOL via Pyth oracle price, split 40/60.
@@ -515,6 +645,10 @@ impl Vault {
 pub struct UserSlot {
     pub owner: Pubkey,
     pub bot_account: Pubkey,
+    pub strategy_hash: [u8; 32],
+    pub registry_version: u32,
+    pub max_position_bps: u16,
+    pub max_slippage_bps: u16,
     pub principal: u64,
     pub available: u64,
     pub open_exposure: u64,
@@ -528,7 +662,29 @@ pub struct UserSlot {
 }
 
 impl UserSlot {
-    pub const SPACE: usize = 8 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 1 + 8 + 1;
+    pub const SPACE: usize = 8 + 32 + 32 + 32 + 4 + 2 + 2 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 1 + 8 + 1;
+}
+
+/// Per-vault delegated executor policy. No executor key is stored here;
+/// only the public key is recorded. Trading remains disabled until an audited
+/// CPI path updates daily_spent_lamports atomically with the swap.
+#[account]
+pub struct ExecutorPolicy {
+    pub owner: Pubkey,
+    pub vault: Pubkey,
+    pub executor: Pubkey,
+    pub max_trade_lamports: u64,
+    pub max_daily_lamports: u64,
+    pub daily_spent_lamports: u64,
+    pub day_index: i64,
+    pub max_slippage_bps: u16,
+    pub enabled: bool,
+    pub version: u32,
+    pub bump: u8,
+}
+
+impl ExecutorPolicy {
+    pub const SPACE: usize = 8 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 2 + 1 + 4 + 1;
 }
 
 #[account]
@@ -642,6 +798,13 @@ pub struct CreateUserSlot<'info> {
         bump
     )]
     pub user_slot: Account<'info, UserSlot>,
+    #[account(
+        seeds = [b"bot-registry-v1", bot_registry.creator.as_ref(), bot_account.as_ref()],
+        bump = bot_registry.bump,
+        constraint = bot_registry.bot_account == bot_account @ VaultError::InvalidBotRegistry,
+        constraint = bot_registry.enabled @ VaultError::BotDisabled
+    )]
+    pub bot_registry: Account<'info, BotRegistry>,
     pub system_program: Program<'info, System>,
 }
 
@@ -673,6 +836,47 @@ pub struct RegisterBot<'info> {
     )]
     pub bot_registry: Account<'info, BotRegistry>,
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct ConfigureExecutorPolicy<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"vault-v1", owner.key().as_ref()],
+        bump = vault.bump,
+        has_one = owner @ VaultError::UnauthorizedOwner
+    )]
+    pub vault: Account<'info, Vault>,
+    #[account(
+        init_if_needed,
+        payer = owner,
+        space = ExecutorPolicy::SPACE,
+        seeds = [b"executor-policy-v1", vault.key().as_ref()],
+        bump
+    )]
+    pub executor_policy: Account<'info, ExecutorPolicy>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct RevokeExecutorPolicy<'info> {
+    pub owner: Signer<'info>,
+    #[account(
+        seeds = [b"vault-v1", owner.key().as_ref()],
+        bump = vault.bump,
+        has_one = owner @ VaultError::UnauthorizedOwner
+    )]
+    pub vault: Account<'info, Vault>,
+    #[account(
+        mut,
+        seeds = [b"executor-policy-v1", vault.key().as_ref()],
+        bump = executor_policy.bump,
+        has_one = owner @ VaultError::UnauthorizedOwner,
+        has_one = vault @ VaultError::InvalidExecutorPolicy
+    )]
+    pub executor_policy: Account<'info, ExecutorPolicy>,
 }
 
 #[derive(Accounts)]
@@ -922,4 +1126,32 @@ pub enum VaultError {
     MintNotAllowed,
     #[msg("Vault does not have enough available balance")]
     InsufficientVaultBalance,
+    #[msg("Global config initialization is disabled until a bootstrap authority is pinned")]
+    GlobalConfigInitDisabled,
+    #[msg("Use the versioned executor policy instructions")]
+    ExecutorPolicyRequired,
+    #[msg("Executor key is invalid")]
+    InvalidExecutor,
+    #[msg("Executor policy is not configured")]
+    ExecutorNotConfigured,
+    #[msg("Executor policy account does not belong to this vault and owner")]
+    InvalidExecutorPolicy,
+    #[msg("Executor spending limits are invalid or exceed current vault assets")]
+    InvalidSpendLimit,
+    #[msg("Requested spend exceeds the executor's daily allowance")]
+    DailyCapExceeded,
+    #[msg("Maximum slippage exceeds the 10% safety ceiling")]
+    InvalidSlippage,
+    #[msg("Legacy direct-amount withdrawal is disabled; redeem vault shares instead")]
+    LegacyWithdrawDisabled,
+    #[msg("Legacy initializer is disabled because its cap parameters were not persisted")]
+    LegacyInitializeDisabled,
+    #[msg("Bot registry does not match the requested bot account")]
+    InvalidBotRegistry,
+    #[msg("Bot is not enabled")]
+    BotDisabled,
+    #[msg("Strategy hash must be non-zero")]
+    InvalidStrategyHash,
+    #[msg("Bot position allocation must be between 1 and 10,000 basis points")]
+    InvalidPositionLimit,
 }

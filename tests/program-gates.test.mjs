@@ -33,7 +33,7 @@ test('automated swaps are fail-closed', () => {
 });
 
 test('position settlement is fail-closed', () => {
-  const body = instruction('pub fn settle_exit(', '/// Owner withdraws SOL (legacy direct-amount interface)');
+  const body = instruction('pub fn settle_exit(', '/// Legacy direct-amount withdrawal is disabled');
   assert.match(body, /err!\(VaultError::TradingDisabled\)/);
   assert.doesNotMatch(body, /settle_exposure/);
 });
@@ -50,4 +50,112 @@ test('bot creation fee collection is fail-closed', () => {
   const body = instruction('pub fn charge_creation_fee(', '// ── Errors');
   assert.match(body, /err!\(VaultError::FeeSettlementDisabled\)/);
   assert.doesNotMatch(body, /system_program::transfer/);
+});
+
+test('executor policy configuration is owner-scoped and bounded by vault assets', () => {
+  const body = instruction('pub fn configure_executor_policy(', '/// register_bot:');
+  assert.match(body, /executor != Pubkey::default\(\) && executor != owner/);
+  assert.match(body, /VaultState::Active[\s\S]*VaultState::Paused/);
+  assert.match(body, /max_trade_lamports >= MIN_POSITION_LAMPORTS/);
+  assert.match(body, /max_trade_lamports <= max_daily_lamports/);
+  assert.match(body, /max_daily_lamports <= available/);
+  assert.match(body, /max_slippage_bps <= 1_000/);
+  assert.match(body, /policy\.version\.checked_add\(1\)/);
+  assert.match(body, /ExecutorPolicyEvent/);
+});
+
+test('executor policy is a per-vault PDA and can be revoked by its owner', () => {
+  const account = source.slice(source.indexOf('pub struct ExecutorPolicy {'), source.indexOf('impl ExecutorPolicy'));
+  assert.match(account, /pub owner: Pubkey/);
+  assert.match(account, /pub vault: Pubkey/);
+  assert.match(account, /pub executor: Pubkey/);
+  assert.match(account, /pub max_trade_lamports: u64/);
+  assert.match(account, /pub max_daily_lamports: u64/);
+  assert.match(account, /pub daily_spent_lamports: u64/);
+  assert.match(account, /pub day_index: i64/);
+
+  const context = source.slice(source.indexOf('pub struct ConfigureExecutorPolicy'), source.indexOf('pub struct RevokeExecutorPolicy'));
+  assert.match(context, /init_if_needed/);
+  assert.match(context, /b"executor-policy-v1"/);
+
+  const revoke = instruction('pub fn revoke_executor_policy(', '/// register_bot:');
+  assert.match(revoke, /policy\.enabled = false/);
+  assert.match(revoke, /policy\.executor = Pubkey::default\(\)/);
+  assert.match(revoke, /policy\.version\.checked_add\(1\)/);
+});
+
+test('legacy executor setters cannot silently succeed', () => {
+  const set = instruction('pub fn set_executor(', '/// Legacy executor entry point is disabled; use revoke_executor_policy');
+  const revoke = instruction('pub fn revoke_executor(', '/// Owner pauses vault (legacy name');
+  assert.match(set, /ExecutorPolicyRequired/);
+  assert.match(revoke, /ExecutorPolicyRequired/);
+});
+
+test('legacy direct withdrawal cannot bypass share accounting', () => {
+  const body = instruction('pub fn withdraw(', '/// Charges a $0.10 creation fee');
+  assert.match(body, /LegacyWithdrawDisabled/);
+  assert.doesNotMatch(body, /try_borrow_mut_lamports/);
+});
+
+test('global configuration cannot be claimed by the first arbitrary signer', () => {
+  const body = instruction('pub fn initialize_global_config(', '// ── Vault lifecycle');
+  assert.match(body, /GlobalConfigInitDisabled/);
+  assert.doesNotMatch(body, /cfg\.authority = ctx\.accounts\.authority\.key\(\)/);
+});
+
+test('bot registration validates strategy hash, allocation, slippage and fee bounds', () => {
+  const body = instruction('pub fn register_bot(', '/// settle_creator_fee:');
+  assert.match(body, /strategy_hash != \[0u8; 32\]/);
+  assert.match(body, /max_position_bps > 0 && max_position_bps <= 10_000/);
+  assert.match(body, /max_slippage_bps <= 1_000/);
+  assert.match(body, /validate_fee_bps/);
+  assert.match(body, /bot_account\.key\(\) != ctx\.accounts\.creator\.key\(\)/);
+});
+
+test('user slots require an enabled bot registry and snapshot the approved strategy', () => {
+  const body = instruction('pub fn create_user_slot(', '/// Owner advances the order nonce');
+  assert.match(body, /registry\.enabled/);
+  assert.match(body, /registry\.strategy_hash/);
+  assert.match(body, /slot\.strategy_hash = registry\.strategy_hash/);
+  assert.match(body, /slot\.registry_version = registry\.version/);
+  assert.match(body, /slot\.max_position_bps = registry\.max_position_bps/);
+  assert.match(body, /slot\.max_slippage_bps = registry\.max_slippage_bps/);
+
+  const context = source.slice(source.indexOf('pub struct CreateUserSlot'), source.indexOf('pub struct UpdateSlotLimits'));
+  assert.match(context, /b"bot-registry-v1"/);
+  assert.match(context, /bot_registry\.enabled/);
+
+  const account = source.slice(source.indexOf('pub struct UserSlot {'), source.indexOf('impl UserSlot'));
+  assert.match(account, /pub strategy_hash: \[u8; 32\]/);
+  assert.match(account, /pub registry_version: u32/);
+  assert.match(account, /pub max_position_bps: u16/);
+  assert.match(account, /pub max_slippage_bps: u16/);
+});
+
+test('legacy initializer cannot imply that non-persisted caps are enforced', () => {
+  const body = instruction('pub fn initialize(', '/// Legacy executor entry point is disabled');
+  assert.match(body, /LegacyInitializeDisabled/);
+  assert.doesNotMatch(body, /check_initialize/);
+  assert.doesNotMatch(body, /ctx\.accounts\.vault/);
+});
+
+
+test('Anchor SBF workspace excludes host-only vault checks crate', () => {
+  const config = readFileSync(new URL('../Anchor.toml', import.meta.url), 'utf8');
+  assert.match(config, /\[workspace\][\s\S]*members\s*=\s*\[\s*"programs\/vault"\s*\]/);
+  assert.doesNotMatch(config, /members\s*=\s*\[\s*"programs\/\*"\s*\]/);
+});
+
+test('Anchor SBF build preserves pinned Cargo lockfiles', () => {
+  const workflow = readFileSync(new URL('../.github/workflows/anchor-sbf.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /anchor build -- -- --locked/);
+  assert.match(workflow, /Refresh Cargo metadata and normalize the SBF lockfile/);
+  assert.ok(workflow.includes('if [[ "\\${1:-}" == "metadata" ]]; then'));
+  assert.ok(workflow.includes('"$REAL_CARGO" "\\$@"'));
+  assert.match(workflow, /sed -i 's\/\^version = 4\$\/version = 3\/' programs\/vault\/Cargo\.lock/);
+  assert.match(workflow, /cargo test --locked --manifest-path programs\/vault\/Cargo\.toml/);
+  assert.match(workflow, /CARGO: \$\{\{ runner\.temp \}\}\/cargo-wrapper\/cargo/);
+  assert.match(workflow, /grep -qx 'version = 3' programs\/vault\/Cargo\.lock/);
+  assert.match(workflow, /for lockfile in programs\/vault\/Cargo\.lock/);
+  assert.doesNotMatch(workflow, /for lockfile in programs\/vault\/Cargo\.lock programs\/vault-checks/);
 });

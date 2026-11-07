@@ -11,6 +11,11 @@ welp_vault = "US517G5965aydkZ46HS38QLi7UQiSojurfbQfKCELFx"
 [registry]
 url = "https://api.apr.dev"
 
+[workspace]
+# Only the deployable Anchor program belongs in Anchor's SBF workspace.
+# vault-checks is a host-side path dependency and must never be built as an SBF program.
+members = ["programs/vault"]
+
 [provider]
 cluster = "localnet"
 wallet = "~/.config/solana/id.json"

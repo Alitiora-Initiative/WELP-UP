@@ -2,6 +2,8 @@ name: CI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
 
 jobs:
@@ -75,7 +77,9 @@ jobs:
       - name: Cache build artifacts
         uses: actions/cache@v4
         with:
-          path: target
+          path: |
+            target
+            programs/vault/target
           key: ${{runner.os}}-cargo-target-${{hashFiles('**/Cargo.lock')}}
           restore-keys: |
             ${{runner.os}}-cargo-target-
