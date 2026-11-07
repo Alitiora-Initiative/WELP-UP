@@ -49,6 +49,6 @@ cargo clippy --manifest-path programs/launchpad/Cargo.toml -- -D warnings
 cargo test --lib --manifest-path programs/launchpad/Cargo.toml
 \`\`\`
 
-The SBF-backed ProgramTest is run separately after Anchor builds `target/deploy/welp_launchpad.so`; it is not part of the host-only `cargo test --lib` command. The integration test is guarded by the optional `program-test` feature to keep normal host checks from compiling Solana's large test-validator dependency graph.
+The ProgramTest suites live in the separate host-only crate `programs/program-tests`, not inside either deployable SBF crate. This keeps validator dependencies out of the program lockfiles. After Anchor builds both `target/deploy/welp_vault.so` and `target/deploy/welp_launchpad.so`, the Anchor SBF workflow runs each integration test with `BPF_OUT_DIR` pointing at `target/deploy`.
 
 The 40% reserve is only permanently inaccessible if the final deployed program is immutable or subject to the explicitly disclosed upgrade-governance policy. Do not describe it as irrevocably locked while an unrestricted upgrade authority remains.
