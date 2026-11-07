@@ -16,6 +16,7 @@
 | High | Executor controls | Legacy `set_executor` / `revoke_executor` were no-op stubs. | Legacy entry points now return `ExecutorPolicyRequired`. New owner-only `ExecutorPolicy` PDA supports configuration, rotation and immediate revocation. |
 | High | Spending limits | Stored executor policy must enforce trade size, daily allowance, current vault assets and slippage. | Policy validates max trade >= 0.001 SOL, max trade <= daily cap <= current accounted assets, and slippage <= 1,000 bps. Pure Rust daily-spend helper is tested but is not yet wired into swap execution. |
 | High | Global configuration | First caller could initialize the singleton authority and fee recipients. | `initialize_global_config` returns `GlobalConfigInitDisabled` until a deployment-specific bootstrap authority is pinned. |
+| High | Legacy initializer | The legacy initializer accepted cap arguments but the Vault account did not persist those limits. | Legacy `initialize` now returns `LegacyInitializeDisabled`; use the current vault lifecycle and do not claim cap enforcement until it is implemented in the account model. |
 | High | Bot registry and user-slot consent | Earlier registry stored unvalidated position/slippage values; slots were not bound to an enabled registry. | Registration now validates strategy hash, allocation, slippage and fee ranges. User-slot creation requires an enabled registry and snapshots strategy hash/version and risk limits. The future swap path must still enforce that snapshot. |
 | High | Creation fee | Previous fee instruction did not enforce idempotent bot nonce handling and recipient verification. | Fee collection returns `FeeSettlementDisabled`. |
 
@@ -28,7 +29,7 @@
 - Per-vault executor policy PDA with owner/vault binding, versioned rotation, trade/day/slippage limits, and immediate owner revocation.
 - Bot registry validation and owner-signed user-slot creation with immutable strategy hash/version and risk-limit snapshots.
 - Pure Rust daily-spend authorization helper with per-trade ceiling, daily cap and monotonic UTC-day rollover tests.
-- Fail-closed legacy direct withdrawal, legacy executor setters, global config initialization, swap, settlement and fee movement.
+- Fail-closed legacy direct withdrawal, legacy initializer, legacy executor setters, global config initialization, swap, settlement and fee movement.
 
 ## Important limitations
 
