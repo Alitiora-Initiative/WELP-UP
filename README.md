@@ -58,7 +58,7 @@ The policy is documented in docs/FEES_AND_TREASURY.md. The server policy and cli
 - docs/ — protocol design, threat models, release gates, fee policy and runbooks.
 - [Launchpad protocol specification](docs/LAUNCHPAD_PROTOCOL_SPEC.md) — custom supply/decimals, curve, escrow, anti-snipe, CPMM, fees, indexing and release design; not a live deployment.
 - [Launchpad and platform hardening backlog](docs/LAUNCHPAD_AND_SECURITY_BACKLOG.md) — implementation checklist and release gates; not a live launch contract.
-- [Treasury and creator-fee design](docs/TREASURY_AND_CREATOR_FEES.md) — two-week treasury epoch, retained reserve, 50-bps protocol fee and Raydium integration limits.
+- [Treasury and protocol-fee design](docs/TREASURY_AND_CREATOR_FEES.md) — two-week treasury epoch, retained reserve, 50-bps protocol fee and Raydium integration limits.
 
 ## Local development
 
