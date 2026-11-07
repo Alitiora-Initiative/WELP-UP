@@ -20,6 +20,8 @@ function applyTheme(theme: Theme) {
     // system: follow prefers-color-scheme
     if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
       html.classList.add('dark');
+    } else {
+      html.classList.add('light');
     }
   }
 }
