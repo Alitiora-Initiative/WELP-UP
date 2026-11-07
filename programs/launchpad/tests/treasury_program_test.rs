@@ -1,0 +1,278 @@
+use anchor_lang::{AccountDeserialize, AccountSerialize, InstructionData, ToAccountMetas};
+use solana_program_test::{processor, ProgramTest};
+use solana_sdk::{
+    account::{Account, AccountSharedData},
+    clock::Clock,
+    instruction::Instruction,
+    pubkey::Pubkey,
+    signature::Signer,
+    system_program,
+    transaction::Transaction,
+};
+use welp_launchpad::{
+    accounts, id, instruction, TreasuryAccount, DEVELOPER_WALLET, DISTRIBUTION_EPOCH_SECONDS,
+    TREASURY_SEED,
+};
+
+fn decode_treasury(account: &Account) -> TreasuryAccount {
+    let mut data: &[u8] = account.data.as_slice();
+    TreasuryAccount::try_deserialize(&mut data).expect("TreasuryAccount deserializes")
+}
+
+fn serialize_treasury(account: &mut Account, state: &TreasuryAccount) {
+    let mut data = Vec::with_capacity(TreasuryAccount::SPACE);
+    state
+        .try_serialize(&mut data)
+        .expect("TreasuryAccount serializes");
+    assert_eq!(data.len(), TreasuryAccount::SPACE);
+    account.data = data;
+}
+
+fn system_account(lamports: u64) -> Account {
+    Account {
+        lamports,
+        data: Vec::new(),
+        owner: system_program::ID,
+        executable: false,
+        rent_epoch: 0,
+    }
+}
+
+fn initialize_ix(payer: Pubkey, treasury: Pubkey) -> Instruction {
+    Instruction {
+        program_id: id(),
+        accounts: accounts::InitializeTreasury {
+            payer,
+            treasury,
+            system_program: system_program::ID,
+        }
+        .to_account_metas(None),
+        data: instruction::InitializeTreasury {}.data(),
+    }
+}
+
+fn disburse_ix(caller: Pubkey, treasury: Pubkey, developer_wallet: Pubkey) -> Instruction {
+    Instruction {
+        program_id: id(),
+        accounts: accounts::DisburseTreasuryFunds {
+            caller,
+            treasury,
+            developer_wallet,
+        }
+        .to_account_metas(None),
+        data: instruction::DisburseTreasuryFunds {}.data(),
+    }
+}
+
+async fn send_as_payer(
+    context: &mut solana_program_test::ProgramTestContext,
+    instruction: Instruction,
+) -> Result<(), solana_banks_client::BanksClientError> {
+    let blockhash = context.banks_client.get_latest_blockhash().await?;
+    let transaction = Transaction::new_signed_with_payer(
+        &[instruction],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        blockhash,
+    );
+    context.banks_client.process_transaction(transaction).await
+}
+
+#[tokio::test]
+async fn treasury_initialization_epoch_gate_distribution_and_reserve_are_enforced() {
+    let program_id = id();
+    let (treasury, _) = Pubkey::find_program_address(&[TREASURY_SEED], &program_id);
+
+    let mut program_test = ProgramTest::new(
+        "welp_launchpad",
+        program_id,
+        processor!(welp_launchpad::entry),
+    );
+    program_test.add_account(DEVELOPER_WALLET, system_account(1));
+
+    let mut context = program_test.start_with_context().await;
+
+    // Freeze a known Clock timestamp so initialization and release boundaries
+    // are asserted against a deterministic runtime sysvar.
+    let initialized_at = 1_700_000_000_i64;
+    context.set_sysvar(&Clock {
+        slot: 10,
+        epoch_start_timestamp: initialized_at,
+        epoch: 1,
+        leader_schedule_epoch: 1,
+        unix_timestamp: initialized_at,
+    });
+
+    send_as_payer(
+        &mut context,
+        initialize_ix(context.payer.pubkey(), treasury),
+    )
+    .await
+    .expect("treasury initialization succeeds");
+
+    let mut treasury_account = context
+        .banks_client
+        .get_account(treasury)
+        .await
+        .expect("account lookup succeeds")
+        .expect("treasury PDA exists");
+    let mut treasury_state = decode_treasury(&treasury_account);
+
+    assert_eq!(treasury_state.developer_wallet, DEVELOPER_WALLET);
+    assert_eq!(treasury_state.last_distribution_timestamp, initialized_at);
+    assert_eq!(treasury_state.total_fees_collected, 0);
+    assert_eq!(treasury_state.locked_reserve_lamports, 0);
+
+    // Simulate the ledger state that a future, atomic creator-fee collection
+    // instruction must create: 1,000 recorded fee lamports plus 300 unsolicited
+    // lamports that are deliberately NOT included in total_fees_collected.
+    treasury_state.total_fees_collected = 1_000;
+    serialize_treasury(&mut treasury_account, &treasury_state);
+    treasury_account.lamports = treasury_account
+        .lamports
+        .checked_add(1_300)
+        .expect("test balance does not overflow");
+    context.set_account(
+        &treasury,
+        &AccountSharedData::from(treasury_account.clone()),
+    );
+
+    let developer_before = context
+        .banks_client
+        .get_account(DEVELOPER_WALLET)
+        .await
+        .expect("developer account lookup succeeds")
+        .expect("developer account exists")
+        .lamports;
+
+    // One hour after initialization must not unlock the treasury.
+    context.set_sysvar(&Clock {
+        slot: 20,
+        epoch_start_timestamp: initialized_at,
+        epoch: 1,
+        leader_schedule_epoch: 1,
+        unix_timestamp: initialized_at + 3_600,
+    });
+    let premature = send_as_payer(
+        &mut context,
+        disburse_ix(context.payer.pubkey(), treasury, DEVELOPER_WALLET),
+    )
+    .await;
+    assert!(premature.is_err(), "premature disbursal must fail");
+
+    let after_premature = context
+        .banks_client
+        .get_account(treasury)
+        .await
+        .expect("treasury lookup succeeds")
+        .expect("treasury remains present");
+    assert_eq!(after_premature.lamports, treasury_account.lamports);
+
+    // A timestamp that precedes initialization must fail closed as well.
+    context.set_sysvar(&Clock {
+        slot: 21,
+        epoch_start_timestamp: initialized_at,
+        epoch: 1,
+        leader_schedule_epoch: 1,
+        unix_timestamp: initialized_at - 1,
+    });
+    let backwards = send_as_payer(
+        &mut context,
+        disburse_ix(context.payer.pubkey(), treasury, DEVELOPER_WALLET),
+    )
+    .await;
+    assert!(backwards.is_err(), "clock rollback must fail");
+
+    // An address substitution must not redirect the developer distribution.
+    let attacker = Pubkey::new_unique();
+    context.set_account(&attacker, &AccountSharedData::from(system_account(1)));
+    context.set_sysvar(&Clock {
+        slot: 22,
+        epoch_start_timestamp: initialized_at,
+        epoch: 1,
+        leader_schedule_epoch: 1,
+        unix_timestamp: initialized_at + DISTRIBUTION_EPOCH_SECONDS,
+    });
+    let substituted = send_as_payer(
+        &mut context,
+        disburse_ix(context.payer.pubkey(), treasury, attacker),
+    )
+    .await;
+    assert!(substituted.is_err(), "developer destination substitution must fail");
+
+    // Exactly 14 days is sufficient. The program uses a >= check, so it
+    // does not require an extra second or a privileged keeper.
+    let matured_at = initialized_at + DISTRIBUTION_EPOCH_SECONDS;
+    context.set_sysvar(&Clock {
+        slot: 23,
+        epoch_start_timestamp: initialized_at,
+        epoch: 1,
+        leader_schedule_epoch: 1,
+        unix_timestamp: matured_at,
+    });
+    send_as_payer(
+        &mut context,
+        disburse_ix(context.payer.pubkey(), treasury, DEVELOPER_WALLET),
+    )
+    .await
+    .expect("matured epoch disbursal succeeds");
+
+    let after_distribution = context
+        .banks_client
+        .get_account(treasury)
+        .await
+        .expect("treasury lookup succeeds")
+        .expect("treasury remains present");
+    let state_after_distribution = decode_treasury(&after_distribution);
+    let developer_after = context
+        .banks_client
+        .get_account(DEVELOPER_WALLET)
+        .await
+        .expect("developer lookup succeeds")
+        .expect("developer account remains present");
+
+    // 60% of 1,000 recorded fee lamports is sent to the developer.
+    assert_eq!(developer_after.lamports - developer_before, 600);
+    // 40% is protected in state. The 300 unsolicited lamports also remain,
+    // but they are not recorded and can never be harvested by this instruction.
+    assert_eq!(state_after_distribution.locked_reserve_lamports, 400);
+    assert_eq!(state_after_distribution.total_developer_disbursed, 600);
+    assert_eq!(
+        after_distribution.lamports,
+        treasury_account.lamports - 600
+    );
+    assert_eq!(
+        state_after_distribution.last_distribution_timestamp,
+        matured_at
+    );
+
+    // A later epoch with no newly recorded fee inflow cannot take the
+    // previously locked 40% reserve or the unsolicited donation.
+    context.set_sysvar(&Clock {
+        slot: 24,
+        epoch_start_timestamp: matured_at,
+        epoch: 2,
+        leader_schedule_epoch: 2,
+        unix_timestamp: matured_at + DISTRIBUTION_EPOCH_SECONDS,
+    });
+    let second_harvest = send_as_payer(
+        &mut context,
+        disburse_ix(context.payer.pubkey(), treasury, DEVELOPER_WALLET),
+    )
+    .await;
+    assert!(
+        second_harvest.is_err(),
+        "previous reserve and unaccounted deposits are not distributable"
+    );
+
+    let final_treasury = context
+        .banks_client
+        .get_account(treasury)
+        .await
+        .expect("final treasury lookup succeeds")
+        .expect("treasury remains present");
+    let final_state = decode_treasury(&final_treasury);
+    assert_eq!(final_state.locked_reserve_lamports, 400);
+    assert_eq!(final_state.total_developer_disbursed, 600);
+    assert_eq!(final_treasury.lamports, after_distribution.lamports);
+}
