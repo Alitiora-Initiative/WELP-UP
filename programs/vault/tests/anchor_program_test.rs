@@ -141,10 +141,7 @@ async fn owner_can_create_fund_redeem_and_revoke_executor_policy() {
     let legacy_withdraw = Instruction {
         program_id,
         accounts: accounts::LegacyWithdraw { owner, vault }.to_account_metas(None),
-        data: instruction::Withdraw {
-            amount: 1_000_000,
-        }
-        .data(),
+        data: instruction::Withdraw { amount: 1_000_000 }.data(),
     };
     assert!(send_ix(&mut context, legacy_withdraw).await.is_err());
 
