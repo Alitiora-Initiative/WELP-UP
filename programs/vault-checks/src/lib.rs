@@ -136,9 +136,7 @@ pub fn authorize_daily_spend(
     if !enabled || !executor_matches {
         return Err(CheckError::UnauthorizedExecutor);
     }
-    if max_trade_lamports < MIN_POSITION_LAMPORTS
-        || max_daily_lamports < max_trade_lamports
-    {
+    if max_trade_lamports < MIN_POSITION_LAMPORTS || max_daily_lamports < max_trade_lamports {
         return Err(CheckError::InvalidSpendLimit);
     }
     if amount_lamports < MIN_POSITION_LAMPORTS {
@@ -457,7 +455,10 @@ mod tests {
         };
         assert_eq!(base(500_000, 0), Err(CheckError::BelowMinPosition));
         assert_eq!(base(6_000_000, 0), Err(CheckError::AbovePerPosition));
-        assert_eq!(base(5_000_000, 6_000_000), Err(CheckError::DailyCapExceeded));
+        assert_eq!(
+            base(5_000_000, 6_000_000),
+            Err(CheckError::DailyCapExceeded)
+        );
         assert_eq!(base(5_000_000, 0), Ok((5_000_000, 10)));
         assert_eq!(
             authorize_daily_spend(false, true, 1_000_000, 5_000_000, 10_000_000, 0, 10, 10),
