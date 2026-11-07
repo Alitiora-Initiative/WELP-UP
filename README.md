@@ -40,7 +40,7 @@ Browser-local records are not a complete on-chain ledger, verified account histo
 
 ## Not enabled — do not represent as live
 
-- Autonomous mainnet bot execution or an AI agent with transaction-signing authority.
+- Autonomous mainnet bot execution or an AI agent with transaction-signing authority. The current read-only analyst is not an execution agent.
 - A production vault that accepts deposits, holds user funds, or executes swaps.
 - Copy trading, follower allocation, public bot settlement, or creator profit-share payouts.
 - Production user accounts, multi-device sync, or a secure hosted API-key manager.
@@ -48,7 +48,7 @@ Browser-local records are not a complete on-chain ledger, verified account histo
 - Production bot-creation fees, treasury routing, or fee distribution.
 - Fiat on-ramps, perpetual futures, tokenized-stock execution, or centralized-exchange trading.
 
-The current Anchor vault program is a scaffold and must be treated as unlaunched until its program ID, deployment, source verification, audit, integrations, and release evidence are confirmed. Never invite users to deposit based on a UI, a source file, a local validator, or a successful frontend build.
+The current Anchor vault program is a scaffold and must be treated as unlaunched until its program ID, deployment, source verification, audit, integrations, and release evidence are confirmed. In the rebuild branch, funding, swap execution, position settlement, and fee instructions are explicitly fail-closed pending the security review. Never invite users to deposit based on a UI, a source file, a local validator, or a successful frontend build.
 
 ## Non-negotiable security and product rules
 
@@ -139,7 +139,7 @@ Before enabling any real-funds vault or automated execution:
 8. Verify data-provider behavior, monitoring, incident response, and user-facing status reporting.
 9. Obtain explicit release approval before enabling deposits or automated mainnet fund movement.
 
-See [the recovered-source porting matrix](docs/BASE44_PORTING_MATRIX.md), [the source completeness audit](docs/BASE44_SOURCE_AUDIT.md), and the [staged vault/bot build specification](docs/WELPUP_BUILD_BLUEPRINT.md), alongside the engineering and vault documents in `docs/`. A green web build is necessary but not sufficient.
+See the [AI analyst runtime guide](docs/AI_AGENT_RUNTIME.md), [recovered-source porting matrix](docs/BASE44_PORTING_MATRIX.md), [the source completeness audit](docs/BASE44_SOURCE_AUDIT.md), and the [staged vault/bot build specification](docs/WELPUP_BUILD_BLUEPRINT.md), alongside the engineering and vault documents in `docs/`. A green web build is necessary but not sufficient.
 
 ## Risk disclosure
 

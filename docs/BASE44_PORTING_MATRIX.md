@@ -10,8 +10,8 @@
 | `Markets.jsx` | `/markets` | Preserve searchable live market board, refresh/status states, and transparent ranking. |
 | `Signals.jsx` | `/signals` | Preserve published score weights, hard blockers, warnings, and eligible/blocked filters. No profit prediction. |
 | `Swap.jsx` | `/swap` | Preserve token search, quote freshness, amount/risk checks, and explicit external wallet signing. Never silently retry or charge. |
-| `Automation.jsx` | `/automation` | Preserve user-defined read-only watch policies and explainable evaluations. Browser-local rules are not bots and cannot submit orders. Any AI analysis must identify its provider, timestamp, input snapshot, and failure state. |
-| `Agent.jsx` | `/agent` | Original file is missing from the archive. Preserve only verified current market-analysis behavior; do not invent an autonomous runtime or agent activity. |
+| `Automation.jsx` | `/automation` | Preserve user-defined read-only watch policies and explainable evaluations. The original page's analyst panel is now ported using the server-side read-only runtime. Browser-local rules are not bots and cannot submit orders; AI analysis identifies its provider, timestamp, input snapshot, and failure state. |
+| `Agent.jsx` | `/agent` | Original file is missing from the archive. The Next.js port now provides an optional server-side, read-only OpenAI market analyst using a fresh Jupiter snapshot. It has no wallet or execution tools; see [AI agent runtime](AI_AGENT_RUNTIME.md). |
 | `Vault.jsx` | `/vault` | The source page includes Base44 entity calls and consent/status UI; that is not proof of a deployed vault. Keep funding and execution disabled until audited on-chain implementation and release gates pass. |
 | `Portfolio.jsx` | `/portfolio` | Preserve public wallet balance reads; label snapshots and incomplete history accurately. |
 | `History.jsx` | `/history` | Use confirmed on-chain records and explicit RPC coverage limits. Do not call a partial wallet scan a complete ledger. |
@@ -31,7 +31,7 @@
 
 - `TopNav.jsx`, `Layout.jsx`, `Footer.jsx`, `TickerStrip.jsx`: use as references for navigation hierarchy, page shell, live-feed status, and footer information; retain responsive behavior in the Next.js shell.
 - `MarketDataTable.jsx`, `MarketTable.jsx`, `TokenLogo.jsx`, `VaultChart.jsx`: port only when their data inputs are real provider/on-chain data and empty/error states remain honest.
-- `useMarketTokens.js` and `engine.js`: preserve deterministic scoring only after validating data fields, normalization, hard gates, and displayed rule weights against the current Next.js market pipeline.
+- `useMarketTokens.js` and `engine.js`: the Next.js scorer now ports the recovered 32/20/15/13/12/8 weights, 80–98 ranking band, liquidity/volume/freeze/concentration/suspicious-token hard gates, and explicit warnings for missing data. Regression tests cover the weights and blockers.
 - `useVaultStatus.js`, `vault.js`, `ledger.js`, `fees.js`, `jupiter.js`, `rpc.js`, `policies.js`, `strategies.js`, and `wallet.jsx` are listed in the archive TOC but absent as captured source sections. Reconstruct their behavior only from call sites, current code, tests, and the staged build specification; do not claim their original implementations were recovered.
 - `base44Client.js`, `AuthContext.jsx`, Base44 entities, and Base44 functions are platform-specific dependencies. Replace them with explicitly designed, security-reviewed services or remove the dependency where no backend is justified.
 
@@ -53,4 +53,5 @@ Do not use the old operator address or old per-action fee wording as production 
 3. Reconcile every source-derived field and rule with the current API contract and tests.
 4. Remove or clearly disable all demo, fixture, local-only, and non-settling marketplace behavior.
 5. Complete vault and bot program work behind fail-closed feature gates; do not expose deposits or autonomous execution during development.
-6. Update README, whitepaper, docs, terms, safety and status surfaces together whenever shipped behavior changes.
+6. Add and validate the read-only analyst adapter with server-only credentials and explicit cost/abuse controls.
+7. Update README, whitepaper, docs, terms, safety and status surfaces together whenever shipped behavior changes.

@@ -7,12 +7,8 @@
 //! Build and test against a local validator only. Do not deploy this scaffold.
 
 use anchor_lang::prelude::*;
-use anchor_lang::system_program;
-use pyth_solana_receiver_sdk::price_update::{get_feed_id_from_hex, PriceUpdateV2};
-use welp_vault_checks::{
-    check_initialize, check_withdraw, compute_redeem, compute_shares, settle_exposure, split_fee,
-    usd_cents_to_lamports_rounded5, validate_pyth_price, CheckError,
-};
+use pyth_solana_receiver_sdk::price_update::PriceUpdateV2;
+use welp_vault_checks::{check_initialize, check_withdraw, compute_redeem, CheckError};
 
 declare_id!("US517G5965aydkZ46HS38QLi7UQiSojurfbQfKCELFx"); // undeployed placeholder; replace after `anchor keys list`
 
@@ -47,10 +43,6 @@ fn map_err(err: CheckError) -> VaultError {
         CheckError::InsufficientBalance => VaultError::InsufficientFunds,
         CheckError::MintNotAllowed => VaultError::MintNotAllowed,
     }
-}
-
-fn map_check_err(err: welp_vault_checks::CheckError) -> VaultError {
-    map_err(err)
 }
 
 // ── Enums ─────────────────────────────────────────────────────────────────
@@ -162,62 +154,9 @@ pub mod welp_vault {
     }
 
     /// Owner deposits SOL; mints shares proportional to their contribution.
-    pub fn fund_vault(ctx: Context<FundVault>, amount: u64) -> Result<()> {
-        require!(amount > 0, VaultError::ZeroAmount);
-
-        {
-            let vault = &ctx.accounts.vault;
-            require!(
-                vault.state == VaultState::Funded || vault.state == VaultState::Active,
-                VaultError::InvalidState
-            );
-        }
-
-        // Mint shares via vault-checks math
-        let shares = compute_shares(
-            amount,
-            ctx.accounts.vault.total_deposited_lamports,
-            ctx.accounts.vault.total_shares,
-        )
-        .map_err(map_err)?;
-
-        // Transfer SOL into the vault PDA
-        let cpi = CpiContext::new(
-            ctx.accounts.system_program.to_account_info(),
-            system_program::Transfer {
-                from: ctx.accounts.owner.to_account_info(),
-                to: ctx.accounts.vault.to_account_info(),
-            },
-        );
-        system_program::transfer(cpi, amount)?;
-
-        // Update accounting (now safe to mutably borrow)
-        let vault = &mut ctx.accounts.vault;
-        vault.total_deposited_lamports = vault
-            .total_deposited_lamports
-            .checked_add(amount)
-            .ok_or(VaultError::Overflow)?;
-        vault.available_lamports = vault
-            .available_lamports
-            .checked_add(amount)
-            .ok_or(VaultError::Overflow)?;
-        vault.total_shares = vault
-            .total_shares
-            .checked_add(shares)
-            .ok_or(VaultError::Overflow)?;
-
-        // Transition to Active on first fund
-        if vault.state == VaultState::Funded {
-            vault.state = VaultState::Active;
-        }
-
-        emit!(FundEvent {
-            owner: vault.owner,
-            amount,
-            shares_minted: shares,
-            timestamp: Clock::get()?.unix_timestamp,
-        });
-        Ok(())
+    /// Funding remains disabled until the complete vault program is reviewed and released.
+    pub fn fund_vault(_ctx: Context<FundVault>, _amount: u64) -> Result<()> {
+        err!(VaultError::FundingDisabled)
     }
 
     /// Owner pauses their vault (Active or Funded → Paused).
@@ -379,44 +318,19 @@ pub mod welp_vault {
     }
 
     /// settle_creator_fee: charge fee_bps on positive realized profit, add to user slot pending_creator_fee
+    /// Creator fee accrual is disabled until realized profit is proven by on-chain accounting.
     pub fn settle_creator_fee(
-        ctx: Context<SettleCreatorFee>,
-        realized_profit_lamports: u64,
+        _ctx: Context<SettleCreatorFee>,
+        _realized_profit_lamports: u64,
     ) -> Result<()> {
-        use welp_vault_checks::compute_creator_fee;
-        let fee_bps = ctx.accounts.bot_registry.fee_bps as u64;
-        let fee = compute_creator_fee(realized_profit_lamports, fee_bps).map_err(|e| match e {
-            welp_vault_checks::CheckError::ZeroProfit => VaultError::ZeroAmount,
-            welp_vault_checks::CheckError::FeeTooHigh => VaultError::FeeTooHigh,
-            welp_vault_checks::CheckError::Overflow => VaultError::Overflow,
-            _ => VaultError::Overflow,
-        })?;
-
-        let slot = &mut ctx.accounts.user_slot;
-        slot.pending_creator_fee = slot
-            .pending_creator_fee
-            .checked_add(fee)
-            .ok_or(VaultError::Overflow)?;
-        Ok(())
+        err!(VaultError::FeeSettlementDisabled)
     }
 
     /// claim_creator_fee: creator claims their pending fees from a user slot
     /// Transfers pending_creator_fee from vault to creator, zeros it out
-    pub fn claim_creator_fee(ctx: Context<ClaimCreatorFee>) -> Result<()> {
-        let pending = ctx.accounts.user_slot.pending_creator_fee;
-        require!(pending > 0, VaultError::ZeroAmount);
-
-        // Zero out first (prevent re-entrancy / double claim)
-        ctx.accounts.user_slot.pending_creator_fee = 0;
-
-        // Transfer from vault to creator
-        let vault_info = ctx.accounts.vault.to_account_info();
-        let creator_info = ctx.accounts.creator.to_account_info();
-
-        **vault_info.try_borrow_mut_lamports()? -= pending;
-        **creator_info.try_borrow_mut_lamports()? += pending;
-
-        Ok(())
+    /// Creator fee payouts remain disabled until vault and slot accounting are reconciled.
+    pub fn claim_creator_fee(_ctx: Context<ClaimCreatorFee>) -> Result<()> {
+        err!(VaultError::FeeSettlementDisabled)
     }
 
     // ── Legacy compatibility stubs ──────────────────────────────────────
@@ -471,170 +385,18 @@ pub mod welp_vault {
     }
 
     /// Trading stays disabled until the approved Jupiter CPI path is implemented.
+    /// Real-fund execution is deliberately fail-closed pending CPI and accounting review.
     pub fn execute_swap<'info>(
-        ctx: Context<'_, '_, '_, 'info, ExecuteSwap<'info>>,
-        params: ExecuteSwapParams,
+        _ctx: Context<'_, '_, '_, 'info, ExecuteSwap<'info>>,
+        _params: ExecuteSwapParams,
     ) -> Result<()> {
-        use anchor_lang::solana_program::instruction::Instruction as SolInstruction;
-        use anchor_lang::solana_program::program::invoke_signed;
-        use welp_vault_checks::{validate_mint_allowlist, validate_swap_params};
-
-        // 1. Global pause check
-        require!(
-            !ctx.accounts.global_config.pause_all,
-            VaultError::TradingPaused
-        );
-
-        // 2. Vault state
-        require!(
-            ctx.accounts.vault.state == VaultState::Active,
-            VaultError::VaultNotActive
-        );
-
-        // 3. Slot state
-        require!(
-            ctx.accounts.user_slot.state == SlotState::Active,
-            VaultError::SlotNotActive
-        );
-
-        // 4. Nonce uniqueness
-        require!(
-            ctx.accounts.user_slot.order_nonce != params.order_nonce,
-            VaultError::DuplicateNonce
-        );
-
-        // 5-6. Amount limits via vault-checks
-        validate_swap_params(
-            params.amount_in,
-            params.minimum_amount_out,
-            DEFAULT_PER_POSITION,
-        )
-        .map_err(map_err)?;
-
-        // 7. Jupiter program ID already enforced by address constraint on jupiter_program account
-
-        // 8. Mint allowlist
-        let input_mint_bytes: [u8; 32] = ctx.accounts.input_mint.key().to_bytes();
-        let output_mint_bytes: [u8; 32] = ctx.accounts.output_mint.key().to_bytes();
-        validate_mint_allowlist(&input_mint_bytes).map_err(|_| VaultError::MintNotAllowed)?;
-        validate_mint_allowlist(&output_mint_bytes).map_err(|_| VaultError::MintNotAllowed)?;
-
-        // 9. Source token account owned by vault PDA
-        require!(
-            ctx.accounts.source_token_account.owner == ctx.accounts.vault.key(),
-            VaultError::UnauthorizedOwner
-        );
-
-        // 10. Sufficient vault balance
-        require!(
-            ctx.accounts.vault.available_lamports >= params.amount_in,
-            VaultError::InsufficientVaultBalance
-        );
-
-        // Capture bot_account before mutable borrows
-        let bot_account = ctx.accounts.user_slot.bot_account;
-
-        // Balance delta: read pre-CPI destination balance
-        let pre_balance = ctx.accounts.destination_token_account.amount;
-
-        // Build Jupiter CPI accounts from remaining_accounts
-        let jupiter_accounts: Vec<anchor_lang::solana_program::instruction::AccountMeta> = ctx
-            .remaining_accounts
-            .iter()
-            .map(|a| {
-                if a.is_writable {
-                    anchor_lang::solana_program::instruction::AccountMeta::new(*a.key, a.is_signer)
-                } else {
-                    anchor_lang::solana_program::instruction::AccountMeta::new_readonly(
-                        *a.key,
-                        a.is_signer,
-                    )
-                }
-            })
-            .collect();
-
-        let jupiter_ix = SolInstruction {
-            program_id: ctx.accounts.jupiter_program.key(),
-            accounts: jupiter_accounts,
-            data: params.route_data.clone(),
-        };
-
-        // Vault PDA signer seeds
-        let vault_bump = ctx.accounts.vault.bump;
-        let owner_key = ctx.accounts.owner.key();
-        let vault_seeds: &[&[&[u8]]] = &[&[b"vault-v1", owner_key.as_ref(), &[vault_bump]]];
-
-        // Collect all account infos for the CPI.
-        // Jupiter route accounts arrive via remaining_accounts.
-        // We include the named SPL accounts so invoke_signed can find them.
-        // Use a raw account info array by collecting references.
-        let src_info = ctx.accounts.source_token_account.to_account_info();
-        let dst_info = ctx.accounts.destination_token_account.to_account_info();
-        let vault_ai = ctx.accounts.vault.to_account_info();
-        let token_ai = ctx.accounts.token_program.to_account_info();
-
-        // Build the account list: remaining_accounts first (Jupiter route), then named accounts.
-        // invoke_signed looks up accounts by pubkey so order matters only for the instruction metas.
-        #[allow(clippy::redundant_clone)]
-        let cpi_account_infos: Vec<AccountInfo> = {
-            let mut v: Vec<AccountInfo> = Vec::with_capacity(ctx.remaining_accounts.len() + 4);
-            for a in ctx.remaining_accounts {
-                v.push(a.clone());
-            }
-            v.push(src_info.clone());
-            v.push(dst_info.clone());
-            v.push(vault_ai.clone());
-            v.push(token_ai.clone());
-            v
-        };
-
-        invoke_signed(&jupiter_ix, &cpi_account_infos, vault_seeds)?;
-
-        // Reload destination token account to get post-CPI balance
-        ctx.accounts.destination_token_account.reload()?;
-        let post_balance = ctx.accounts.destination_token_account.amount;
-
-        let actual_out = post_balance
-            .checked_sub(pre_balance)
-            .ok_or(VaultError::InsufficientOutput)?;
-        require!(
-            actual_out >= params.minimum_amount_out,
-            VaultError::InsufficientOutput
-        );
-
-        // Update accounting
-        let slot = &mut ctx.accounts.user_slot;
-        slot.open_exposure = slot
-            .open_exposure
-            .checked_add(params.amount_in)
-            .ok_or(VaultError::Overflow)?;
-        slot.order_nonce = params.order_nonce;
-
-        let vault = &mut ctx.accounts.vault;
-        vault.available_lamports = vault
-            .available_lamports
-            .checked_sub(params.amount_in)
-            .ok_or(VaultError::Overflow)?;
-
-        emit!(SwapExecutedEvent {
-            owner: ctx.accounts.owner.key(),
-            bot_account,
-            amount_in: params.amount_in,
-            actual_out,
-            order_nonce: params.order_nonce,
-            timestamp: Clock::get()?.unix_timestamp,
-        });
-
-        Ok(())
+        err!(VaultError::TradingDisabled)
     }
 
     /// Owner or executor records a closed position.
-    pub fn settle_exit(ctx: Context<SettleExit>, amount_lamports: u64) -> Result<()> {
-        let vault = &mut ctx.accounts.vault;
-        // Expose open_exposure via available_lamports for simplified accounting
-        let current = vault.available_lamports;
-        vault.available_lamports = settle_exposure(current, amount_lamports).map_err(map_err)?;
-        Ok(())
+    /// Position settlement is disabled until realized P&L is derived from verified swap events.
+    pub fn settle_exit(_ctx: Context<SettleExit>, _amount_lamports: u64) -> Result<()> {
+        err!(VaultError::TradingDisabled)
     }
 
     /// Owner withdraws SOL (legacy direct-amount interface).
@@ -652,64 +414,9 @@ pub mod welp_vault {
     }
 
     /// Charges a $0.10 creation fee in SOL via Pyth oracle price, split 40/60.
-    pub fn charge_creation_fee(ctx: Context<ChargeCreationFee>, _bot_nonce: u64) -> Result<()> {
-        // Read SOL/USD price from Pyth
-        let sol_usd_feed_id = get_feed_id_from_hex(
-            "ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
-        )
-        .map_err(|_| VaultError::InvalidPrice)?;
-
-        let price_data = ctx
-            .accounts
-            .price_update
-            .get_price_no_older_than(&Clock::get()?, 30, &sol_usd_feed_id)
-            .map_err(|_| VaultError::StaleFeed)?;
-
-        let lamports_per_dollar =
-            validate_pyth_price(price_data.price, price_data.conf, price_data.exponent)
-                .map_err(map_check_err)?;
-
-        // $0.10 = 10 cents
-        let fee_lamports =
-            usd_cents_to_lamports_rounded5(10, lamports_per_dollar).map_err(map_check_err)?;
-
-        // Verify payer has enough above rent
-        let rent = Rent::get()?;
-        let min_rent = rent.minimum_balance(0);
-        let available = ctx.accounts.payer.lamports().saturating_sub(min_rent);
-        require!(available >= fee_lamports, VaultError::InsufficientFunds);
-
-        let (recipient_lamports, treasury_lamports) =
-            split_fee(fee_lamports).map_err(map_check_err)?;
-
-        // Transfer 40% to fee_recipient
-        let cpi_to_recipient = CpiContext::new(
-            ctx.accounts.system_program.to_account_info(),
-            system_program::Transfer {
-                from: ctx.accounts.payer.to_account_info(),
-                to: ctx.accounts.fee_recipient_account.to_account_info(),
-            },
-        );
-        system_program::transfer(cpi_to_recipient, recipient_lamports)?;
-
-        // Transfer 60% to treasury
-        let cpi_to_treasury = CpiContext::new(
-            ctx.accounts.system_program.to_account_info(),
-            system_program::Transfer {
-                from: ctx.accounts.payer.to_account_info(),
-                to: ctx.accounts.treasury.to_account_info(),
-            },
-        );
-        system_program::transfer(cpi_to_treasury, treasury_lamports)?;
-
-        ctx.accounts.treasury.accumulated_lamports = ctx
-            .accounts
-            .treasury
-            .accumulated_lamports
-            .checked_add(treasury_lamports)
-            .ok_or(VaultError::Overflow)?;
-
-        Ok(())
+    /// Creation fees remain disabled until idempotent bot registration and recipients are verified.
+    pub fn charge_creation_fee(_ctx: Context<ChargeCreationFee>, _bot_nonce: u64) -> Result<()> {
+        err!(VaultError::FeeSettlementDisabled)
     }
 }
 
@@ -1099,6 +806,12 @@ pub enum VaultError {
     InvalidPerPosition,
     #[msg("Amount must be greater than zero")]
     ZeroAmount,
+    #[msg("Vault funding is disabled pending security review")]
+    FundingDisabled,
+    #[msg("Automated trading and position settlement are disabled pending security review")]
+    TradingDisabled,
+    #[msg("Fee accrual, claims and collection are disabled pending security review")]
+    FeeSettlementDisabled,
     #[msg("Vault is paused")]
     Paused,
     #[msg("Signer is not the authorized executor")]

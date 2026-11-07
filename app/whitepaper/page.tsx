@@ -11,7 +11,7 @@ const chapters = [
   ['03', 'Current system', 'Live market data, deterministic signals, Jupiter Swap API v2, public wallet reads, and browser-local activity snapshots.'],
   ['04', 'Vault architecture', 'A proposed per-user PDA vault design. The source scaffold is not deployed or audited on mainnet and must not receive deposits.'],
   ['05', 'Agents and copy trading', 'A proposed constrained executor and strategy marketplace. No live autonomous execution or verified strategy performance is currently available.'],
-  ['06', 'Fees and governance', 'A proposed US$0.10 fee schedule and 60/40 operator/treasury split. Collection is inactive; treasury configuration and audited settlement are prerequisites.'],
+  ['06', 'Fees and governance', 'A proposed US$0.10 bot creation/activation fee, split 40% to a verified recipient and 60% to the Treasury PDA, plus a separate 0–30% creator share of realized positive net profit. Collection is disabled.'],
   ['07', 'Security and risks', 'Threats, launch gates, irreversibility, liquidity risk, smart-contract risk, and no guarantee of returns.'],
 ];
 

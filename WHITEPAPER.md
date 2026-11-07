@@ -23,7 +23,7 @@ The project is exploring a future non-custodial vault and constrained strategy-a
 
 ### 3.1 Market data and signals
 
-The web app reads live Solana token/market information through the configured providers. A deterministic rule engine evaluates available fields and returns a score with rule-based eligibility. Missing or stale inputs must not be presented as a successful signal. A score range such as 80–98 is a filter output, not a statistical probability of profit.
+The web app reads live Solana token/market information from Jupiter Token API v2. The recovered WELP scoring model maps six inputs into an 80–98 ranking band: organic activity 32%, liquidity depth 20%, turnover 15%, holder count 13%, buy pressure 12%, and one-hour momentum 8%. Hard blockers are live freeze authority, liquidity below US$100,000, 24-hour volume below US$100,000, top-holder concentration above 60%, and Jupiter's explicit suspicious-token flag. Warnings include active mint authority, small holder base, liquidity below US$250,000, top holders above 40%, low organic score, sharp drawdown, unverified status, and missing risk fields. Missing market cap or one-hour change contributes no score and is surfaced as a warning. A score is a rule-based ranking, not a statistical probability of profit.
 
 ### 3.2 Wallet and swap flow
 
@@ -43,19 +43,23 @@ The repository contains an Anchor/Rust vault scaffold intended to use a per-user
 - Vault accounting and token balances are controlled by the program, not by browser state.
 - All actions emit events that an independent indexer can reconcile against confirmed transactions.
 
-This is a proposed design, not an available mainnet service. The current program ID is a placeholder. The scaffold's swap instruction is disabled, and token-account/withdrawal coverage, deployment verification, independent audit, and mainnet launch gates remain incomplete. Do not send assets to an address derived from the placeholder.
+This is a proposed design, not an available mainnet service. The current program ID is a placeholder. In the current rebuild branch, vault funding, swap execution, position settlement, creator-fee accrual/claims, and creation-fee collection return explicit disabled errors. Token-account accounting, owner recovery, deployment verification, independent audit, and mainnet launch gates remain incomplete. Do not send assets to an address derived from the placeholder.
 
 ## 5. Proposed agent and copy-trading model
 
 A future agent should run as an isolated service with no access to user seed phrases. Each follower would explicitly authorize a constrained executor for a specific vault and strategy. Users must be able to pause or revoke the executor and recover assets without cooperation from the strategy owner.
 
-A future marketplace may allow strategy owners to publish configurations and followers to subscribe. Performance must be calculated from confirmed on-chain executions, net of fees and slippage. Backtests and paper results must be clearly distinguished from live results. A strategy owner may configure a profit share from 0% to 30%; the final amount and settlement method must be disclosed and enforced by reviewed program logic. A one-time US$0.10 subscription fee per new strategy owner is a proposed commercial term, not an active charge.
+A future marketplace may allow strategy owners to publish configurations and followers to subscribe. Performance must be calculated from confirmed on-chain executions, net of fees and slippage. Backtests and paper results must be clearly distinguished from live results. A strategy owner may configure a separate creator share of 0% to 30% of realized positive net profit; the final amount and settlement method must be disclosed and enforced by reviewed program logic. The bot activation fee is charged per bot creation, not per strategy-owner subscription, and the two fee types must never be double charged.
 
 ## 6. Proposed fee policy
 
-The proposed fee is US$0.10 per successful trade, deposit, and withdrawal. The proposed allocation is 60% to the operator wallet `6uyKhdb2iT8kWhk6SKyJjudWthYLESrVj3G7WHHydoEQ` and 40% to a platform treasury. The treasury address is not yet configured and fee collection is not active.
+The proposed setup fee is **US$0.10 per successful personal or public bot creation/activation**, charged once per bot activation nonce. It is not a per-trade, per-deposit, per-withdrawal, or per-strategy-owner subscription fee.
 
-A production implementation must specify the USDC mint and price source, rounding, atomicity, transaction-success conditions, receipts, duplicate prevention, and refunds. Failed or reverted actions must not incur a platform fee. The fee must be displayed before signing. The website must not silently convert or transfer user assets.
+The staged design converts US$0.10 to SOL using a valid, fresh, confidence-checked Mainnet Pyth SOL/USD update, rounds the lamport amount upward to a multiple of five lamports, then atomically allocates **40% to a verified, explicitly configured recipient and 60% to the Treasury PDA** derived from `b"website-treasury"`. The recipient candidate supplied in the build specification (`EDZjEbRAtqyC8z6ta6PYHX161Xynt13tWpd7orKERkbz`) is unverified and must not be used until independently validated and explicitly approved. It is not an on-chain constant.
+
+Separately, a bot creator may receive **0–30% of realized positive net profit**, calculated from verified on-chain settlement after costs. This performance share is not the bot creation fee. Both terms must be disclosed and settled without double charging.
+
+**No fee is active.** The current Anchor creation-fee instruction returns a disabled error. Oracle configuration, recipient validation, idempotent activation, atomic split, receipts, rounding tests, reconciliation, and refund behavior must be reviewed and tested before collection. Failed or reverted bot activation must not incur a fee.
 
 ## 7. Security model and launch gates
 
