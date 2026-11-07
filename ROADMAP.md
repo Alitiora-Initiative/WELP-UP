@@ -60,7 +60,7 @@ The requested product is an AI agent that analyzes the market, selects suitable 
    - [ ] Deploy matching source and verify all actions on Devnet. `execute_swap` and SPL-token withdrawals remain disabled/unimplemented.
 4. [ ] Publish verified source and program addresses; complete an independent audit and resolve critical/high findings.
 5. [ ] Implement durable, wallet-scoped vault configuration and consent records tied to the website wallet session.
-6. [ ] Complete Kenyan legal and privacy review, update the Terms, and obtain new user consent.
+6. [ ] Complete jurisdiction-appropriate legal and privacy review, update the Terms, and obtain any required user consent.
 7. [ ] Launch only after the user-facing limits match the deployed enforcement and withdrawals have been verified.
 
 **Mainnet autonomous vault remains disabled.** The `/automation`, `/agent`, and `/autonomous` pages are status and policy interfaces; they do not run bots, place orders, or simulate P&L. No executor is connected. Existing swaps run only after a wallet connects and explicitly signs the transaction.
@@ -77,17 +77,17 @@ This is a staged plan, not a promise that a provider, market, or trading product
 | P1 | TradingView charts | Confirm library access and usage terms; implement a datafeed with symbol search, OHLC history, live updates, market hours/time zone, and stale/error states. The chart library itself does not provide market data; see the [Datafeed API](https://www.tradingview.com/charting-library-docs/latest/connecting_data/datafeed-api/). | Not started |
 | P1 | Vault Devnet gate 3 | Deploy matching source, run transaction-level and property tests for caps, executor permissions, pause/revoke, and owner recovery; implement and verify SPL-token withdrawals. | Partial scaffold only |
 | P1 | User-controlled funding and recovery | Map deposits, token ownership, open positions, failed swaps, emergency pause, and withdrawal flows. Retain owner control; never treat losses or liquidations as protocol revenue. | Not started |
-| P2 | Fonbnk fiat on/off-ramp | Obtain a merchant account; confirm Kenya/KES and Solana/asset availability for this merchant; integrate the provider widget or signed server API, webhook verification, reconciliation, limits, KYC/AML, refunds, support, and disclosures. Keep provider credentials server-side. See [Fonbnk Widget docs](https://docs.fonbnk.com/widget-integration/getting-started) and [Server API docs](https://docs.fonbnk.com/server-to-server/getting-started). | Not started |
+| P2 | Fonbnk fiat on/off-ramp | Obtain a merchant account; confirm supported fiat currencies and Solana asset availability for this merchant; integrate the provider widget or signed server API, webhook verification, reconciliation, limits, KYC/AML, refunds, support, and disclosures. Keep provider credentials server-side. See [Fonbnk Widget docs](https://docs.fonbnk.com/widget-integration/getting-started) and [Server API docs](https://docs.fonbnk.com/server-to-server/getting-started). | Not started |
 | P2 | Perpetual futures | Separate product and risk review; define funding, margin, liquidation, mark price, outage handling, and explicit user consent. No leverage or live perpetual order is available in the current app. | Not started |
 | P2 | Affiliate program | Define transparent, opt-in referral attribution and a payout ledger funded from a separately disclosed operator budget or approved fees. Never pay affiliates from a user's losses, collateral, or liquidation proceeds. | Not started |
-| P2 | Legal, operations, and mainnet readiness | Kenyan counsel review, fee/custody and licensing analysis, updated terms/privacy, incident response, monitoring, audited immutable or governed program, and independent security assessment. | Not started |
+| P2 | Legal, operations, and mainnet readiness | Qualified legal review, fee/custody and licensing analysis, updated terms/privacy, incident response, monitoring, audited immutable or governed program, and independent security assessment. | Not started |
 
 **Treasury constraint:** Do not add code that redirects user funds, losses, liquidation proceeds, or collateral to an operator-controlled wallet. No treasury address is embedded in the app. Any future protocol fee requires a documented purpose, separate accounting, clear disclosure, and explicit user authorization before the transaction.
 
 ## Legal and publishing follow-up
 
-- [ ] Have Kenyan counsel review the Terms, privacy disclosure, operator/contact details, dispute language, regulatory treatment, and acceptance mechanism.
-- [x] Publish operator identity (Joseph Mushelle Nyingeh / Alitiora Initiative) and contact emails.
+- [ ] Have qualified counsel review the Terms, privacy disclosure, contact details, dispute language, regulatory treatment, and acceptance mechanism.
+- [ ] Publish any legally required operator disclosures after jurisdiction-specific legal review.
 - [ ] Implement a durable record of the exact Terms version and affirmative user acceptance before relying on it as a contract.
 - [x] Publish a separate privacy notice.
 - [ ] Keep this documentation aligned with the code actually running on Vercel.
