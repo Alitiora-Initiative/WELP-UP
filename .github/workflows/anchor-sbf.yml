@@ -98,8 +98,8 @@ jobs:
           #!/usr/bin/env bash
           if [[ "\${1:-}" == "metadata" ]]; then
             "$REAL_CARGO" "\$@"
-            status=$?
-            if [[ $status -ne 0 ]]; then exit "$status"; fi
+            status=\$?
+            if [[ \$status -ne 0 ]]; then exit "\$status"; fi
             sed -i 's/^version = 4$/version = 3/' programs/vault/Cargo.lock
             grep -qx 'version = 3' programs/vault/Cargo.lock
             exit 0
