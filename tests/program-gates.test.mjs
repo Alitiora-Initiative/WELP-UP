@@ -148,6 +148,22 @@ test('Anchor SBF workspace includes both deployable programs and excludes host-o
   assert.doesNotMatch(config, /"programs\/program-tests"/);
 });
 
+test('disabled creation-fee instruction does not pull unused Pyth SDK', () => {
+  const manifest = readFileSync(new URL('../programs/vault/Cargo.toml', import.meta.url), 'utf8');
+  const source = readFileSync(new URL('../programs/vault/src/lib.rs', import.meta.url), 'utf8');
+  const contextStart = source.indexOf('pub struct ChargeCreationFee');
+  const contextEnd = source.indexOf('// ── Errors', contextStart);
+  const context = source.slice(contextStart, contextEnd);
+  assert.doesNotMatch(manifest, /pyth-solana-receiver-sdk/);
+  assert.doesNotMatch(source, /pyth_solana_receiver_sdk|PriceUpdateV2/);
+  assert.doesNotMatch(context, /price_update/);
+  const disabledInstruction = source.slice(
+    source.indexOf('pub fn charge_creation_fee('),
+    source.indexOf('}', source.indexOf('pub fn charge_creation_fee(')) + 1,
+  );
+  assert.match(disabledInstruction, /FeeSettlementDisabled/);
+});
+
 test('Anchor SBF build preserves pinned Cargo lockfiles', () => {
   const workflow = readFileSync(new URL('../.github/workflows/anchor-sbf.yml', import.meta.url), 'utf8');
   assert.match(workflow, /anchor build -- -- --locked/);
