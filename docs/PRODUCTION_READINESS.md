@@ -68,15 +68,11 @@ No live bot performance, ROI, TVL, active-agent count, or copier count may be sh
 
 ## Fees and treasury
 
-**Fee policy from the staged build specification (not enabled):**
+**Current fee policy (not collected):** WELP's target protocol fee is 0.50% (50 bps) of gross input for each WELP-controlled swap. The fee is split 60% to the published developer/operator receiving address and 40% to the WELP protocol treasury. There are no additional fixed USDC trade, transfer or launch-creation charges, and the creator-configurable 0–3% fee model has been removed.
 
-- Bot creation/activation fee: **US$0.10 per personal or public bot**, once per successful creation/activation.
-- Allocation: **40% to a verified, explicitly configured recipient and 60% to the platform Treasury PDA** derived from `b"website-treasury"`.
-- Creator performance share: separately configurable from **0–30% of realized positive net profit**, only after trusted on-chain accounting and settlement exist.
-- The setup fee and creator share are separate; prevent double charging.
-- The payout address in the planning specification (`EDZjEbRAtqyC8z6ta6PYHX161Xynt13tWpd7orKERkbz`) is an **unverified candidate**, not an approved recipient or on-chain constant. Validate it and confirm configuration before use.
-- Fee collection, treasury routing, and creator payouts are **disabled**. The disabled creation-fee instruction currently has no oracle account or Pyth SDK dependency. Before any fee settlement is enabled, pin an Anchor-compatible Pyth receiver SDK and verify the SOL/USD feed ID, account owner, freshness and confidence checks, SOL conversion and rounding, recipients, treasury PDA, atomic settlement, receipts, reconciliation, duplicate prevention, and refund behavior.
-- Do not implement a per-trade, per-deposit, or per-withdrawal charge unless the product specification is explicitly revised and approved. Existing documents previously described a conflicting fee model; this section supersedes that obsolete wording.
+The canonical server policy is in lib/server/fee-policy.ts. The TypeScript and Rust helpers perform integer fee calculations only; they do not collect funds. The launchpad crate is not deployed to mainnet, has no production deployment keypair, and does not implement a buy/sell instruction or a generic SPL input-token fee vault. The Jupiter order/execute route cannot currently append the on-chain fee legs, so both routes remain fail-closed.
+
+Before enabling collection, implement and verify the actual mainnet swap instruction, atomically transfer the fee shares, derive each recipient token account from the real input mint, add replay protection and event receipts, run SBF-backed adversarial tests, verify the deployed bytecode/IDL/upgrade authority, and complete an independent Solana/Anchor security review. Do not treat a frontend build or fee calculation test as proof of collection.
 
 ## Production operations
 
