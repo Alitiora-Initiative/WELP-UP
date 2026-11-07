@@ -104,3 +104,9 @@ jobs:
         run: cargo clippy --manifest-path programs/vault/Cargo.toml -- -D warnings
       - name: Unit tests — vault-checks
         run: cargo test --manifest-path programs/vault-checks/Cargo.toml
+      - name: Check formatting — launchpad treasury
+        run: cargo fmt --check --manifest-path programs/launchpad/Cargo.toml
+      - name: Clippy — launchpad treasury
+        run: cargo clippy --manifest-path programs/launchpad/Cargo.toml -- -D warnings
+      - name: Unit tests — launchpad treasury
+        run: cargo test --manifest-path programs/launchpad/Cargo.toml
