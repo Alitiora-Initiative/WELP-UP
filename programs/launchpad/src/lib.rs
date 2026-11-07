@@ -15,8 +15,6 @@ pub const TREASURY_VAULT_SEED: &[u8] = b"treasury-vault-v1";
 pub const DEVELOPER_WALLET: Pubkey = pubkey!("ETuGxX6Znxr9q59THJtcYDJKt6RvCfN7wp79tRnbG1xG");
 pub const BASIS_POINTS_DENOMINATOR: u128 = 10_000;
 pub const PROTOCOL_SWAP_FEE_BPS: u128 = 50; // 0.50% of gross swap input
-pub const DEVELOPER_FEE_SHARE_BPS: u128 = 6_000; // 60% of protocol fee
-pub const TREASURY_FEE_SHARE_BPS: u128 = 4_000; // 40% of protocol fee
 pub const DISTRIBUTION_EPOCH_SECONDS: i64 = 1_209_600; // exactly 14 days
 pub const DEVELOPER_DISTRIBUTION_BPS: u128 = 6_000; // 60%
 pub const PERMANENT_RESERVE_BPS: u128 = 4_000; // 40%
@@ -242,8 +240,7 @@ impl TreasuryAccount {
 pub struct ProtocolSwapFeeRoute {
     pub gross_input_base_units: u64,
     pub protocol_fee_base_units: u64,
-    pub developer_fee_base_units: u64,
-    pub treasury_fee_base_units: u64,
+    pub treasury_credit_base_units: u64,
     pub net_swap_input_base_units: u64,
 }
 
@@ -256,14 +253,6 @@ pub fn calculate_protocol_swap_fee(gross_input_base_units: u64) -> Result<Protoc
     )?;
     require!(protocol_fee > 0, TreasuryError::FeeBelowMinimumUnit);
 
-    let developer_fee = mul_div_floor_u64(
-        protocol_fee,
-        DEVELOPER_FEE_SHARE_BPS,
-        BASIS_POINTS_DENOMINATOR,
-    )?;
-    let treasury_fee = protocol_fee
-        .checked_sub(developer_fee)
-        .ok_or(TreasuryError::ArithmeticUnderflow)?;
     let net_swap_input = gross_input_base_units
         .checked_sub(protocol_fee)
         .ok_or(TreasuryError::ArithmeticUnderflow)?;
@@ -271,8 +260,7 @@ pub fn calculate_protocol_swap_fee(gross_input_base_units: u64) -> Result<Protoc
     Ok(ProtocolSwapFeeRoute {
         gross_input_base_units,
         protocol_fee_base_units: protocol_fee,
-        developer_fee_base_units: developer_fee,
-        treasury_fee_base_units: treasury_fee,
+        treasury_credit_base_units: protocol_fee,
         net_swap_input_base_units: net_swap_input,
     })
 }
@@ -386,11 +374,10 @@ mod tests {
         let route = calculate_protocol_swap_fee(1_000_000_000).unwrap();
         assert_eq!(route.gross_input_base_units, 1_000_000_000);
         assert_eq!(route.protocol_fee_base_units, 5_000_000);
-        assert_eq!(route.developer_fee_base_units, 3_000_000);
-        assert_eq!(route.treasury_fee_base_units, 2_000_000);
+        assert_eq!(route.treasury_credit_base_units, 5_000_000);
         assert_eq!(route.net_swap_input_base_units, 995_000_000);
         assert_eq!(
-            route.developer_fee_base_units + route.treasury_fee_base_units,
+            route.treasury_credit_base_units,
             route.protocol_fee_base_units
         );
         assert_eq!(
@@ -403,8 +390,7 @@ mod tests {
     fn protocol_fee_uses_checked_integer_rounding() {
         let route = calculate_protocol_swap_fee(10_000).unwrap();
         assert_eq!(route.protocol_fee_base_units, 50);
-        assert_eq!(route.developer_fee_base_units, 30);
-        assert_eq!(route.treasury_fee_base_units, 20);
+        assert_eq!(route.treasury_credit_base_units, 50);
         assert_eq!(route.net_swap_input_base_units, 9_950);
     }
 
