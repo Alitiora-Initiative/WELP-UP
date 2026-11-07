@@ -17,6 +17,8 @@ test('vault deposits require owner-signed SOL transfer and mint proportional sha
   assert.match(body, /amount > 0/);
   assert.match(body, /VaultState::Funded \|\| vault\.state == VaultState::Active/);
   assert.match(body, /compute_shares\(/);
+  assert.match(body, /available_lamports,\s*ctx\.accounts\.vault\.total_shares/);
+  assert.match(body, /VaultError::AccountingInvariant/);
   assert.match(body, /system_program::transfer/);
   assert.match(body, /available_lamports[\s\S]*checked_add\(amount\)/);
   assert.match(body, /total_shares[\s\S]*checked_add\(shares\)/);
