@@ -46,7 +46,9 @@ Run the host-side unit tests with:
 \`\`\`bash
 cargo fmt --check --manifest-path programs/launchpad/Cargo.toml
 cargo clippy --manifest-path programs/launchpad/Cargo.toml -- -D warnings
-cargo test --manifest-path programs/launchpad/Cargo.toml
+cargo test --lib --manifest-path programs/launchpad/Cargo.toml
 \`\`\`
+
+The SBF-backed ProgramTest is run separately after Anchor builds `target/deploy/welp_launchpad.so`; it is not part of the host-only `cargo test --lib` command.
 
 The 40% reserve is only permanently inaccessible if the final deployed program is immutable or subject to the explicitly disclosed upgrade-governance policy. Do not describe it as irrevocably locked while an unrestricted upgrade authority remains.
