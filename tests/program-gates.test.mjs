@@ -33,7 +33,7 @@ test('automated swaps are fail-closed', () => {
 });
 
 test('position settlement is fail-closed', () => {
-  const body = instruction('pub fn settle_exit(', '/// Owner withdraws SOL (legacy direct-amount interface)');
+  const body = instruction('pub fn settle_exit(', '/// Legacy direct-amount withdrawal is disabled');
   assert.match(body, /err!\(VaultError::TradingDisabled\)/);
   assert.doesNotMatch(body, /settle_exposure/);
 });
