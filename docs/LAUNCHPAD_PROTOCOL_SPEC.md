@@ -1,7 +1,7 @@
 # WELP UP Launchpad — Protocol and Platform Specification
 
 **Document status:** Engineering specification / not a deployment claim  
-**Target:** Solana Mainnet-Beta after Devnet verification, independent review and a separately approved release  
+**Target:** Solana Mainnet-Beta only, after independent review and a separately approved production release. No Devnet deployment or test flow is part of this product requirement.  
 **Application:** \`welpup.fun\`  
 **On-chain framework target:** Anchor 0.30.1, aligned to the existing repository workspace  
 **Frontend target:** Next.js App Router, React, TypeScript and the repository's current \`@solana/kit\` + \`@solana/react\` wallet stack
@@ -471,14 +471,14 @@ Discovery search/filter categories may include quote asset, newest, market cap a
 
 ### Release promotion
 
-1. Complete local unit and SBF tests.
-2. Deploy only to Devnet using a dedicated test authority and wallet.
-3. Run the full creator-to-pool-to-LP-burn loop on Devnet with no production secrets.
-4. Verify the deployed binary, IDL, program ID, token mint and authority state.
-5. Confirm all fee destinations, AMM config/program ID and LP-token burn.
-6. Complete independent security review and remediate all critical/high findings.
+1. Complete source formatting, host unit tests, dependency checks and reproducible Anchor/SBF builds.
+2. Complete a full independent Solana/Anchor security review and remediate every critical/high finding.
+3. Generate and secure a production deployment keypair outside the app; never commit its secret key.
+4. Deploy only to Solana Mainnet-Beta after review and explicit release approval.
+5. Verify the deployed binary, IDL, program ID, token mint and authority state directly from mainnet.
+6. Verify treasury vaults, fee accounting, AMM config/program IDs and LP-token burn against deployed accounts and confirmed transactions.
 7. Review upgrade authority, multisig/custody policy, monitoring, incident response, pause/recovery and communication plan.
-8. Require a separate explicit Mainnet-Beta release approval. No documentation PR, issue closure or CI automation may silently enable trading or deposits.
+8. Keep trading/deposits disabled until every mainnet verification and user-consent gate is complete. No documentation PR, issue closure or CI automation may silently enable trading or deposits.
 
 ---
 
@@ -494,15 +494,13 @@ Discovery search/filter categories may include quote asset, newest, market cap a
 - Visual reference: https://stonkfun.xyz/
 
 
-## 14. Treasury epochs and creator-fee routing
+## 14. Treasury epochs and protocol swap fee
 
-The implemented local Treasury PDA and exact interpretation of the fee waterfall are documented in [TREASURY_AND_CREATOR_FEES.md](./TREASURY_AND_CREATOR_FEES.md).
+The implementation status and fee waterfall are documented in [TREASURY_AND_CREATOR_FEES.md](./TREASURY_AND_CREATOR_FEES.md).
 
-### 14.1 Creator fee
+WELP's target protocol fee is 50 basis points (0.50%) of gross input for swaps that execute through a WELP-controlled on-chain instruction. The full fee is credited to the input asset's treasury vault in the same transaction as the swap. After a minimum 14-day epoch, 60% of eligible new SOL inflows is released to the published developer recipient and 40% remains as protected treasury reserve. The split occurs once at epoch maturity.
 
-Creator-selected fee is 0–300 basis points (0.00%–3.00%) on eligible WELP-routed trade volume. The 0.5% treasury share is a share of the creator-fee amount, not an additional 0.5 percentage points of swap volume. The remainder of the creator-fee amount is the creator reward. Fractional lamport remainders are carried across trades.
-
-This creator fee is separate from the existing fixed WELP USDC trade/transfer/launch-creation fee policy. The fee helper is implemented and unit-tested, but the helper has not yet been called from a buy/sell handler and no funds are collected by the current program.
+The current treasury vault is SOL-only. Generic SPL-token input vaults, swap instructions, fee receipts and live fee transfers are not implemented. The current Rust fee helper is math only and does not collect funds. The 0.50% policy is not active on mainnet, and swap endpoints remain fail-closed.
 
 ### 14.2 Treasury distribution
 
@@ -519,7 +517,7 @@ This "permanent" reserve is only as immutable as the deployed program. An unrest
 
 The local crate now contains \`initialize_treasury\` and \`disburse_treasury_funds\`. The crate is not deployed, has not been audited and must not receive Mainnet funds. The fee helper is not yet connected to atomic transfers or a launch buy/sell route.
 
-### 14.3 Raydium creator-fee limits
+### 14.3 External Raydium fee boundaries
 
 Raydium CPMM has separate trade-fee and creator-fee buckets. The creator-fee rate comes from `AmmConfig.creator_fee_rate` and is shared by pools using that config, while each pool stores an enable flag and fee side. A `CreatorFeeShare` PDA can override the creator's share rate for a specific creator/config pair; that split is applied at collection and the shared amount is moved to Raydium's protocol-fee bucket. That bucket is not the WELP Treasury PDA. See [Raydium CPMM fees](https://github.com/raydium-io/raydium-docs-v1/blob/main/products/cpmm/fees.mdx) and [creator-fee flow](https://github.com/raydium-io/raydium-docs-v1/blob/main/user-flows/how-creator-fees-work.mdx).
 
