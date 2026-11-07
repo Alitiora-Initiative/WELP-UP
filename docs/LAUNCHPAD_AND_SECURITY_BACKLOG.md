@@ -209,8 +209,9 @@ Design and current implementation detail: [TREASURY_AND_CREATOR_FEES.md](./TREAS
 - [ ] Carry fractional basis-point remainders so cumulative tiny trades do not lose the treasury share to per-trade integer rounding.
 - [ ] Keep this creator fee separate from the existing fixed WELP USDC trade/transfer/creation fee policy. Disclose any combined charge before wallet signing.
 - [ ] Do not claim this fee applies to arbitrary SPL transfers or direct external DEX swaps.
-- [ ] Pin Raydium CPMM version, creator-fee configuration and creator-fee collection path before enabling a post-graduation fee. CPMM creator-fee rate is shared by pools using a fee tier; it is not an arbitrary per-pool 0–3% rate. Its built-in creator-fee share is paid to Raydium's protocol bucket, not the WELP Treasury PDA.
-- [ ] Implement a reviewed adapter to collect Raydium creator fees to a launch-controlled account and split them between the WELP treasury and creator. If that cannot be enforced, disable the custom fee for post-graduation routing.
+- [ ] Pin Raydium CPMM version, `AmmConfig`, `PoolState`, `CreatorFeeShare` and creator-fee collection path before enabling a post-graduation fee. A pool can opt into the creator fee and set its side, but `AmmConfig.creator_fee_rate` is shared by pools on that tier; it is not an arbitrary per-pool 0–3% rate.
+- [ ] Account for the Raydium `CreatorFeeShare` PDA override. Its shared amount is transferred to Raydium's `protocol_fees` bucket at collection; the WELP Treasury PDA is not the recipient.
+- [ ] Implement and review a permitted integration to route WELP's fee share to WELP's own treasury. Do not assume a CPMM CPI can redirect Raydium-owned protocol fees. If the selected route cannot enforce the configured fee and destination, disable the WELP creator fee after graduation.
 
 ### Economic blockers
 
