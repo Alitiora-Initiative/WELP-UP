@@ -94,23 +94,19 @@ Official sources:
 - https://github.com/raydium-io/raydium-cp-swap/blob/master/programs/cp-swap/src/instructions/initialize.rs
 - https://solana.com/docs/tokens/basics/burn-tokens
 
-## 7. Fixed WELP fee settlement
+## 7. WELP protocol swap-fee settlement
 
-Source of truth: [FEES_AND_TREASURY.md](./FEES_AND_TREASURY.md). Fixed Mainnet-Beta USDC values:
+Source of truth: docs/FEES_AND_TREASURY.md. Target fee is **0.50% of gross input** on each WELP-controlled swap. Split the collected fee 60% to the developer/operator receiving wallet and 40% to the protocol treasury.
 
-| Operation | Fee | Developer/operator (60%) | Protocol treasury (40%) |
-|---|---:|---:|---:|
-| Launch creation | $0.50 USDC | $0.30 | $0.20 |
-| Each supported trade | $0.10 USDC | $0.06 | $0.04 |
-| Each WELP-supported transfer operation | $0.10 USDC | $0.06 | $0.04 |
+- [ ] Enforce 50 basis points of gross input in the on-chain buy/sell/swap instruction, with checked integer math and explicit rounding.
+- [ ] Support only explicitly allowed input assets and derive the developer and treasury token accounts for the exact input mint.
+- [ ] Atomically execute the swap, both fee transfers, state updates and fee receipt/nonce; any failure must roll back the full transaction.
+- [ ] Prevent duplicate fee collection with a unique operation receipt, and emit an event containing payer, mint, gross input, fee amount, recipient split and slot.
+- [ ] Show the exact 0.50% fee, input asset and recipients before wallet signing.
+- [ ] Do not imply that WELP taxes arbitrary SPL transfers or swaps that bypass WELP.
+- [ ] Keep swap endpoints fail-closed until composable transaction building, deployed program verification and SBF-backed adversarial tests pass.
 
-- [ ] Hardcode fee amounts, split and destination public keys in reviewed program constants/config; browser and backend may not override them.
-- [ ] Validate the exact canonical USDC mint, Token Program ownership, developer recipient ATA and treasury PDA/ATA.
-- [ ] Atomically transfer both shares with the launch/trade/supported-transfer instruction being charged.
-- [ ] Use unique operation-specific receipt/nonce PDAs to make charges idempotent and prevent replay.
-- [ ] A direct wallet-to-wallet SPL transfer that does not invoke WELP cannot be intercepted. WELP transfer fees apply only to an explicitly supported WELP instruction path.
-- [ ] Show the USDC fee, split, recipients, SOL/USDC contribution and separate network/rent/pool costs before wallet signing.
-- [ ] Keep fees disabled until SBF tests, independent review, source verification and release approval.
+The prior fixed $0.10/$0.50 USDC charge schedule and creator-configurable 0–3% fee design are superseded and must not remain in frontend or on-chain code.
 
 ## 8. TypeScript service and transaction assembly
 
