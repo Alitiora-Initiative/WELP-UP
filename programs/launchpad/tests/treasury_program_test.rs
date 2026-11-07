@@ -5,6 +5,7 @@ use solana_sdk::{
     clock::Clock,
     instruction::Instruction,
     pubkey::Pubkey,
+    rent::Rent,
     signature::Signer,
     system_program,
     transaction::Transaction,
