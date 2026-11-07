@@ -139,7 +139,7 @@ Before enabling any real-funds vault or automated execution:
 8. Verify data-provider behavior, monitoring, incident response, and user-facing status reporting.
 9. Obtain explicit release approval before enabling deposits or automated mainnet fund movement.
 
-See the detailed engineering and vault documents in `docs/`. A green web build is necessary but not sufficient.
+See [the recovered-source porting matrix](docs/BASE44_PORTING_MATRIX.md), [the source completeness audit](docs/BASE44_SOURCE_AUDIT.md), and the [staged vault/bot build specification](docs/WELPUP_BUILD_BLUEPRINT.md), alongside the engineering and vault documents in `docs/`. A green web build is necessary but not sufficient.
 
 ## Risk disclosure
 
