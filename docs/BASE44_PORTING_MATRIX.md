@@ -31,7 +31,7 @@
 
 - `TopNav.jsx`, `Layout.jsx`, `Footer.jsx`, `TickerStrip.jsx`: use as references for navigation hierarchy, page shell, live-feed status, and footer information; retain responsive behavior in the Next.js shell.
 - `MarketDataTable.jsx`, `MarketTable.jsx`, `TokenLogo.jsx`, `VaultChart.jsx`: port only when their data inputs are real provider/on-chain data and empty/error states remain honest.
-- `useMarketTokens.js` and `engine.js`: the Next.js scorer now ports the recovered 32/20/15/13/12/8 weights, 80–98 ranking band, liquidity/volume/freeze/concentration hard gates, and explicit warnings for missing data. Regression tests cover the weights and blockers.
+- `useMarketTokens.js` and `engine.js`: the Next.js scorer now ports the recovered 32/20/15/13/12/8 weights, 80–98 ranking band, liquidity/volume/freeze/concentration/suspicious-token hard gates, and explicit warnings for missing data. Regression tests cover the weights and blockers.
 - `useVaultStatus.js`, `vault.js`, `ledger.js`, `fees.js`, `jupiter.js`, `rpc.js`, `policies.js`, `strategies.js`, and `wallet.jsx` are listed in the archive TOC but absent as captured source sections. Reconstruct their behavior only from call sites, current code, tests, and the staged build specification; do not claim their original implementations were recovered.
 - `base44Client.js`, `AuthContext.jsx`, Base44 entities, and Base44 functions are platform-specific dependencies. Replace them with explicitly designed, security-reviewed services or remove the dependency where no backend is justified.
 
