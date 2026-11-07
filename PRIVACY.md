@@ -149,7 +149,7 @@ We may update this Privacy Notice from time to time. The updated version will be
 
 ## 11. HOW CAN YOU CONTACT US ABOUT THIS NOTICE?
 
-If you have questions or comments about this notice, you may email us at [jaymn2006@gmail.com](mailto:jaymn2006@gmail.com) or contact us by post at:
+If you have questions or comments about this notice, you may email us at [jaymn2006@gmail.com](mailto:jaymn2006@gmail.com) or contact us by email:
 
 
 ## 12. HOW CAN YOU REVIEW, UPDATE, OR DELETE THE DATA WE COLLECT FROM YOU?

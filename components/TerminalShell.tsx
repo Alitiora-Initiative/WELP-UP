@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -62,7 +61,7 @@ export function TerminalShell({ children }: { children: ReactNode }) {
  const activeGroup=navGroups.find(group=>group.label===activeMenu);
  return <div className="terminal-site">
   <header className="site-header" onMouseLeave={()=>setActiveMenu(null)}>
-   <Link href="/" className="site-brand" onClick={()=>{setOpen(false);setActiveMenu(null);}}><Image className="site-brand-mark" src="/welp-up-logo.svg" alt="" width={38} height={38} priority /><strong>WELP UP!</strong><span className="network-badge"><i/> MAINNET</span></Link>
+   <Link href="/" className="site-brand" onClick={()=>{setOpen(false);setActiveMenu(null);}}><span className="site-brand-mark" aria-hidden="true">W</span><strong>WELP UP!</strong><span className="network-badge"><i/> MAINNET</span></Link>
    <nav className={'site-nav'+(open?' is-open':'')} aria-label="Main navigation">
     {navGroups.map(group=><button key={group.label} type="button" className={'site-nav-trigger'+(isActive(group.items)?' is-active':'')+(activeMenu===group.label?' is-expanded':'')} aria-expanded={activeMenu===group.label} onMouseEnter={()=>setActiveMenu(group.label)} onFocus={()=>setActiveMenu(group.label)} onClick={()=>setActiveMenu(current=>current===group.label?null:group.label)}>{group.label}<ChevronDown size={12}/></button>)}
    </nav>
@@ -72,7 +71,7 @@ export function TerminalShell({ children }: { children: ReactNode }) {
   <TickerStrip/>
   <div className="site-main">{children}</div>
     <footer className="site-footer">
-      <div className="footer-brand"><Image className="site-brand-mark" src="/welp-up-logo.svg" alt="" width={38} height={38} priority /><div><strong>WELP UP!</strong><p>A Solana market console. Live pools, published rules, wallet-approved execution. WELP never holds keys and never trades on your behalf.</p><small>Operator · Alitiora Initiative · Kenya</small></div></div>
+      <div className="footer-brand"><span className="footer-brand-mark" aria-hidden="true">W</span><div><strong>WELP UP!</strong><p>A Solana market console. Live pools, published rules, wallet-approved execution. WELP never holds keys and never trades on your behalf.</p></div></div>
       <div className="footer-column"><strong>PRODUCT</strong><Link href="/markets">Market board</Link><Link href="/signals">Signal engine</Link><Link href="/swap">Swap desk</Link><Link href="/portfolio">Portfolio</Link><Link href="/token-explorer">Token explorer</Link></div>
       <div className="footer-column"><strong>AUTOMATION</strong><Link href="/automation">Signal policies</Link><Link href="/agent">Market agent</Link><Link href="/vault">Vault console</Link><Link href="/strategy-marketplace">Strategy marketplace</Link></div>
       <div className="footer-column"><strong>CONSOLE</strong><Link href="/profile">Profile</Link><Link href="/history">Transaction history</Link><Link href="/activity-logs">Activity logs</Link><Link href="/support">Support centre</Link><Link href="/system-status">System status</Link></div>
