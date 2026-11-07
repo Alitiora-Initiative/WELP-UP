@@ -35,11 +35,12 @@ Implementation must extend these structures. Do not create an unused \`src/pages
 
 The maximum supply is not fixed at 200,000,000.
 
-- Minimum accepted supply: **1 whole token**.
-- Maximum accepted supply: **1,000,000,000 whole tokens**.
+- Creator configuration range: **0 through 1,000,000,000 whole tokens**.
+- A zero-supply configuration may be previewed, but it cannot initialize a tradable sale, accept purchases or graduate to a liquidity pool. The on-chain sale initializer must reject zero supply.
+- Maximum accepted tradable supply: **1,000,000,000 whole tokens**.
 - The creator submits an integer count of whole tokens.
 - **200,000,000** is a valid example selected by a creator, not the platform default and not the platform ceiling.
-- A value of zero is invalid. A zero-supply mint is not a useful token launch and must be rejected by the UI and, independently, by the program.
+- A value of zero is allowed in the configuration preview to match the creator-selected range, but it is non-launchable. The UI must explain this, and the on-chain sale initializer must independently reject zero supply.
 
 The UI may display a zero starting point in a visual slider or empty state, but it must not permit a zero value to reach the initialization instruction.
 
@@ -429,7 +430,7 @@ Reusable styles are implemented in the project's CSS. Do not introduce Tailwind 
 
 The creator form collects:
 - name and ticker;
-- whole-token supply from 1 through 1,000,000,000;
+- whole-token supply from 0 through 1,000,000,000 (zero is preview-only; a tradable launch requires positive supply);
 - decimals selector 0 / 6 / 9;
 - supported quote asset and the finalized curve parameters when the program economics are frozen;
 - required metadata URI and disclosed metadata mutability.
