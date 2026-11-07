@@ -1,75 +1,73 @@
 import Link from 'next/link';
-import { AppSidebar } from '@/components/AppSidebar';
-import { WalletConnectionControl } from '@/components/WalletConnectionControl';
+import { ArrowUpRight, CheckCircle2, CircleDashed, LockKeyhole } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
+const launchStages = [
+  { label: 'Token mint', detail: 'A mint must be confirmed on Solana mainnet and its authority state inspected.', state: 'Awaiting program' },
+  { label: 'Liquidity pool', detail: 'A created token is not a market. A real pool and its liquidity must be independently indexed.', state: 'Awaiting integration' },
+  { label: 'Creator economics', detail: 'Launch fees and creator rewards must be disclosed and settled by verified on-chain instructions.', state: 'Not enabled' },
+];
+
 export default function LaunchpadPage() {
   return (
-    <main className="app-shell">
-      <AppSidebar active="launchpad" status="Launchpad · awaiting verified program" />
-      <section className="workspace" id="top">
-        <header className="topbar">
-          <div className="breadcrumb">
-            <span>WELP UP</span><span className="crumb-slash">/</span><strong>Launchpad</strong>
+    <main className="terminal-page launchpad-page">
+      <section className="launchpad-hero">
+        <div className="launchpad-hero-copy">
+          <p className="eyebrow"><span className="eyebrow-dot" /> WELP UP / SOLANA LAUNCHPAD</p>
+          <h1>Launches<span>.</span></h1>
+          <p>Discover tokens with verifiable on-chain origins. Create when the launch program is deployed, audited and ready for mainnet use.</p>
+        </div>
+        <div className="launchpad-hero-action">
+          <span className="launchpad-network"><i /> SOLANA MAINNET</span>
+          <button className="launchpad-primary" type="button" disabled aria-describedby="launchpad-lock-reason">
+            Create a token <ArrowUpRight size={16} />
+          </button>
+          <small id="launchpad-lock-reason">Creator studio is locked until the launch program is deployed and verified.</small>
+        </div>
+      </section>
+
+      <section className="launchpad-discovery" aria-labelledby="launchpad-discovery-title">
+        <div className="launchpad-section-heading">
+          <div><p className="launchpad-kicker">DISCOVERY</p><h2 id="launchpad-discovery-title">Explore launches</h2></div>
+          <span className="launchpad-count"><CircleDashed size={14} /> 0 verified listings</span>
+        </div>
+        <div className="launchpad-filter-row">
+          <div className="launchpad-filter-tabs" aria-label="Launch categories">
+            <span className="selected">All launches</span><span>New</span><span>Active</span><span>Graduated</span>
           </div>
-          <div className="topbar-right"><WalletConnectionControl /></div>
-        </header>
-        <div className="page-content">
-          <section className="welcome-row">
-            <div>
-              <p className="eyebrow">WELP LAUNCHPAD · SOLANA MAINNET</p>
-              <h1>Launch something <em>real.</em></h1>
-              <p className="welcome-copy">
-                A creator-first launch surface with configurable token supply, decimals, verified on-chain creation,
-                transparent fee receipts and a public discovery board.
-              </p>
-            </div>
-            <div className="date-pill"><span className="date-dot" /> PROGRAM NOT DEPLOYED</div>
-          </section>
-
-          <section className="panel" style={{ marginBottom: 20 }}>
-            <div className="terminal-panel-heading">
-              <span>DISCOVER</span><h2>Verified launches</h2>
-            </div>
-            <div className="empty-panel" style={{ marginTop: 14 }}>
-              No WELP launch records have been verified on Solana mainnet yet.
-              This board will only list mints and pools that can be traced to confirmed on-chain transactions.
-            </div>
-            <p className="muted-copy" style={{ marginTop: 12 }}>
-              No sample tokens, simulated volume, fake holders or placeholder prices are shown here.
-            </p>
-          </section>
-
-          <section className="feature-grid two">
-            <div className="panel">
-              <div className="terminal-panel-heading"><span>CREATOR STUDIO</span><h2>Configure your token</h2></div>
-              <p className="muted-copy">Creators will choose the token parameters and review the complete transaction before signing.</p>
-              <label className="field-label">TOKEN NAME<input disabled placeholder="Your token name" maxLength={32} /></label>
-              <label className="field-label">TICKER<input disabled placeholder="TICKER" maxLength={10} /></label>
-              <label className="field-label">METADATA URI<input disabled placeholder="Verified metadata URL" /></label>
-              <div className="form-grid">
-                <label className="field-label">TOTAL SUPPLY<input disabled type="number" min="1" placeholder="Choose supply" /></label>
-                <label className="field-label">DECIMALS<select disabled defaultValue=""><option value="" disabled>Choose decimals</option>{[0,2,4,6,8,9].map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+          <span className="launchpad-filter-note">Categories appear when verified launch data is available</span>
+        </div>
+        <div className="launchpad-table-wrap">
+          <table className="launchpad-table">
+            <thead><tr><th>Token</th><th>Pair</th><th>Market cap</th><th>24H change</th><th>Liquidity</th><th>Launch status</th></tr></thead>
+            <tbody><tr><td colSpan={6}>
+              <div className="launchpad-empty">
+                <span className="launchpad-empty-icon"><CheckCircle2 size={22} /></span>
+                <strong>No verified launches yet</strong>
+                <p>There are no WELP launch records confirmed on Solana mainnet. This board will not fill itself with demo tokens, generated prices or simulated volume.</p>
               </div>
-              <label className="field-label">QUOTE ASSET<select disabled defaultValue="USDC"><option value="USDC">USDC</option><option value="SOL">SOL</option></select></label>
-              <button className="primary-action" disabled type="button">Create token · unavailable</button>
-              <p className="inline-message" role="status">
-                Token creation is locked until the WELP launch program, metadata validation, treasury fee routing and mainnet release checks are deployed and verified.
-              </p>
-            </div>
+            </td></tr></tbody>
+          </table>
+        </div>
+        <p className="launchpad-data-note"><LockKeyhole size={13} /> Listings require a confirmed mint, a verified pool and traceable transaction signatures.</p>
+      </section>
 
-            <div className="panel">
-              <div className="terminal-panel-heading"><span>TRANSPARENT ECONOMICS</span><h2>Before you launch</h2></div>
-              <div className="gate-row"><span className="gate-state">01</span><div><strong>Creator sets supply and decimals</strong><small>Parameters are fixed in the mint transaction and visible before signing.</small></div></div>
-              <div className="gate-row"><span className="gate-state">02</span><div><strong>0.50 USDC launch fee</strong><small>Target split: 60% developer wallet · 40% protocol treasury. Not currently collected.</small></div></div>
-              <div className="gate-row"><span className="gate-state">03</span><div><strong>Creator rewards</strong><small>Rewards require a disclosed, funded allocation and on-chain claim accounting. No percentage is active yet.</small></div></div>
-              <div className="gate-row"><span className="gate-state">04</span><div><strong>Market verification</strong><small>A token mint is not a liquidity pool. The board marks a launch live only after pool and mint verification.</small></div></div>
-              <p className="muted-copy" style={{ marginTop: 16 }}>
-                Review the <Link href="/terms">Terms &amp; Conditions</Link> and <Link href="/docs">protocol documentation</Link> before using any future launch feature.
-              </p>
+      <section className="launchpad-bottom">
+        <div className="launchpad-creator-copy">
+          <p className="launchpad-kicker">FOR TOKEN CREATORS</p>
+          <h2>Built around transparent launches.</h2>
+          <p>WELP’s planned creator flow supports custom supply and decimals, wallet-reviewed transactions, clear fee receipts and verifiable pool status. Those mechanics stay unavailable until the on-chain program and fee settlement are ready.</p>
+          <Link className="launchpad-text-link" href="/docs">Read the launchpad specification <ArrowUpRight size={14} /></Link>
+        </div>
+        <div className="launchpad-stage-list">
+          {launchStages.map((stage, index) => (
+            <div className="launchpad-stage" key={stage.label}>
+              <span className="launchpad-stage-number">0{index + 1}</span>
+              <div><strong>{stage.label}</strong><p>{stage.detail}</p></div>
+              <small>{stage.state}</small>
             </div>
-          </section>
+          ))}
         </div>
       </section>
     </main>
