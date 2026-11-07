@@ -9,8 +9,9 @@ const execute = readFileSync(new URL('../app/api/execute/route.ts', import.meta.
 test('canonical protocol fee is 0.50% of gross swap input with a 60/40 split', () => {
   assert.match(policy, /import 'server-only'/);
   assert.match(policy, /swapFeeBps: 50/);
-  assert.match(policy, /developerShareBps: 6_000/);
-  assert.match(policy, /treasuryShareBps: 4_000/);
+  assert.match(policy, /epochDurationSeconds: 1_209_600/);
+  assert.match(policy, /epochDeveloperReleaseBps: 6_000/);
+  assert.match(policy, /epochPermanentReserveBps: 4_000/);
   assert.match(policy, /collectionEnabled: false/);
   assert.doesNotMatch(policy, /tradeOrTransferUsdcBaseUnits|launchCreationUsdcBaseUnits/);
 });
