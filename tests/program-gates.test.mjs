@@ -159,6 +159,9 @@ test('Anchor SBF build preserves pinned Cargo lockfiles', () => {
   assert.ok(workflow.includes(String.raw`if [[ -f "\$lockfile" ]]; then`));
   assert.ok(workflow.includes(String.raw`sed -i 's/^version = 4$/version = 3/' "\$lockfile"`));
   assert.match(workflow, /metadata --manifest-path programs\/launchpad\/Cargo\.toml/);
+  assert.doesNotMatch(workflow, /--features program-test/);
+  const ciWorkflow = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+  assert.match(ciWorkflow, /cargo check --manifest-path programs\\/program-tests\\/Cargo\\.toml --tests/);
   assert.match(workflow, /for lockfile in programs\/vault\/Cargo\.lock programs\/launchpad\/Cargo\.lock/);
   assert.match(workflow, /test -s target\/deploy\/welp_launchpad\.so/);
   assert.match(workflow, /test -s target\/idl\/welp_launchpad\.json/);
