@@ -29,7 +29,7 @@ The user is responsible for wallet security, device security, transaction review
 
 The Service may prepare swaps through third-party Solana protocols and market data providers. Such providers operate independently. Quotes can expire, routes can fail, liquidity can change and execution can differ from estimates. A transaction's finalized on-chain outcome is authoritative.
 
-The current application supports wallet-approved trading flows only where the relevant route is available. No AI service or server may silently sign transactions on a user's behalf.
+Swap execution is currently disabled until the disclosed WELP fee can be included atomically in the transaction. No AI service or server may silently sign transactions on a user's behalf.
 
 ## 5. Fees
 
