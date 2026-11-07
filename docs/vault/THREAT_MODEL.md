@@ -39,11 +39,12 @@ PDA derivations:
 6. **Premature global authority:** global configuration initialization is disabled until a deployment-specific bootstrap authority is pinned.
 7. **Unreviewed trading:** `execute_swap` and `settle_exit` return `TradingDisabled`; no Jupiter CPI occurs and no position accounting is changed.
 8. **Unverified fee movement:** creator-fee accrual/claims and bot-creation fee collection return `FeeSettlementDisabled`.
+9. **Strategy substitution:** bot registration validates a non-zero strategy hash and bounded allocation/slippage; owner-signed user-slot creation requires an enabled registry and snapshots the strategy hash, version and risk settings. A future swap instruction must verify that snapshot before execution.
 
 ## Explicit gaps
 
 - The executor policy is configuration groundwork only. The daily spend helper is not wired into a swap instruction and no daily spend is currently consumed.
-- No Jupiter CPI, SPL-token custody/withdrawal, mint/account validation, exact-next order nonce, fill reconciliation or P&L settlement is active.
+- No Jupiter CPI, SPL-token custody/withdrawal, mint/account validation, exact-next order nonce, fill reconciliation or P&L settlement is active. The future swap path must also enforce the strategy/risk snapshot stored in each user slot.
 - The vault account's placeholder program ID is not a valid deployment address.
 - Local-validator transaction tests, fuzzing, independent audit, secure upgrade authority, monitoring and incident response are outstanding.
 - The web vault UI must not derive a fundable address or accept deposits.
