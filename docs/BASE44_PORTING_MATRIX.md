@@ -10,7 +10,7 @@
 | `Markets.jsx` | `/markets` | Preserve searchable live market board, refresh/status states, and transparent ranking. |
 | `Signals.jsx` | `/signals` | Preserve published score weights, hard blockers, warnings, and eligible/blocked filters. No profit prediction. |
 | `Swap.jsx` | `/swap` | Preserve token search, quote freshness, amount/risk checks, and explicit external wallet signing. Never silently retry or charge. |
-| `Automation.jsx` | `/automation` | Preserve user-defined read-only watch policies and explainable evaluations. Browser-local rules are not bots and cannot submit orders. Any AI analysis must identify its provider, timestamp, input snapshot, and failure state. |
+| `Automation.jsx` | `/automation` | Preserve user-defined read-only watch policies and explainable evaluations. The original page's analyst panel is now ported using the server-side read-only runtime. Browser-local rules are not bots and cannot submit orders; AI analysis identifies its provider, timestamp, input snapshot, and failure state. |
 | `Agent.jsx` | `/agent` | Original file is missing from the archive. The Next.js port now provides an optional server-side, read-only OpenAI market analyst using a fresh Jupiter snapshot. It has no wallet or execution tools; see [AI agent runtime](AI_AGENT_RUNTIME.md). |
 | `Vault.jsx` | `/vault` | The source page includes Base44 entity calls and consent/status UI; that is not proof of a deployed vault. Keep funding and execution disabled until audited on-chain implementation and release gates pass. |
 | `Portfolio.jsx` | `/portfolio` | Preserve public wallet balance reads; label snapshots and incomplete history accurately. |
