@@ -4,7 +4,7 @@
  * This module validates user-selected whole-token supply and decimal precision.
  * It does not build or submit transactions and does not imply a deployed program.
  */
-export const MIN_TOTAL_SUPPLY_WHOLE = 1n;
+export const MIN_TOTAL_SUPPLY_WHOLE = 0n;
 export const MAX_TOTAL_SUPPLY_WHOLE = 1_000_000_000n;
 export const SUPPORTED_TOKEN_DECIMALS = [0, 6, 9] as const;
 export type SupportedTokenDecimals = (typeof SUPPORTED_TOKEN_DECIMALS)[number];
@@ -17,6 +17,7 @@ export type LaunchSupplyValidation =
       ok: true;
       wholeSupply: bigint;
       decimals: SupportedTokenDecimals;
+      launchable: boolean;
       maxSupplyBaseUnits: bigint;
       earlyWalletLimitBaseUnits: bigint;
       earlyWalletLimitWholeTokens: string;
@@ -42,7 +43,7 @@ export function validateLaunchSupply(
 
   const wholeSupply = BigInt(normalized);
   if (wholeSupply < MIN_TOTAL_SUPPLY_WHOLE) {
-    return { ok: false, error: 'Supply must be greater than zero.' };
+    return { ok: false, error: 'Supply must be a non-negative whole number.' };
   }
   if (wholeSupply > MAX_TOTAL_SUPPLY_WHOLE) {
     return { ok: false, error: 'Maximum supply is 1,000,000,000 whole tokens.' };
@@ -70,6 +71,7 @@ export function validateLaunchSupply(
     ok: true,
     wholeSupply,
     decimals,
+    launchable: wholeSupply > 0n,
     maxSupplyBaseUnits,
     earlyWalletLimitBaseUnits,
     earlyWalletLimitWholeTokens: formatBaseUnits(earlyWalletLimitBaseUnits, decimals),
