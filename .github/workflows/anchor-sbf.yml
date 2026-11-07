@@ -153,6 +153,11 @@ jobs:
         env:
           BPF_OUT_DIR: ${{ github.workspace }}/target/deploy
 
+      - name: Run platform fee collection ProgramTest against the built SBF binary
+        run: cargo test --manifest-path programs/program-tests/Cargo.toml --test fee_collection_program_test
+        env:
+          BPF_OUT_DIR: ${{ github.workspace }}/target/deploy
+
       - name: Verify build outputs
         run: |
           test -s target/deploy/welp_vault.so
