@@ -164,16 +164,11 @@ async fn supported_transfer_collects_fixed_usdc_fee_atomically_and_rejects_repla
     let (treasury_vault, _) =
         Pubkey::find_program_address(&[TREASURY_VAULT_SEED], &program_id);
 
-    let payer = Pubkey::new_unique();
-    let recipient = Pubkey::new_unique();
     let source_mint = Pubkey::new_unique();
-    let payer_usdc_ata = get_associated_token_address(&payer, &PLATFORM_USDC_MINT);
     let developer_usdc_ata =
         get_associated_token_address(&DEVELOPER_WALLET, &PLATFORM_USDC_MINT);
     let treasury_usdc_ata =
         get_associated_token_address(&treasury, &PLATFORM_USDC_MINT);
-    let source_ata = get_associated_token_address(&payer, &source_mint);
-    let destination_ata = get_associated_token_address(&recipient, &source_mint);
 
     let mut program_test = ProgramTest::new("welp_launchpad", program_id, None);
     program_test.add_program(
@@ -184,7 +179,6 @@ async fn supported_transfer_collects_fixed_usdc_fee_atomically_and_rejects_repla
     program_test.add_account(DEVELOPER_WALLET, system_account(1));
     program_test.add_account(PLATFORM_USDC_MINT, mint_account(6));
     program_test.add_account(source_mint, mint_account(9));
-    program_test.add_account(payer_usdc_ata, token_account(PLATFORM_USDC_MINT, payer, 500_000));
     program_test.add_account(
         developer_usdc_ata,
         token_account(PLATFORM_USDC_MINT, DEVELOPER_WALLET, 0),
@@ -193,19 +187,14 @@ async fn supported_transfer_collects_fixed_usdc_fee_atomically_and_rejects_repla
         treasury_usdc_ata,
         token_account(PLATFORM_USDC_MINT, treasury, 0),
     );
-    program_test.add_account(source_ata, token_account(source_mint, payer, 10_000));
-    program_test.add_account(destination_ata, token_account(source_mint, recipient, 0));
 
     let mut context = program_test.start_with_context().await;
-    // Use the ProgramTest payer as the transfer signer; install the matching
-    // token-account authorities after the generated payer key is available.
     let actual_payer = context.payer.pubkey();
-    assert_ne!(actual_payer, payer);
-
-    // Replace the preloaded payer-controlled token accounts with accounts
-    // owned by the actual ProgramTest fee payer.
+    let recipient = Pubkey::new_unique();
     let payer_usdc_ata = get_associated_token_address(&actual_payer, &PLATFORM_USDC_MINT);
     let source_ata = get_associated_token_address(&actual_payer, &source_mint);
+    let destination_ata = get_associated_token_address(&recipient, &source_mint);
+
     context.set_account(
         &payer_usdc_ata,
         &solana_sdk::account::AccountSharedData::from(token_account(
@@ -222,9 +211,6 @@ async fn supported_transfer_collects_fixed_usdc_fee_atomically_and_rejects_repla
             10_000,
         )),
     );
-
-    let recipient = Pubkey::new_unique();
-    let destination_ata = get_associated_token_address(&recipient, &source_mint);
     context.set_account(
         &destination_ata,
         &solana_sdk::account::AccountSharedData::from(token_account(source_mint, recipient, 0)),
