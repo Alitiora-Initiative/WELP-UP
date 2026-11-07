@@ -43,7 +43,8 @@ export type ScoredMarketToken = {
   warnings: string[];
 };
 
-export function scoreToken(row: Row): ScoredMarketToken {
+export function scoreToken(value: unknown): ScoredMarketToken {
+  const row = rec(value);
   const audit = rec(row.audit);
   const s24 = rec(row.stats24h);
   const s1 = rec(row.stats1h);
