@@ -14,16 +14,19 @@ This checklist distinguishes working public-data and wallet-approved features fr
 - [ ] Server-side account identity and durable per-user data.
 - [ ] Verified end-to-end transaction reconciliation for every trade and vault event.
 
-## Current branch hardening (source-driven-product-port)
+## Current Anchor program source status (executor-policy-foundation)
 
 - [x] Added a server-side read-only market analyst route. It consumes the live Jupiter snapshot and requires a server-only OpenAI API key; it has no wallet, transaction, or bot tools.
 - [x] Added bounded snapshot sanitization and response parsing tests for the analyst.
 - [x] Implemented owner-signed SOL deposits through the System Program CPI, proportional share minting, and overflow-safe accounting in the Anchor source.
 - [x] Implemented owner-only share redemption, including rent-exemption checks; owner pause/resume remains available.
-- [x] Added source-level regression tests for the deposit path and retained fail-closed swap execution, position settlement, creator-fee accrual/claim, and bot-creation fee collection.
+- [x] Added source-level regression tests for deposits, owner-controlled executor policy, legacy withdrawal protection, and fail-closed instructions.
+- [x] Added a per-vault ExecutorPolicy PDA with owner-only configure/rotate/revoke instructions, max trade, daily cap, slippage ceiling, and policy versioning.
+- [x] Added pure Rust daily-spend authorization checks and UTC-day rollover tests. These checks are not yet wired into a swap instruction; no executor can trade.
+- [x] Disabled the unsafe legacy amount-based withdrawal, no-op executor setters, and first-caller global configuration initializer.
 - [ ] Add Anchor local-validator integration tests for deposit, partial/full withdrawal, paused-vault recovery, repeated deposits after withdrawals, direct SOL donations, and rent preservation.
 - [ ] Run all GitHub CI checks for the latest branch commit and resolve any failures.
-- [ ] Run Anchor 0.30.1 SBF build, IDL validation, local-validator transaction tests, and independent security audit. These remain unavailable/unverified in the current CI baseline.
+- [ ] Run Anchor 0.30.1 SBF build, IDL validation, local-validator transaction tests for deposit/withdraw/policy configure/revoke, and independent security audit. These remain outstanding.
 - [ ] Add a durable shared rate limiter and provider spend controls before enabling the public AI endpoint broadly.
 - [ ] Configure `OPENAI_API_KEY` and `WELP_AI_MODEL` in Vercel Preview and test a real response. No provider credential was available during implementation.
 
@@ -37,8 +40,8 @@ See [AI_AGENT_RUNTIME.md](AI_AGENT_RUNTIME.md) and [VAULT_PROGRAM_SECURITY_REVIE
 - [ ] Property, fuzz, invariant, and adversarial tests for share accounting, rounding, rent, token accounts, CPI account validation, re-entrancy-like composition risks, and emergency paths.
 - [ ] SPL-token deposits and withdrawals implemented and tested, not just SOL.
 - [ ] Jupiter CPI route validation and token accounting implemented. The current scaffold intentionally disables swap execution.
-- [ ] User-authorized caps and per-position limits enforced on-chain. UI limits alone are not security controls.
-- [ ] Owner pause, executor revocation, and withdrawal recovery verified under failure conditions.
+- [ ] Wire executor policy into an audited swap instruction so per-trade, daily spend, slippage, policy version, nonce, and available-balance limits are enforced atomically. UI limits alone are not security controls.
+- [ ] Verify owner pause, implemented executor-policy revocation, and share-withdrawal recovery under local-validator failure conditions.
 - [ ] Upgrade authority policy selected, documented, and secured (prefer a reviewed multisig or immutable deployment after upgrade window).
 - [ ] Monitoring, incident response, pause authority, recovery runbook, and independent RPC/indexer redundancy.
 - [ ] Mainnet integration tests and independent transaction-level verification.
