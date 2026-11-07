@@ -142,7 +142,7 @@ export default function TermsPage() {
           </article>
           <footer className="footer">
             <span>WELP UP · Terms v2.0 · effective 7 November 2026</span>
-            <span>Contact: jaymnyon@gmail.com · jaymn2006@gmail.com</span>
+            <span>Support Centre: self-service only; no direct contact address is published</span>
             <Link href="/">Back to home</Link>
           </footer>
         </div>

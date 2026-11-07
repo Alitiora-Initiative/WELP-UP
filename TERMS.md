@@ -35,12 +35,13 @@ Swap execution is currently disabled until the disclosed WELP fee can be include
 
 The intended WELP fee schedule is:
 
-- **Trade or supported transfer:** 0.10 USD-equivalent per operation.
+- **Each supported trade:** 0.10 USD-equivalent per operation.
+- **Each supported transfer:** 0.10 USD-equivalent per operation.
 - **Launchpad token creation:** 0.50 USD-equivalent per launch.
 - **Fee distribution:** 60% to the published developer/operator fee wallet and 40% to the WELP protocol treasury PDA.
 - **Creator rewards:** paid only from a separately disclosed creator-reward allocation after the on-chain accounting and claim mechanism is deployed.
 
-The intended collection asset is USDC on Solana, with six decimal places. The final transaction must show the fee amount and destination before the user signs. Solana network fees, account rent and third-party protocol fees are separate from WELP fees.
+The intended collection asset is USDC on Solana, with six decimal places. The $0.10 trade fee, $0.10 supported-transfer fee, $0.50 launch-creation fee, and 60/40 split are fixed protocol constants to be enforced by the on-chain program, not mutable operator settings. The final transaction must show the fee amount and destination before the user signs. Solana network fees, account rent and third-party protocol fees are separate from WELP fees.
 
 **No fee is authorized merely by these Terms.** Fee collection is not enabled until the required on-chain program, treasury PDA, recipient token accounts, atomic fee enforcement, disclosures and mainnet verification are complete. If the fee instruction is absent or cannot be verified in the wallet prompt, the user should not assume a fee was paid or that the operation is enabled.
 
@@ -84,11 +85,11 @@ Nothing in these Terms excludes liability that cannot lawfully be excluded.
 
 ## 14. Governing law and disputes
 
-These Terms are interpreted under the laws that apply to the relevant parties and transaction, including any mandatory consumer protections. Contact the Service through its published support email before initiating a formal dispute where doing so is practical.
+These Terms are interpreted under the laws that apply to the relevant parties and transaction, including any mandatory consumer protections. The current Support Centre at https://welpup.fun/support provides self-service guidance only; it does not accept formal legal notices or privacy requests. A dedicated secure contact channel must be published before account-level personal-data features are enabled.
 
-## 15. Contact
+## 15. Support and contact status
 
-Questions about these Terms or the Service may be sent to: jaymnyon@gmail.com.
+General product guidance is available through the self-service Support Centre at https://welpup.fun/support. This release does not publish a direct personal contact address or accept formal legal notices through that page. A secure contact and privacy-request channel must be established before account-level personal-data features are enabled.
 
 ---
 

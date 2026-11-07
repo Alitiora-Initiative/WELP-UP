@@ -2,6 +2,19 @@
 
 This roadmap distinguishes the product the user wants from features currently available in the browser app. A checked item describes implemented UI, agent hardening, or documentation, not a security audit of an on-chain vault.
 
+## Next planned milestone: launchpad and platform hardening
+
+The next product milestone is the verified Solana launchpad plus backend and protocol security work. This is **planned, not implemented or enabled**. The complete task list, account model, acceptance gates, fee requirements, and security checklist are in [docs/LAUNCHPAD_AND_SECURITY_BACKLOG.md](docs/LAUNCHPAD_AND_SECURITY_BACKLOG.md).
+
+- [ ] Build and test the Anchor launch program with a 200,000,000-token maximum supply, launch escrow, Active/Graduated/Refundable state, checked purchase math, and owner/account validation.
+- [ ] Add the early-slot per-wallet 5% allocation cap (10,000,000 tokens at the specified supply) and refund protection.
+- [ ] Integrate an audited Raydium pool-creation CPI for graduation; verify and burn LP tokens only after independent validation.
+- [ ] Add a wallet-approved launchpad purchase/creator flow using the repository's current Solana Kit wallet stack and the existing `app/launchpad/page.tsx` route.
+- [ ] Keep Helius credentials and privileged RPC operations on the backend; add bounded priority-fee estimates, RPC fallback, retry, and connection cleanup.
+- [ ] Enforce the fixed $0.10 USDC fee per supported trade and per supported transfer, plus the $0.50 USDC launch-creation fee, atomically on-chain with the documented 60/40 split.
+- [ ] Harden API boundaries, secrets handling, idempotency, replay protection, monitoring, dependency scanning, adversarial tests, and privacy controls.
+- [ ] Complete devnet verification and independent audit before any Mainnet-Beta launch or fee collection.
+
 ## Current release
 
 - [x] Open new buys at 0.001 SOL while leaving the input adjustable.
