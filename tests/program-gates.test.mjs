@@ -140,10 +140,11 @@ test('legacy initializer cannot imply that non-persisted caps are enforced', () 
 });
 
 
-test('Anchor SBF workspace excludes host-only vault checks crate', () => {
+test('Anchor SBF workspace includes both deployable programs and excludes host-only checks', () => {
   const config = readFileSync(new URL('../Anchor.toml', import.meta.url), 'utf8');
-  assert.match(config, /\[workspace\][\s\S]*members\s*=\s*\[\s*"programs\/vault"\s*\]/);
+  assert.match(config, /members\s*=\s*\[\s*"programs\/vault"\s*,\s*"programs\/launchpad"\s*\]/);
   assert.doesNotMatch(config, /members\s*=\s*\[\s*"programs\/\*"\s*\]/);
+  assert.doesNotMatch(config, /"programs\/vault-checks"/);
 });
 
 test('Anchor SBF build preserves pinned Cargo lockfiles', () => {
@@ -154,10 +155,12 @@ test('Anchor SBF build preserves pinned Cargo lockfiles', () => {
   assert.ok(workflow.includes('"$REAL_CARGO" "\\$@"'));
   assert.ok(workflow.includes('status=\\$?'));
   assert.ok(workflow.includes('if [[ \\$status -ne 0 ]]; then exit "\\$status"; fi'));
-  assert.match(workflow, /sed -i 's\/\^version = 4\$\/version = 3\/' programs\/vault\/Cargo\.lock/);
+  assert.match(workflow, /metadata --manifest-path programs\/launchpad\/Cargo\.toml/);
+  assert.match(workflow, /for lockfile in programs\/vault\/Cargo\.lock programs\/launchpad\/Cargo\.lock/);
+  assert.match(workflow, /test -s target\/deploy\/welp_launchpad\.so/);
+  assert.match(workflow, /test -s target\/idl\/welp_launchpad\.json/);
   assert.match(workflow, /cargo test --locked --manifest-path programs\/vault\/Cargo\.toml/);
   assert.match(workflow, /CARGO: \$\{\{ runner\.temp \}\}\/cargo-wrapper\/cargo/);
-  assert.match(workflow, /grep -qx 'version = 3' programs\/vault\/Cargo\.lock/);
-  assert.match(workflow, /for lockfile in programs\/vault\/Cargo\.lock/);
+  assert.match(workflow, /grep -qx 'version = 3' "\$lockfile"/);
   assert.doesNotMatch(workflow, /for lockfile in programs\/vault\/Cargo\.lock programs\/vault-checks/);
 });
