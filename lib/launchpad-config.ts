@@ -12,8 +12,8 @@ export type SupportedTokenDecimals = (typeof SUPPORTED_TOKEN_DECIMALS)[number];
 export const U64_MAX = (1n << 64n) - 1n;
 export const BASIS_POINTS_DENOMINATOR = 10_000n;
 export const PROTOCOL_SWAP_FEE_BPS = 50n; // 0.50% of gross swap input
-export const DEVELOPER_FEE_SHARE_BPS = 6_000n; // 60% of collected protocol fee
-export const TREASURY_FEE_SHARE_BPS = 4_000n; // 40% retained by protocol treasury
+export const TREASURY_EPOCH_DEVELOPER_BPS = 6_000n; // 60% of eligible accrued fees
+export const TREASURY_EPOCH_RESERVE_BPS = 4_000n; // 40% permanently retained by policy
 
 export type LaunchSupplyValidation =
   | {
@@ -31,14 +31,14 @@ export type LaunchSupplyValidation =
 export type ProtocolSwapFeeRoute = {
   grossInputBaseUnits: bigint;
   protocolFeeBaseUnits: bigint;
-  developerFeeBaseUnits: bigint;
-  treasuryFeeBaseUnits: bigint;
   netSwapInputBaseUnits: bigint;
 };
 
 /**
  * Exact integer fee preview for a WELP-controlled swap:
- * 0.50% is calculated from the gross input amount, then split 60/40.
+ * 0.50% of gross input is credited to the protocol treasury. The separate
+ * 14-day treasury epoch releases 60% of eligible new inflows and protects
+ * the remaining 40% as reserve.
  *
  * This function only calculates amounts. It does not prove that a swap
  * occurred, sign a transaction, or collect funds. On-chain enforcement is
@@ -58,16 +58,11 @@ export function calculateProtocolSwapFee(grossInputBaseUnits: bigint): ProtocolS
     throw new RangeError('Swap input is too small to express the 0.50% fee in base units.');
   }
 
-  const developerFeeBaseUnits =
-    (protocolFeeBaseUnits * DEVELOPER_FEE_SHARE_BPS) / BASIS_POINTS_DENOMINATOR;
-  const treasuryFeeBaseUnits = protocolFeeBaseUnits - developerFeeBaseUnits;
   const netSwapInputBaseUnits = grossInputBaseUnits - protocolFeeBaseUnits;
 
   return {
     grossInputBaseUnits,
     protocolFeeBaseUnits,
-    developerFeeBaseUnits,
-    treasuryFeeBaseUnits,
     netSwapInputBaseUnits,
   };
 }
