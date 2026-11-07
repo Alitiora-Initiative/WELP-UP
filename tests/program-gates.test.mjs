@@ -148,7 +148,7 @@ test('Anchor SBF workspace excludes host-only vault checks crate', () => {
 
 test('Anchor SBF build preserves pinned Cargo lockfiles', () => {
   const workflow = readFileSync(new URL('../.github/workflows/anchor-sbf.yml', import.meta.url), 'utf8');
-  assert.match(workflow, /anchor build -- --locked/);
+  assert.match(workflow, /anchor build -- -- --locked/);
   assert.match(workflow, /for lockfile in programs\/vault\/Cargo\.lock/);
   assert.doesNotMatch(workflow, /for lockfile in programs\/vault\/Cargo\.lock programs\/vault-checks/);
 });
