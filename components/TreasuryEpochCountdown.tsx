@@ -30,13 +30,15 @@ export function TreasuryEpochCountdown({
       !Number.isSafeInteger(lastDistributionTimestamp) ||
       lastDistributionTimestamp < 0
     ) {
-      setNowSeconds(null);
       return;
     }
 
-    const update = () => setNowSeconds(Math.floor(Date.now() / 1_000));
-    update();
-    const interval = window.setInterval(update, 1_000);
+    // Subscribe to the browser clock; the first visible tick appears within
+    // one second. The program independently checks the Solana Clock sysvar.
+    const interval = window.setInterval(
+      () => setNowSeconds(Math.floor(Date.now() / 1_000)),
+      1_000,
+    );
     return () => window.clearInterval(interval);
   }, [lastDistributionTimestamp]);
 
@@ -59,7 +61,7 @@ export function TreasuryEpochCountdown({
         <p className="lp-kicker">TREASURY / DISTRIBUTION WINDOW</p>
         <h2 id="lp-treasury-epoch-title">Two-week release lock.</h2>
         <p>
-          The 14-day epoch is checked against Solana's on-chain Clock. A browser
+          The 14-day epoch is checked against Solana&apos;s on-chain Clock. A browser
           countdown never authorizes a withdrawal.
         </p>
       </div>
