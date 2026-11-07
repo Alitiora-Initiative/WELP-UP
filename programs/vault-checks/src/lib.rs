@@ -484,18 +484,27 @@ mod tests {
             authorize_daily_spend(5_000_000, policy(6_000_000)),
             Err(CheckError::DailyCapExceeded)
         );
-        assert_eq!(authorize_daily_spend(5_000_000, policy(0)), Ok((5_000_000, 10)));
+        assert_eq!(
+            authorize_daily_spend(5_000_000, policy(0)),
+            Ok((5_000_000, 10))
+        );
         assert_eq!(
             authorize_daily_spend(
                 1_000_000,
-                DailySpendPolicy { enabled: false, ..policy(0) }
+                DailySpendPolicy {
+                    enabled: false,
+                    ..policy(0)
+                }
             ),
             Err(CheckError::UnauthorizedExecutor)
         );
         assert_eq!(
             authorize_daily_spend(
                 1_000_000,
-                DailySpendPolicy { executor_matches: false, ..policy(0) }
+                DailySpendPolicy {
+                    executor_matches: false,
+                    ..policy(0)
+                }
             ),
             Err(CheckError::UnauthorizedExecutor)
         );
