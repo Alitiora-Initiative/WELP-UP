@@ -8,7 +8,9 @@
 
 use anchor_lang::prelude::*;
 use pyth_solana_receiver_sdk::price_update::PriceUpdateV2;
-use welp_vault_checks::{check_initialize, check_withdraw, compute_redeem, compute_shares, CheckError};
+use welp_vault_checks::{
+    check_initialize, check_withdraw, compute_redeem, compute_shares, CheckError,
+};
 
 declare_id!("US517G5965aydkZ46HS38QLi7UQiSojurfbQfKCELFx"); // undeployed placeholder; replace after `anchor keys list`
 
@@ -178,25 +180,32 @@ pub mod welp_vault {
             amount,
             ctx.accounts.vault.available_lamports,
             ctx.accounts.vault.total_shares,
-        ).map_err(map_err)?;
+        )
+        .map_err(map_err)?;
 
         let transfer_accounts = anchor_lang::system_program::Transfer {
             from: ctx.accounts.owner.to_account_info(),
             to: ctx.accounts.vault.to_account_info(),
         };
         anchor_lang::system_program::transfer(
-            CpiContext::new(ctx.accounts.system_program.to_account_info(), transfer_accounts),
+            CpiContext::new(
+                ctx.accounts.system_program.to_account_info(),
+                transfer_accounts,
+            ),
             amount,
         )?;
 
         let vault = &mut ctx.accounts.vault;
-        vault.available_lamports = vault.available_lamports
+        vault.available_lamports = vault
+            .available_lamports
             .checked_add(amount)
             .ok_or(VaultError::Overflow)?;
-        vault.total_deposited_lamports = vault.total_deposited_lamports
+        vault.total_deposited_lamports = vault
+            .total_deposited_lamports
             .checked_add(amount)
             .ok_or(VaultError::Overflow)?;
-        vault.total_shares = vault.total_shares
+        vault.total_shares = vault
+            .total_shares
             .checked_add(shares)
             .ok_or(VaultError::Overflow)?;
         vault.state = VaultState::Active;
