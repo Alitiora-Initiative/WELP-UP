@@ -131,3 +131,10 @@ test('user slots require an enabled bot registry and snapshot the approved strat
   assert.match(account, /pub max_position_bps: u16/);
   assert.match(account, /pub max_slippage_bps: u16/);
 });
+
+test('legacy initializer cannot imply that non-persisted caps are enforced', () => {
+  const body = instruction('pub fn initialize(', '/// Legacy executor entry point is disabled');
+  assert.match(body, /LegacyInitializeDisabled/);
+  assert.doesNotMatch(body, /total_cap_lamports/);
+  assert.doesNotMatch(body, /per_position_max_lamports/);
+});
