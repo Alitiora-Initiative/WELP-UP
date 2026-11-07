@@ -6,9 +6,7 @@ use solana_sdk::{
     system_instruction, system_program,
     transaction::Transaction,
 };
-use welp_vault::{
-    accounts, instruction, BotRegistry, ExecutorPolicy, UserSlot, Vault,
-};
+use welp_vault::{accounts, instruction, BotRegistry, ExecutorPolicy, UserSlot, Vault};
 
 async fn send_ix(
     context: &mut ProgramTestContext,
@@ -21,7 +19,10 @@ async fn send_ix(
         &[&context.payer],
         blockhash,
     );
-    context.banks_client.process_transaction(transaction).await?;
+    context
+        .banks_client
+        .process_transaction(transaction)
+        .await?;
     Ok(())
 }
 
@@ -45,8 +46,10 @@ async fn owner_can_create_fund_redeem_and_revoke_executor_policy() {
     let mut context = start_program().await;
     let owner = context.payer.pubkey();
     let program_id = welp_vault::id();
-    let (vault, _) =
-        solana_sdk::pubkey::Pubkey::find_program_address(&[b"vault-v1", owner.as_ref()], &program_id);
+    let (vault, _) = solana_sdk::pubkey::Pubkey::find_program_address(
+        &[b"vault-v1", owner.as_ref()],
+        &program_id,
+    );
 
     let create_vault = Instruction {
         program_id,
