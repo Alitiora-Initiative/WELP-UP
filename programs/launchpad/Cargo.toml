@@ -1,0 +1,27 @@
+[package]
+name = "welp-launchpad"
+version = "0.1.0"
+description = "WELP launchpad and epoch-locked treasury program; local-test scaffold only"
+edition = "2021"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "welp_launchpad"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+idl-build = ["anchor-lang/idl-build"]
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = [
+  'cfg(feature, values("anchor-debug", "anchor-no-log-cpi-calls", "anchor-program", "custom-heap", "custom-panic"))',
+  'cfg(target_os, values("solana"))',
+] }
+
+[dependencies]
+anchor-lang = { version = "0.30.1" }
