@@ -105,7 +105,7 @@ export default function TermsPage() {
                 Terms &amp; <em>Conditions.</em>
               </h1>
               <p className="welcome-copy">
-                Official terms for the non-custodial WELP UP! Solana interface operated by Joseph Mushelle Nyingeh under Alitiora Initiative.
+                Terms for the WELP UP Solana software and protocol interface.
               </p>
             </div>
             <div className="date-pill">
@@ -115,7 +115,7 @@ export default function TermsPage() {
           <div className="terms-draft-banner">
             <strong>Version 1.0 — published terms.</strong>
             <span>
-              Operator: Joseph Mushelle Nyingeh (Alitiora Initiative), Kenya. Non-custodial wallet interface only. Autonomous vault is not enabled. Independent Kenyan legal advice remains recommended for formal reliance.
+              Users create and control their own safes through wallet-signed on-chain instructions. WELP does not receive wallet secrets. Safes remain unavailable until the mainnet program and security gates are verified.
             </span>
           </div>
           <article className="panel terms-document">
