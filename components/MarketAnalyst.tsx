@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { ArrowUpRight, Bot, LoaderCircle, LockKeyhole, RefreshCw, Sparkles } from 'lucide-react';
+import { Bot, LoaderCircle, LockKeyhole, RefreshCw, Sparkles } from 'lucide-react';
 
 type AgentStatus = {
   configured: boolean;
