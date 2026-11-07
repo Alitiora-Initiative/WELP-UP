@@ -9,8 +9,8 @@
 use anchor_lang::prelude::*;
 use pyth_solana_receiver_sdk::price_update::PriceUpdateV2;
 use welp_vault_checks::{
-    check_initialize, check_withdraw, compute_redeem, compute_shares,
-    CheckError, MIN_POSITION_LAMPORTS,
+    check_initialize, check_withdraw, compute_redeem, compute_shares, CheckError,
+    MIN_POSITION_LAMPORTS,
 };
 
 declare_id!("US517G5965aydkZ46HS38QLi7UQiSojurfbQfKCELFx"); // undeployed placeholder; replace after `anchor keys list`
@@ -375,7 +375,10 @@ pub mod welp_vault {
         let vault_key = ctx.accounts.vault.key();
         let available = ctx.accounts.vault.available_lamports;
 
-        require!(executor != Pubkey::default() && executor != owner, VaultError::InvalidExecutor);
+        require!(
+            executor != Pubkey::default() && executor != owner,
+            VaultError::InvalidExecutor
+        );
         require!(
             ctx.accounts.vault.state == VaultState::Active
                 || ctx.accounts.vault.state == VaultState::Paused,
