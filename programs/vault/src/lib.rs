@@ -165,6 +165,13 @@ pub mod welp_vault {
             );
         }
 
+        // The share supply and accounted assets must be zero together.
+        // Reject corrupted/inconsistent state rather than minting at a false price.
+        require!(
+            (ctx.accounts.vault.available_lamports == 0) == (ctx.accounts.vault.total_shares == 0),
+            VaultError::AccountingInvariant
+        );
+
         // Price new shares against the currently accounted assets, not the
         // lifetime deposit counter. This remains correct after withdrawals.
         let shares = compute_shares(
@@ -852,6 +859,8 @@ pub enum VaultError {
     ZeroAmount,
     #[msg("Vault funding is disabled pending security review")]
     FundingDisabled,
+    #[msg("Vault share supply and accounted assets are inconsistent")]
+    AccountingInvariant,
     #[msg("Automated trading and position settlement are disabled pending security review")]
     TradingDisabled,
     #[msg("Fee accrual, claims and collection are disabled pending security review")]
