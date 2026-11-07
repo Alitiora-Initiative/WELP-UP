@@ -68,11 +68,11 @@ No live bot performance, ROI, TVL, active-agent count, or copier count may be sh
 
 ## Fees and treasury
 
-**Current fee policy (not collected):** WELP's target protocol fee is 0.50% (50 bps) of gross input for each WELP-controlled swap. The fee is split 60% to the published developer/operator receiving address and 40% to the WELP protocol treasury. There are no additional fixed USDC trade, transfer or launch-creation charges, and the creator-configurable 0–3% fee model has been removed.
+**Current fee policy (not collected):** WELP's target protocol fee is 0.50% (50 bps) of gross input for each WELP-controlled swap. 100% is credited to treasury at collection; after a 14-day epoch, 60% of eligible new inflows is released to the published developer/operator receiving address and 40% is added to the protected reserve. The split is applied once, not twice. There are no additional fixed USDC trade, transfer or launch-creation charges, and the creator-configurable 0–3% fee model has been removed.
 
 The canonical server policy is in lib/server/fee-policy.ts. The TypeScript and Rust helpers perform integer fee calculations only; they do not collect funds. The launchpad crate is not deployed to mainnet, has no production deployment keypair, and does not implement a buy/sell instruction or a generic SPL input-token fee vault. The Jupiter order/execute route cannot currently append the on-chain fee legs, so both routes remain fail-closed.
 
-Before enabling collection, implement and verify the actual mainnet swap instruction, atomically transfer the fee shares, derive each recipient token account from the real input mint, add replay protection and event receipts, run SBF-backed adversarial tests, verify the deployed bytecode/IDL/upgrade authority, and complete an independent Solana/Anchor security review. Do not treat a frontend build or fee calculation test as proof of collection.
+Before enabling collection, implement and verify the actual mainnet swap instruction, atomically credit 100% of the fee to a treasury vault for the exact input mint, and wire its 14-day epoch release. Add replay protection and event receipts, run SBF-backed adversarial tests, verify the deployed bytecode/IDL/upgrade authority, and complete an independent Solana/Anchor security review. The current SOL-only vault cannot collect arbitrary SPL-token input fees. Do not treat a frontend build or fee calculation test as proof of collection.
 
 ## Production operations
 
