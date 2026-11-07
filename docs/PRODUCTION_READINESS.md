@@ -68,7 +68,7 @@ No live bot performance, ROI, TVL, active-agent count, or copier count may be sh
 - Creator performance share: separately configurable from **0–30% of realized positive net profit**, only after trusted on-chain accounting and settlement exist.
 - The setup fee and creator share are separate; prevent double charging.
 - The payout address in the planning specification (`EDZjEbRAtqyC8z6ta6PYHX161Xynt13tWpd7orKERkbz`) is an **unverified candidate**, not an approved recipient or on-chain constant. Validate it and confirm configuration before use.
-- Fee collection, treasury routing, and creator payouts are **disabled**. No fee may be collected until the USDC mint/denomination, conversion/rounding, recipient, treasury PDA, atomic settlement, receipts, reconciliation, duplicate prevention, and refund behavior are reviewed and tested.
+- Fee collection, treasury routing, and creator payouts are **disabled**. No fee may be collected until the Pyth SOL/USD feed ID, owner, freshness and confidence checks, SOL conversion and rounding, recipient, treasury PDA, atomic settlement, receipts, reconciliation, duplicate prevention, and refund behavior are reviewed and tested.
 - Do not implement a per-trade, per-deposit, or per-withdrawal charge unless the product specification is explicitly revised and approved. Existing documents previously described a conflicting fee model; this section supersedes that obsolete wording.
 
 ## Production operations
