@@ -12,16 +12,16 @@
 4. The server sends the question and snapshot to the OpenAI Responses API with `store: false`, no tools, and instructions to treat market fields as untrusted data.
 5. The server returns text plus the model and market timestamp. No conversation or model response is persisted by WELP.
 
-The API key is read only from `OPENAI_API_KEY` on the server. The model is selected by `WELP_AI_MODEL` and defaults to `gpt-5.5`. The key must never use a `NEXT_PUBLIC_` prefix or be included in browser code.
+The API key is read only from `OPENAI_API_KEY` on the server. The model is selected explicitly by `WELP_AI_MODEL`; no default model is assumed because model access varies by API project. The key must never use a `NEXT_PUBLIC_` prefix or be included in browser code.
 
 ## Vercel configuration
 
-Add the following in the Vercel project’s Environment Variables, scoped to Preview first:
+Add both variables in the Vercel project’s Environment Variables, scoped to Preview first:
 
 | Variable | Required | Purpose |
 |---|---:|---|
 | `OPENAI_API_KEY` | Yes | Server-only API credential |
-| `WELP_AI_MODEL` | No | Model identifier; defaults to `gpt-5.5` |
+| `WELP_AI_MODEL` | Yes | A model identifier enabled for your API project |
 
 Redeploy the Preview environment, then open `/agent`. The page calls `GET /api/agent` to report whether the key exists. It never returns the key. Test a simple market-summary question and confirm the answer includes the current feed timestamp. Promote to Production only after reviewing costs, privacy, and abuse controls.
 
