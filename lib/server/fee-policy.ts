@@ -1,42 +1,44 @@
 import 'server-only';
 
 /**
- * Canonical WELP fee policy.
+ * Canonical WELP mainnet swap-fee policy.
  *
- * Keep this module server-only. The on-chain program must independently
- * enforce the same values; this module is for backend transaction builders
- * and validation only. It is not proof that fees are currently collected.
+ * The fee is 0.50% of gross input on each WELP-controlled swap.
+ * 60% routes to the published developer recipient and 40% to the treasury.
+ * This server module is a policy reference, not on-chain enforcement.
  */
 export const WELP_FEE_POLICY = Object.freeze({
   network: 'solana-mainnet-beta',
-  stablecoin: Object.freeze({
-    symbol: 'USDC',
-    mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-    decimals: 6,
-  }),
+  swapFeeBps: 50,
+  basisPointDenominator: 10_000,
   developerRecipient: 'ETuGxX6Znxr9q59THJtcYDJKt6RvCfN7wp79tRnbG1xG',
   developerShareBps: 6_000,
   treasuryShareBps: 4_000,
-  fees: Object.freeze({
-    tradeOrTransferUsdcBaseUnits: 100_000n,
-    launchCreationUsdcBaseUnits: 500_000n,
-  }),
   treasuryPdaSeed: 'treasury-v1',
   collectionEnabled: false,
+  collectionDisabledReason:
+    'The mainnet launchpad program has not been deployed and verified with atomic 0.50% swap-fee enforcement.',
 });
 
-export type WelpFeeKind = 'trade-or-transfer' | 'launch-creation';
-
-export function splitWelpFee(amount: bigint) {
-  if (amount <= 0n) throw new Error('Fee amount must be positive.');
-  const developer = (amount * BigInt(WELP_FEE_POLICY.developerShareBps)) / 10_000n;
-  const treasury = amount - developer;
-  return { developer, treasury };
-}
-
-export function getWelpFee(kind: WelpFeeKind) {
-  const amount = kind === 'launch-creation'
-    ? WELP_FEE_POLICY.fees.launchCreationUsdcBaseUnits
-    : WELP_FEE_POLICY.fees.tradeOrTransferUsdcBaseUnits;
-  return { amount, ...splitWelpFee(amount), mint: WELP_FEE_POLICY.stablecoin.mint };
+export function splitProtocolSwapFee(grossInputBaseUnits: bigint) {
+  if (grossInputBaseUnits <= 0n) {
+    throw new RangeError('Gross swap input must be positive.');
+  }
+  const totalFee =
+    (grossInputBaseUnits * BigInt(WELP_FEE_POLICY.swapFeeBps)) /
+    BigInt(WELP_FEE_POLICY.basisPointDenominator);
+  if (totalFee <= 0n) {
+    throw new RangeError('Gross input is too small to express the protocol fee.');
+  }
+  const developer =
+    (totalFee * BigInt(WELP_FEE_POLICY.developerShareBps)) /
+    BigInt(WELP_FEE_POLICY.basisPointDenominator);
+  const treasury = totalFee - developer;
+  return {
+    grossInputBaseUnits,
+    totalFeeBaseUnits: totalFee,
+    developerFeeBaseUnits: developer,
+    treasuryFeeBaseUnits: treasury,
+    netSwapInputBaseUnits: grossInputBaseUnits - totalFee,
+  };
 }
