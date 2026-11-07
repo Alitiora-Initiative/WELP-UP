@@ -18,7 +18,7 @@ The existing policy in [FEES_AND_TREASURY.md](./FEES_AND_TREASURY.md) remains se
 | Supported transfer | $0.10 USDC | $0.06 | $0.04 |
 | Launch creation | $0.50 USDC | $0.30 | $0.20 |
 
-That fee policy is not currently collected on-chain. It must not silently be applied on top of another fee for the same operation without explicit user disclosure and an agreed policy revision.
+The supported-transfer row now has a local Anchor instruction on the current feature branch. Trade and launch-creation fee collection remain unimplemented until corresponding swap/mint instructions exist. It must not silently be applied on top of another fee for the same operation without explicit user disclosure and an agreed policy revision.
 
 ### 1.2 Creator-configured trading fee
 
@@ -196,4 +196,4 @@ The 0.02% initial buy must be an explicit, disclosed, creator-signed purchase in
 
 ## Current implementation boundary
 
-The local Anchor crate implements the treasury state account, initialization instruction, two-week disbursement instruction and tested fee/split math. It does **not** implement the buy/sell instruction, SOL fee transfers, launch minting, bonding curve, refunds, creator-fee CPI adapter, Raydium CPMM pool initialization, LP burn or a live mainnet service. This boundary is deliberate and must remain visible in the UI and release documentation.
+The local Anchor crate implements the treasury state account, initialization instruction, two-week disbursement instruction, tested creator-fee math and a fixed USDC fee instruction for actual WELP-supported SPL transfers. It does **not** implement the buy/sell instruction, SOL creator-fee transfers, launch minting, bonding curve, refunds, creator-fee CPI adapter, Raydium CPMM pool initialization, LP burn or a live mainnet service. The transfer fee instruction is not deployed and must not be represented as active on Mainnet. This boundary is deliberate and must remain visible in the UI and release documentation.
