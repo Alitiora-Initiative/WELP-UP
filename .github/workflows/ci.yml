@@ -69,7 +69,7 @@ jobs:
         run: npm audit --audit-level=moderate
 
   rust-checks:
-    name: Rust checks (vault crates)
+    name: Rust checks (Anchor crates)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -104,3 +104,13 @@ jobs:
         run: cargo clippy --manifest-path programs/vault/Cargo.toml -- -D warnings
       - name: Unit tests — vault-checks
         run: cargo test --manifest-path programs/vault-checks/Cargo.toml
+      - name: Check formatting — launchpad treasury
+        run: cargo fmt --check --manifest-path programs/launchpad/Cargo.toml
+      - name: Clippy — launchpad treasury
+        run: cargo clippy --manifest-path programs/launchpad/Cargo.toml -- -D warnings
+      - name: Unit tests — launchpad treasury core
+        run: cargo test --lib --manifest-path programs/launchpad/Cargo.toml
+      - name: Format host-only Solana integration tests
+        run: cargo fmt --check --manifest-path programs/program-tests/Cargo.toml
+      - name: Compile host-only Solana integration tests
+        run: cargo check --manifest-path programs/program-tests/Cargo.toml --tests

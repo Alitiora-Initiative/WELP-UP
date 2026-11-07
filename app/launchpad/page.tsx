@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ArrowUpRight, CheckCircle2, CircleDashed, LockKeyhole } from 'lucide-react';
 import { LaunchpadCreatorStudio } from '@/components/LaunchpadCreatorStudio';
+import { TreasuryEpochCountdown } from '@/components/TreasuryEpochCountdown';
 import './launchpad.css';
 
 export const dynamic = 'force-dynamic';
@@ -8,7 +9,7 @@ export const dynamic = 'force-dynamic';
 const launchStages = [
   {
     label: 'Custom token mint',
-    detail: 'Creator-selected whole supply and 0, 6 or 9 decimals are fixed when the mint is initialized.',
+    detail: 'Creator-selected whole supply and 0–9 decimals are fixed when the mint is initialized.',
     state: 'Program pending',
   },
   {
@@ -66,6 +67,8 @@ export default function LaunchpadPage() {
       </section>
 
       <LaunchpadCreatorStudio />
+
+      <TreasuryEpochCountdown lastDistributionTimestamp={null} />
 
       <section className="lp-discovery-v2 glass-panel" aria-labelledby="lp-stages-title">
         <div className="lp-section-head-v2">

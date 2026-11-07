@@ -5,6 +5,7 @@ on:
     paths:
       - 'programs/**'
       - 'Anchor.toml'
+      - 'scripts/pin-sbf-compatible-locks.sh'
       - '.github/workflows/anchor-sbf.yml'
   push:
     branches:
@@ -36,8 +37,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential pkg-config libudev-dev
 
-      - name: Install Rust host toolchain (Cargo 1.85+ for edition 2024 manifests)
-        uses: dtolnay/rust-toolchain@1.85.0
+      - name: Install stable Rust host toolchain
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Verify host Rust and Cargo
         run: |
@@ -51,7 +52,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cache/solana
-          key: ${{ runner.os }}-anchor-0.30.1-solana-1.18.26-${{ hashFiles('programs/vault/Cargo.toml', 'programs/vault-checks/Cargo.toml') }}
+          key: ${{ runner.os }}-anchor-0.30.1-solana-1.18.26-${{ hashFiles('programs/vault/Cargo.toml', 'programs/vault-checks/Cargo.toml', 'programs/launchpad/Cargo.toml', 'programs/program-tests/Cargo.toml') }}
           restore-keys: |
             ${{ runner.os }}-anchor-0.30.1-solana-1.18.26-
 
@@ -80,16 +81,18 @@ jobs:
           # Solana 1.18's bundled Cargo cannot parse lockfile v4. Keep the
           # committed program dependency graph, but normalize its format immediately
           # before invoking the SBF toolchain if host metadata upgraded it.
-          for lockfile in programs/vault/Cargo.lock; do
-            sed -i 's/^version = 4$/version = 3/' "$lockfile"
-            grep -qx 'version = 3' "$lockfile"
+          for lockfile in programs/vault/Cargo.lock programs/launchpad/Cargo.lock; do
+            if [[ -f "$lockfile" ]]; then
+              sed -i 's/^version = 4$/version = 3/' "$lockfile"
+              grep -qx 'version = 3' "$lockfile"
+            fi
           done
 
       - name: Refresh Cargo metadata and normalize the SBF lockfile
         run: |
-          # The committed lockfile predates the current ProgramTest dev-dependencies.
-          # Let host Cargo metadata add the missing packages, then downgrade only the
-          # lockfile format so Solana 1.18's bundled Cargo can consume the resolved graph.
+          # Resolve only deployable program dependencies here. ProgramTest lives in
+          # programs/program-tests and must not contaminate either SBF lockfile.
+          # Normalize the program lockfile format for Solana 1.18's bundled Cargo.
           # Anchor invokes cargo metadata before cargo-build-sbf; this wrapper handles
           # that one metadata call and leaves the later SBF invocation locked.
           mkdir -p "$RUNNER_TEMP/cargo-wrapper"
@@ -100,32 +103,58 @@ jobs:
             "$REAL_CARGO" "\$@"
             status=\$?
             if [[ \$status -ne 0 ]]; then exit "\$status"; fi
-            sed -i 's/^version = 4$/version = 3/' programs/vault/Cargo.lock
-            grep -qx 'version = 3' programs/vault/Cargo.lock
+            for lockfile in programs/vault/Cargo.lock programs/launchpad/Cargo.lock; do
+              if [[ -f "\$lockfile" ]]; then
+                sed -i 's/^version = 4$/version = 3/' "\$lockfile"
+                grep -qx 'version = 3' "\$lockfile"
+              fi
+            done
             exit 0
           fi
           exec "$REAL_CARGO" "\$@"
           EOF
           chmod +x "$RUNNER_TEMP/cargo-wrapper/cargo"
-          # Resolve ProgramTest dev-dependencies with host Cargo, then downgrade
-          # the generated lockfile before Solana 1.18 bundled Cargo reads it.
+          # Resolve production program dependency graphs independently.
           "$RUNNER_TEMP/cargo-wrapper/cargo" metadata --manifest-path programs/vault/Cargo.toml --format-version 1 >/dev/null
           sed -i 's/^version = 4$/version = 3/' programs/vault/Cargo.lock
           grep -qx 'version = 3' programs/vault/Cargo.lock
+          "$RUNNER_TEMP/cargo-wrapper/cargo" metadata --manifest-path programs/launchpad/Cargo.toml --format-version 1 >/dev/null
+          sed -i 's/^version = 4$/version = 3/' programs/launchpad/Cargo.lock
+          grep -qx 'version = 3' programs/launchpad/Cargo.lock
           echo "$RUNNER_TEMP/cargo-wrapper" >> "$GITHUB_PATH"
+
+      - name: Pin Solana 1.18-compatible transitive crate versions
+        run: |
+          bash scripts/pin-sbf-compatible-locks.sh \
+            programs/vault/Cargo.toml \
+            programs/launchpad/Cargo.toml
 
       - name: Build Solana BPF/SBF program and IDL
         run: |
-          sed -i 's/^version = 4$/version = 3/' programs/vault/Cargo.lock
-          grep -qx 'version = 3' programs/vault/Cargo.lock
+          for lockfile in programs/vault/Cargo.lock programs/launchpad/Cargo.lock; do
+            sed -i 's/^version = 4$/version = 3/' "$lockfile"
+            grep -qx 'version = 3' "$lockfile"
+          done
           anchor build -- -- --locked
-          grep -qx 'version = 3' programs/vault/Cargo.lock
+          for lockfile in programs/vault/Cargo.lock programs/launchpad/Cargo.lock; do
+            grep -qx 'version = 3' "$lockfile"
+          done
         env:
           # Anchor resolves Cargo through this variable before invoking metadata.
           CARGO: ${{ runner.temp }}/cargo-wrapper/cargo
 
-      - name: Run Solana ProgramTest against the built SBF binary
-        run: cargo test --locked --manifest-path programs/vault/Cargo.toml --test anchor_program_test
+      - name: Run vault ProgramTest against the built SBF binary
+        run: cargo test --manifest-path programs/program-tests/Cargo.toml --test vault_program_test
+        env:
+          BPF_OUT_DIR: ${{ github.workspace }}/target/deploy
+
+      - name: Run launchpad treasury ProgramTest against the built SBF binary
+        run: cargo test --manifest-path programs/program-tests/Cargo.toml --test treasury_program_test
+        env:
+          BPF_OUT_DIR: ${{ github.workspace }}/target/deploy
+
+      - name: Run platform fee collection ProgramTest against the built SBF binary
+        run: cargo test --manifest-path programs/program-tests/Cargo.toml --test fee_collection_program_test
         env:
           BPF_OUT_DIR: ${{ github.workspace }}/target/deploy
 
@@ -133,14 +162,19 @@ jobs:
         run: |
           test -s target/deploy/welp_vault.so
           test -s target/idl/welp_vault.json
+          test -s target/deploy/welp_launchpad.so
+          test -s target/idl/welp_launchpad.json
 
       - name: Upload review artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: welp-vault-anchor-0.30.1-sbf
+          name: welp-vault-and-launchpad-anchor-0.30.1-sbf
           path: |
             target/deploy/welp_vault.so
             target/idl/welp_vault.json
+            target/deploy/welp_launchpad.so
+            target/idl/welp_launchpad.json
             programs/vault/Cargo.lock
+            programs/launchpad/Cargo.lock
           if-no-files-found: error
           retention-days: 7

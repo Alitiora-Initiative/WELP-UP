@@ -7,6 +7,7 @@ skip-lint = false
 
 [programs.localnet]
 welp_vault = "US517G5965aydkZ46HS38QLi7UQiSojurfbQfKCELFx"
+welp_launchpad = "BrcdB9sV7z9DvF9rDHG263HUxXgJM3iCQdF36TcxbFEn"
 
 [registry]
 url = "https://api.apr.dev"
@@ -14,7 +15,7 @@ url = "https://api.apr.dev"
 [workspace]
 # Only the deployable Anchor program belongs in Anchor's SBF workspace.
 # vault-checks is a host-side path dependency and must never be built as an SBF program.
-members = ["programs/vault"]
+members = ["programs/vault", "programs/launchpad"]
 
 [provider]
 cluster = "localnet"

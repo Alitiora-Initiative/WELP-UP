@@ -140,24 +140,103 @@ test('legacy initializer cannot imply that non-persisted caps are enforced', () 
 });
 
 
-test('Anchor SBF workspace excludes host-only vault checks crate', () => {
-  const config = readFileSync(new URL('../Anchor.toml', import.meta.url), 'utf8');
-  assert.match(config, /\[workspace\][\s\S]*members\s*=\s*\[\s*"programs\/vault"\s*\]/);
-  assert.doesNotMatch(config, /members\s*=\s*\[\s*"programs\/\*"\s*\]/);
+test('supported WELP transfers collect fixed USDC fees atomically with replay protection', () => {
+  const source = readFileSync(new URL('../programs/launchpad/src/lib.rs', import.meta.url), 'utf8');
+  const handler = source.slice(
+    source.indexOf('pub fn supported_transfer_with_fee('),
+    source.indexOf('/// Permissionless epoch harvest'),
+  );
+  const context = source.slice(
+    source.indexOf('pub struct SupportedTransferWithFee'),
+    source.indexOf('pub struct DisburseTreasuryFunds'),
+  );
+  assert.match(source, /PLATFORM_USDC_MINT: Pubkey = pubkey!/);
+  assert.match(source, /PLATFORM_TRANSFER_FEE_USDC: u64 = 100_000/);
+  assert.match(source, /PLATFORM_DEVELOPER_SHARE_BPS: u128 = 6_000/);
+  assert.match(source, /PLATFORM_TREASURY_SHARE_BPS: u128 = 4_000/);
+  assert.match(handler, /token::transfer_checked/);
+  assert.match(handler, /PLATFORM_TRANSFER_FEE_USDC/);
+  assert.match(handler, /PlatformFeeCollected/);
+  assert.match(context, /FEE_RECEIPT_SEED/);
+  assert.match(context, /associated_token::authority = developer_wallet/);
+  assert.match(context, /associated_token::authority = treasury/);
+  assert.match(context, /address = PLATFORM_USDC_MINT/);
+  assert.match(source, /pub struct FeeReceipt/);
+  assert.match(source, /total_platform_usdc_fees_collected/);
+  const hostTests = readFileSync(new URL('../programs/program-tests/Cargo.toml', import.meta.url), 'utf8');
+  const testSource = readFileSync(new URL('../programs/program-tests/tests/fee_collection_program_test.rs', import.meta.url), 'utf8');
+  assert.match(hostTests, /name = "fee_collection_program_test"/);
+  assert.match(testSource, /duplicate operation receipt must fail/);
+  assert.match(testSource, /developer_after - developer_before, 60_000/);
+  assert.match(testSource, /treasury_after, 40_000/);
 });
 
-test('Anchor SBF build preserves pinned Cargo lockfiles', () => {
+test('Anchor SBF workspace includes both deployable programs and excludes host-only checks', () => {
+  const config = readFileSync(new URL('../Anchor.toml', import.meta.url), 'utf8');
+  assert.match(config, /members\s*=\s*\[\s*"programs\/vault"\s*,\s*"programs\/launchpad"\s*\]/);
+  assert.doesNotMatch(config, /members\s*=\s*\[\s*"programs\/\*"\s*\]/);
+  assert.doesNotMatch(config, /"programs\/vault-checks"/);
+  assert.doesNotMatch(config, /"programs\/program-tests"/);
+});
+
+test('disabled creation-fee instruction does not pull unused Pyth SDK', () => {
+  const manifest = readFileSync(new URL('../programs/vault/Cargo.toml', import.meta.url), 'utf8');
+  const source = readFileSync(new URL('../programs/vault/src/lib.rs', import.meta.url), 'utf8');
+  const contextStart = source.indexOf('pub struct ChargeCreationFee');
+  const contextEnd = source.indexOf('// ── Errors', contextStart);
+  const context = source.slice(contextStart, contextEnd);
+  assert.doesNotMatch(manifest, /pyth-solana-receiver-sdk/);
+  assert.doesNotMatch(source, /pyth_solana_receiver_sdk|PriceUpdateV2/);
+  assert.doesNotMatch(context, /price_update/);
+  const disabledInstruction = source.slice(
+    source.indexOf('pub fn charge_creation_fee('),
+    source.indexOf('}', source.indexOf('pub fn charge_creation_fee(')) + 1,
+  );
+  assert.match(disabledInstruction, /FeeSettlementDisabled/);
+});
+
+test('Anchor SBF build preserves Cargo 1.75-compatible lockfiles', () => {
   const workflow = readFileSync(new URL('../.github/workflows/anchor-sbf.yml', import.meta.url), 'utf8');
+  const compatibilityScript = readFileSync(new URL('../scripts/pin-sbf-compatible-locks.sh', import.meta.url), 'utf8');
+
+  assert.match(compatibilityScript, /pin_if_present "\$manifest" blake3 1\.8\.7 1\.8\.2/);
+  assert.match(compatibilityScript, /pin_if_present "\$manifest" constant_time_eq 0\.4\.2 0\.3\.1/);
+  assert.match(compatibilityScript, /pin_if_present "\$manifest" base64ct 1\.8\.3 1\.7\.3/);
+  assert.match(compatibilityScript, /pin_if_present "\$manifest" indexmap 2\.14\.2 2\.11\.4/);
+  assert.match(compatibilityScript, /package_version_exists/);
+  assert.ok(workflow.includes('bash scripts/pin-sbf-compatible-locks.sh'));
+  assert.doesNotMatch(workflow, /pin-anchor-030-sbf-deps\.sh/);
+
   assert.match(workflow, /anchor build -- -- --locked/);
   assert.match(workflow, /Refresh Cargo metadata and normalize the SBF lockfile/);
   assert.ok(workflow.includes('if [[ "\\${1:-}" == "metadata" ]]; then'));
   assert.ok(workflow.includes('"$REAL_CARGO" "\\$@"'));
   assert.ok(workflow.includes('status=\\$?'));
   assert.ok(workflow.includes('if [[ \\$status -ne 0 ]]; then exit "\\$status"; fi'));
-  assert.match(workflow, /sed -i 's\/\^version = 4\$\/version = 3\/' programs\/vault\/Cargo\.lock/);
-  assert.match(workflow, /cargo test --locked --manifest-path programs\/vault\/Cargo\.toml/);
+  assert.ok(workflow.includes('if [[ -f "\\$lockfile" ]]; then'));
+  assert.ok(workflow.includes('sed -i \'s/^version = 4$/version = 3/\' "\\$lockfile"'));
+  assert.match(workflow, /metadata --manifest-path programs\/launchpad\/Cargo\.toml/);
+  assert.doesNotMatch(workflow, /--features program-test/);
+
+  const ciWorkflow = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+  assert.ok(ciWorkflow.includes('cargo check --manifest-path programs/program-tests/Cargo.toml --tests'));
+  assert.match(workflow, /for lockfile in programs\/vault\/Cargo\.lock programs\/launchpad\/Cargo\.lock/);
+  assert.match(workflow, /test -s target\/deploy\/welp_launchpad\.so/);
+  assert.match(workflow, /test -s target\/idl\/welp_launchpad\.json/);
+  assert.match(workflow, /cargo test --manifest-path programs\/program-tests\/Cargo\.toml --test vault_program_test/);
+  assert.match(workflow, /cargo test --manifest-path programs\/program-tests\/Cargo\.toml --test treasury_program_test/);
+  assert.match(workflow, /cargo test --manifest-path programs\/program-tests\/Cargo\.toml --test fee_collection_program_test/);
+  assert.match(workflow, /uses: dtolnay\/rust-toolchain@stable/);
+
+  const launchpadManifest = readFileSync(new URL('../programs/launchpad/Cargo.toml', import.meta.url), 'utf8');
+  const vaultManifest = readFileSync(new URL('../programs/vault/Cargo.toml', import.meta.url), 'utf8');
+  const hostTestsManifest = readFileSync(new URL('../programs/program-tests/Cargo.toml', import.meta.url), 'utf8');
+  assert.doesNotMatch(launchpadManifest, /solana-program-test|solana-banks-client|\[\[test\]\]/);
+  assert.doesNotMatch(vaultManifest, /solana-program-test|solana-banks-client|\[dev-dependencies\]/);
+  assert.match(hostTestsManifest, /solana-program-test/);
+  assert.match(hostTestsManifest, /welp-vault = \{ path = "\.\.\/vault", features = \["no-entrypoint"\] \}/);
+  assert.match(hostTestsManifest, /welp-launchpad = \{ path = "\.\.\/launchpad", features = \["no-entrypoint"\] \}/);
   assert.match(workflow, /CARGO: \$\{\{ runner\.temp \}\}\/cargo-wrapper\/cargo/);
-  assert.match(workflow, /grep -qx 'version = 3' programs\/vault\/Cargo\.lock/);
-  assert.match(workflow, /for lockfile in programs\/vault\/Cargo\.lock/);
+  assert.match(workflow, /grep -qx 'version = 3' "\$lockfile"/);
   assert.doesNotMatch(workflow, /for lockfile in programs\/vault\/Cargo\.lock programs\/vault-checks/);
 });
