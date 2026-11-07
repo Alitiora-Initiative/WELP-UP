@@ -195,4 +195,11 @@ test('Anchor SBF build preserves pinned Cargo lockfiles', () => {
   assert.match(workflow, /CARGO: \$\{\{ runner\.temp \}\}\/cargo-wrapper\/cargo/);
   assert.match(workflow, /grep -qx 'version = 3' "\$lockfile"/);
   assert.doesNotMatch(workflow, /for lockfile in programs\/vault\/Cargo\.lock programs\/vault-checks/);
+  assert.match(workflow, /Pin Cargo 1\.75-compatible transitive dependencies/);
+  assert.ok(workflow.includes('bash scripts/pin-anchor-030-sbf-deps.sh'));
+  const pinScript = readFileSync(new URL('../scripts/pin-anchor-030-sbf-deps.sh', import.meta.url), 'utf8');
+  assert.match(pinScript, /blake3 1\.8\.7 1\.8\.2/);
+  assert.match(pinScript, /constant_time_eq 0\.4\.2 0\.3\.1/);
+  assert.match(pinScript, /base64ct 1\.8\.3 1\.7\.3/);
+  assert.match(pinScript, /indexmap 2\.14\.2 2\.11\.4/);
 });
