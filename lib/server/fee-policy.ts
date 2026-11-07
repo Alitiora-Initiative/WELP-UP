@@ -4,7 +4,8 @@ import 'server-only';
  * Canonical WELP mainnet swap-fee policy.
  *
  * The fee is 0.50% of gross input on each WELP-controlled swap.
- * 60% routes to the published developer recipient and 40% to the treasury.
+ * The full fee is credited to treasury; after a 14-day epoch, 60% of
+ * eligible new inflows is released to the developer and 40% remains reserved.
  * This server module is a policy reference, not on-chain enforcement.
  */
 export const WELP_FEE_POLICY = Object.freeze({
@@ -12,8 +13,9 @@ export const WELP_FEE_POLICY = Object.freeze({
   swapFeeBps: 50,
   basisPointDenominator: 10_000,
   developerRecipient: 'ETuGxX6Znxr9q59THJtcYDJKt6RvCfN7wp79tRnbG1xG',
-  developerShareBps: 6_000,
-  treasuryShareBps: 4_000,
+  epochDurationSeconds: 1_209_600,
+  epochDeveloperReleaseBps: 6_000,
+  epochPermanentReserveBps: 4_000,
   treasuryPdaSeed: 'treasury-v1',
   collectionEnabled: false,
   collectionDisabledReason:
@@ -30,15 +32,10 @@ export function splitProtocolSwapFee(grossInputBaseUnits: bigint) {
   if (totalFee <= 0n) {
     throw new RangeError('Gross input is too small to express the protocol fee.');
   }
-  const developer =
-    (totalFee * BigInt(WELP_FEE_POLICY.developerShareBps)) /
-    BigInt(WELP_FEE_POLICY.basisPointDenominator);
-  const treasury = totalFee - developer;
   return {
     grossInputBaseUnits,
     totalFeeBaseUnits: totalFee,
-    developerFeeBaseUnits: developer,
-    treasuryFeeBaseUnits: treasury,
+    treasuryCreditBaseUnits: totalFee,
     netSwapInputBaseUnits: grossInputBaseUnits - totalFee,
   };
 }
