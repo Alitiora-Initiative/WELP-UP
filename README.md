@@ -40,7 +40,7 @@ Browser-local records are not a complete on-chain ledger, verified account histo
 
 ## Not enabled — do not represent as live
 
-- Autonomous mainnet bot execution or an AI agent with transaction-signing authority.
+- Autonomous mainnet bot execution or an AI agent with transaction-signing authority. The current read-only analyst is not an execution agent.
 - A production vault that accepts deposits, holds user funds, or executes swaps.
 - Copy trading, follower allocation, public bot settlement, or creator profit-share payouts.
 - Production user accounts, multi-device sync, or a secure hosted API-key manager.
@@ -48,7 +48,7 @@ Browser-local records are not a complete on-chain ledger, verified account histo
 - Production bot-creation fees, treasury routing, or fee distribution.
 - Fiat on-ramps, perpetual futures, tokenized-stock execution, or centralized-exchange trading.
 
-The current Anchor vault program is a scaffold and must be treated as unlaunched until its program ID, deployment, source verification, audit, integrations, and release evidence are confirmed. Never invite users to deposit based on a UI, a source file, a local validator, or a successful frontend build.
+The current Anchor vault program is a scaffold and must be treated as unlaunched until its program ID, deployment, source verification, audit, integrations, and release evidence are confirmed. In the rebuild branch, funding, swap execution, position settlement, and fee instructions are explicitly fail-closed pending the security review. Never invite users to deposit based on a UI, a source file, a local validator, or a successful frontend build.
 
 ## Non-negotiable security and product rules
 
