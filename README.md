@@ -76,7 +76,7 @@ Before enabling any new fund-moving instruction:
 2. Run unit, SBF-backed ProgramTest, adversarial account-composition and invariant tests.
 3. Run dependency and static-analysis tools and remediate findings.
 4. Generate and verify a deployment keypair securely outside chat; never expose its secret key.
-5. Deploy to Devnet first, then verify the program ID, binary, upgrade authority and configuration.
+5. Deploy only to Solana Mainnet after independent review, using a production keypair controlled outside the app. Verify the program ID, binary, upgrade authority and configuration before enabling any transaction path.
 6. Verify fee recipient, treasury PDA, token accounts, fee splits and atomic settlement.
 7. Complete independent Solana/Anchor review before public deposits or automated execution.
 8. Publish transaction-level evidence and accurate status before enabling the UI.
