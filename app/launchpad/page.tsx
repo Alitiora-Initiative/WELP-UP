@@ -31,9 +31,9 @@ export default function LaunchpadPage() {
           <p className="lp-kicker">WELP UP / SOLANA LAUNCHPAD</p>
           <h1>Launch on your terms<span>.</span></h1>
           <p>
-            Create tokens with creator-defined supply and precision, discover
-            launches from verifiable on-chain records, and follow each token
-            through its sale and liquidity-pool graduation.
+            Review token parameters and protocol release gates. Live discovery,
+            launch creation, purchases and graduation require a deployed,
+            verified mainnet launch program and on-chain indexer.
           </p>
         </div>
         <div className="lp-hero-state">
@@ -48,20 +48,20 @@ export default function LaunchpadPage() {
             <p className="lp-kicker">DISCOVERY</p>
             <h2 id="lp-discovery-title">Explore launches</h2>
           </div>
-          <span className="lp-count-v2"><CircleDashed size={13} /> 0 verified launches</span>
+          <span className="lp-count-v2"><CircleDashed size={13} /> Live indexer unavailable</span>
         </div>
         <div className="lp-empty-v2">
           <span className="lp-empty-icon"><CheckCircle2 size={20} /></span>
-          <strong>No verified WELP launches yet</strong>
+          <strong>Live launch discovery is not available</strong>
           <p>
-            The discovery feed is empty until confirmed launch accounts and
-            transactions can be indexed from Solana. No demo tokens, generated
-            prices, synthetic volume or placeholder pool addresses are shown.
+            No mainnet launch indexer is configured for this program. The page
+            cannot currently read verified launch-state accounts, so it does
+            not display sample tokens, estimated prices or fabricated volume.
           </p>
         </div>
         <p className="lp-raw-note">
-          <LockKeyhole size={13} /> A launch listing must be backed by a verified
-          mint, launch-state PDA, token allocation, quote reserve and pool record.
+          <LockKeyhole size={13} /> Listings must be backed by finalized mainnet
+          mint, launch-state, token allocation, quote reserve and pool accounts.
         </p>
       </section>
 
