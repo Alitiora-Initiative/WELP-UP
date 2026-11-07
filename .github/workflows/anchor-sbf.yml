@@ -103,9 +103,9 @@ jobs:
             status=\$?
             if [[ \$status -ne 0 ]]; then exit "\$status"; fi
             for lockfile in programs/vault/Cargo.lock programs/launchpad/Cargo.lock; do
-              if [[ -f "$lockfile" ]]; then
-                sed -i 's/^version = 4$/version = 3/' "$lockfile"
-                grep -qx 'version = 3' "$lockfile"
+              if [[ -f "\$lockfile" ]]; then
+                sed -i 's/^version = 4$/version = 3/' "\$lockfile"
+                grep -qx 'version = 3' "\$lockfile"
               fi
             done
             exit 0
