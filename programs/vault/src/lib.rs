@@ -9,7 +9,7 @@
 use anchor_lang::prelude::*;
 use pyth_solana_receiver_sdk::price_update::PriceUpdateV2;
 use welp_vault_checks::{
-    check_initialize, check_withdraw, compute_redeem, compute_shares, CheckError,
+    check_withdraw, compute_redeem, compute_shares, CheckError,
     MIN_POSITION_LAMPORTS,
 };
 
@@ -545,23 +545,14 @@ pub mod welp_vault {
 
     // ── Legacy compatibility stubs ──────────────────────────────────────
 
-    /// Compatibility: create vault with cap/position params (delegates to create_vault logic).
+    /// Legacy initializer accepted cap values that were never stored in Vault.
+    /// It remains disabled to avoid implying that unenforced limits are active.
     pub fn initialize(
-        ctx: Context<Initialize>,
-        total_cap_lamports: u64,
-        per_position_max_lamports: u64,
+        _ctx: Context<Initialize>,
+        _total_cap_lamports: u64,
+        _per_position_max_lamports: u64,
     ) -> Result<()> {
-        check_initialize(total_cap_lamports, per_position_max_lamports).map_err(map_err)?;
-
-        let vault = &mut ctx.accounts.vault;
-        vault.owner = ctx.accounts.owner.key();
-        vault.total_deposited_lamports = 0;
-        vault.available_lamports = 0;
-        vault.total_shares = 0;
-        vault.state = VaultState::Funded;
-        vault.bump = ctx.bumps.vault;
-        vault.created_at = Clock::get()?.unix_timestamp;
-        Ok(())
+        err!(VaultError::LegacyInitializeDisabled)
     }
 
     /// Legacy executor entry point is disabled; use configure_executor_policy.
@@ -1154,6 +1145,8 @@ pub enum VaultError {
     InvalidSlippage,
     #[msg("Legacy direct-amount withdrawal is disabled; redeem vault shares instead")]
     LegacyWithdrawDisabled,
+    #[msg("Legacy initializer is disabled because its cap parameters were not persisted")]
+    LegacyInitializeDisabled,
     #[msg("Bot registry does not match the requested bot account")]
     InvalidBotRegistry,
     #[msg("Bot is not enabled")]
