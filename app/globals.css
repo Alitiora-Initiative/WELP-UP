@@ -1275,3 +1275,49 @@ h2 { margin: 0; font: 600 17px var(--display); letter-spacing: -.02em; }
 .light .agent-status small, .light .sidebar-note, .light .build-label { color:#5c6c5e; }
 .light .network-chip { background:#eaf2e7; }
 .light .connect-button { color:#10180b!important; }
+
+
+/* WELP UP full-site action language for the legacy workspace shell. */
+.app-shell .topbar {
+  background:rgba(8,12,8,.94);
+  border-bottom:1px solid rgba(185,243,109,.16);
+  backdrop-filter:blur(16px);
+}
+.app-shell :is(.primary-button,.connect-button,.refresh-button,.profile-copy-button,.vault-secondary-button,.studio-create-button,.leaderboard-copy-button,.history-pagination button,.market-pagination button) {
+  border:1px solid #a9e747!important;
+  border-radius:999px!important;
+  background:linear-gradient(180deg,#e1ffa2 0%,#caff6b 48%,#aeea48 100%)!important;
+  color:#14200a!important;
+  font-weight:800!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.88),inset 0 -2px 3px rgba(57,89,14,.16),0 4px 14px rgba(158,220,55,.14)!important;
+  transition:transform .16s ease,filter .16s ease,box-shadow .16s ease;
+}
+.app-shell :is(.primary-button,.connect-button,.refresh-button,.profile-copy-button,.vault-secondary-button,.studio-create-button,.leaderboard-copy-button,.history-pagination button,.market-pagination button):hover:not(:disabled) {
+  background:linear-gradient(180deg,#efffc8,#d8ff8d 52%,#c2f36a)!important;
+  color:#14200a!important; transform:translateY(-1px); filter:saturate(1.08);
+  box-shadow:inset 0 1px 0 #fff,0 7px 19px rgba(158,220,55,.22)!important;
+}
+.app-shell :is(.primary-button,.connect-button,.refresh-button,.profile-copy-button,.vault-secondary-button,.studio-create-button,.leaderboard-copy-button,.history-pagination button,.market-pagination button):disabled {
+  opacity:.48; cursor:not-allowed; filter:saturate(.55);
+}
+.app-shell .direction-tab.selected,.app-shell .select-signal {
+  border:1px solid #a9e747; border-radius:999px;
+  background:linear-gradient(180deg,#e1ffa2,#aeea48); color:#14200a;
+  box-shadow:inset 0 1px 0 #fff,0 4px 12px rgba(158,220,55,.12);
+}
+.app-shell .nav-item.active {
+  border-color:rgba(185,243,109,.34);
+  background:linear-gradient(90deg,rgba(185,243,109,.15),rgba(185,243,109,.045));
+  color:#d5ff8a;
+}
+.app-shell :is(.panel,.stat-card,.safety-panel) {
+  border-color:rgba(185,243,109,.14);
+}
+.app-shell :is(input,select,textarea):focus-visible {
+  border-color:#b9f36d; outline:2px solid rgba(185,243,109,.2); outline-offset:1px;
+}
+@media (max-width:760px) {
+  .app-shell .workspace { min-width:0; }
+  .app-shell .content-grid { grid-template-columns:minmax(0,1fr); }
+  .app-shell .topbar { padding-inline:14px; }
+}
