@@ -14,6 +14,19 @@ This checklist distinguishes working public-data and wallet-approved features fr
 - [ ] Server-side account identity and durable per-user data.
 - [ ] Verified end-to-end transaction reconciliation for every trade and vault event.
 
+## Current branch hardening (source-driven-product-port)
+
+- [x] Added a server-side read-only market analyst route. It consumes the live Jupiter snapshot and requires a server-only OpenAI API key; it has no wallet, transaction, or bot tools.
+- [x] Added bounded snapshot sanitization and response parsing tests for the analyst.
+- [x] Added explicit fail-closed errors to vault funding, swap execution, position settlement, creator-fee accrual/claim, and bot-creation fee collection in the Anchor source.
+- [x] Added source-level regression tests for those disabled instructions.
+- [ ] Run all GitHub CI checks for the branch and resolve any failures.
+- [ ] Run Anchor 0.30.1 SBF build, IDL validation, local-validator transaction tests, and independent security audit. These remain unavailable/unverified in the current CI baseline.
+- [ ] Add a durable shared rate limiter and provider spend controls before enabling the public AI endpoint broadly.
+- [ ] Configure `OPENAI_API_KEY` and `WELP_AI_MODEL` in Vercel Preview and test a real response. No provider credential was available during implementation.
+
+See [AI_AGENT_RUNTIME.md](AI_AGENT_RUNTIME.md) and [VAULT_PROGRAM_SECURITY_REVIEW.md](VAULT_PROGRAM_SECURITY_REVIEW.md). These checkboxes describe code added in this branch, not production deployment or a release approval.
+
 ## Mainnet vault launch gates
 
 - [ ] Final program ID generated from the reviewed source and keypair.
