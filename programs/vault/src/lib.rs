@@ -98,6 +98,8 @@ pub struct VaultStateEvent {
 pub struct SlotCreatedEvent {
     pub owner: Pubkey,
     pub bot_account: Pubkey,
+    pub strategy_hash: [u8; 32],
+    pub registry_version: u32,
     pub timestamp: i64,
 }
 
@@ -329,11 +331,27 @@ pub mod welp_vault {
 
     // ── User slots ─────────────────────────────────────────────────────
 
-    /// Creates a UserSlot PDA for the (owner, bot_account) pair.
+    /// Creates a UserSlot only for an existing, enabled bot registry.
+    /// The owner-signed creation snapshots the exact strategy and risk limits
+    /// they are consenting to; later registry changes cannot silently rewrite it.
     pub fn create_user_slot(ctx: Context<CreateUserSlot>, bot_account: Pubkey) -> Result<()> {
+        let registry = &ctx.accounts.bot_registry;
+        require!(registry.enabled, VaultError::BotDisabled);
+        require!(registry.bot_account == bot_account, VaultError::InvalidBotRegistry);
+        require!(registry.strategy_hash != [0u8; 32], VaultError::InvalidStrategyHash);
+        require!(
+            registry.max_position_bps > 0 && registry.max_position_bps <= 10_000,
+            VaultError::InvalidPositionLimit
+        );
+        require!(registry.max_slippage_bps <= 1_000, VaultError::InvalidSlippage);
+
         let slot = &mut ctx.accounts.user_slot;
         slot.owner = ctx.accounts.owner.key();
         slot.bot_account = bot_account;
+        slot.strategy_hash = registry.strategy_hash;
+        slot.registry_version = registry.version;
+        slot.max_position_bps = registry.max_position_bps;
+        slot.max_slippage_bps = registry.max_slippage_bps;
         slot.principal = 0;
         slot.available = 0;
         slot.open_exposure = 0;
@@ -348,6 +366,8 @@ pub mod welp_vault {
         emit!(SlotCreatedEvent {
             owner: slot.owner,
             bot_account,
+            strategy_hash: slot.strategy_hash,
+            registry_version: slot.registry_version,
             timestamp: Clock::get()?.unix_timestamp,
         });
         Ok(())
@@ -473,6 +493,17 @@ pub mod welp_vault {
     ) -> Result<()> {
         use welp_vault_checks::validate_fee_bps;
         validate_fee_bps(fee_bps as u64).map_err(|_| VaultError::FeeTooHigh)?;
+        require!(strategy_hash != [0u8; 32], VaultError::InvalidStrategyHash);
+        require!(
+            max_position_bps > 0 && max_position_bps <= 10_000,
+            VaultError::InvalidPositionLimit
+        );
+        require!(max_slippage_bps <= 1_000, VaultError::InvalidSlippage);
+        require!(
+            ctx.accounts.bot_account.key() != Pubkey::default()
+                && ctx.accounts.bot_account.key() != ctx.accounts.creator.key(),
+            VaultError::InvalidBotRegistry
+        );
 
         let reg = &mut ctx.accounts.bot_registry;
         reg.creator = ctx.accounts.creator.key();
@@ -615,6 +646,10 @@ impl Vault {
 pub struct UserSlot {
     pub owner: Pubkey,
     pub bot_account: Pubkey,
+    pub strategy_hash: [u8; 32],
+    pub registry_version: u32,
+    pub max_position_bps: u16,
+    pub max_slippage_bps: u16,
     pub principal: u64,
     pub available: u64,
     pub open_exposure: u64,
@@ -628,7 +663,7 @@ pub struct UserSlot {
 }
 
 impl UserSlot {
-    pub const SPACE: usize = 8 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 1 + 8 + 1;
+    pub const SPACE: usize = 8 + 32 + 32 + 32 + 4 + 2 + 2 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 1 + 8 + 1;
 }
 
 /// Per-vault delegated executor policy. No executor key is stored here;
@@ -764,6 +799,13 @@ pub struct CreateUserSlot<'info> {
         bump
     )]
     pub user_slot: Account<'info, UserSlot>,
+    #[account(
+        seeds = [b"bot-registry-v1", bot_registry.creator.as_ref(), bot_account.as_ref()],
+        bump = bot_registry.bump,
+        constraint = bot_registry.bot_account == bot_account @ VaultError::InvalidBotRegistry,
+        constraint = bot_registry.enabled @ VaultError::BotDisabled
+    )]
+    pub bot_registry: Account<'info, BotRegistry>,
     pub system_program: Program<'info, System>,
 }
 
@@ -1103,4 +1145,12 @@ pub enum VaultError {
     InvalidSlippage,
     #[msg("Legacy direct-amount withdrawal is disabled; redeem vault shares instead")]
     LegacyWithdrawDisabled,
+    #[msg("Bot registry does not match the requested bot account")]
+    InvalidBotRegistry,
+    #[msg("Bot is not enabled")]
+    BotDisabled,
+    #[msg("Strategy hash must be non-zero")]
+    InvalidStrategyHash,
+    #[msg("Bot position allocation must be between 1 and 10,000 basis points")]
+    InvalidPositionLimit,
 }
