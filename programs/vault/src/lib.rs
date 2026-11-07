@@ -420,6 +420,382 @@ pub mod welp_vault {
     }
 }
 
+// ── Accounts ──────────────────────────────────────────────────────────────
+
+#[account]
+pub struct GlobalConfig {
+    pub authority: Pubkey,
+    pub treasury_recipient: Pubkey,
+    pub fee_recipient: Pubkey,
+    pub pause_all: bool,
+    pub bump: u8,
+}
+
+impl GlobalConfig {
+    pub const SPACE: usize = 8 + 32 + 32 + 32 + 1 + 1;
+}
+
+#[account]
+pub struct Vault {
+    pub owner: Pubkey,
+    pub total_deposited_lamports: u64,
+    pub available_lamports: u64,
+    pub total_shares: u64,
+    pub state: VaultState,
+    pub bump: u8,
+    pub created_at: i64,
+}
+
+impl Vault {
+    // VaultState enum is 1 byte
+    pub const SPACE: usize = 8 + 32 + 8 + 8 + 8 + 1 + 1 + 8;
+}
+
+#[account]
+pub struct UserSlot {
+    pub owner: Pubkey,
+    pub bot_account: Pubkey,
+    pub principal: u64,
+    pub available: u64,
+    pub open_exposure: u64,
+    pub realized_pnl: i64,
+    pub pending_creator_fee: u64,
+    pub accrued_protocol_fee: u64,
+    pub shares: u64,
+    pub state: SlotState,
+    pub order_nonce: u64,
+    pub bump: u8,
+}
+
+impl UserSlot {
+    pub const SPACE: usize = 8 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 1 + 8 + 1;
+}
+
+#[account]
+pub struct Treasury {
+    pub accumulated_lamports: u64,
+    pub bump: u8,
+}
+
+impl Treasury {
+    pub const SPACE: usize = 8 + 8 + 1;
+}
+
+#[account]
+pub struct BotRegistry {
+    pub creator: Pubkey,
+    pub bot_account: Pubkey,
+    pub strategy_hash: [u8; 32],
+    pub max_position_bps: u16,
+    pub max_slippage_bps: u16,
+    pub fee_bps: u16,
+    pub enabled: bool,
+    pub version: u32,
+    pub bump: u8,
+}
+
+impl BotRegistry {
+    pub const SPACE: usize = 8 + 32 + 32 + 32 + 2 + 2 + 2 + 1 + 4 + 1;
+}
+
+// ── Instruction contexts ──────────────────────────────────────────────────
+
+#[derive(Accounts)]
+pub struct InitializeGlobalConfig<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    #[account(
+        init,
+        payer = authority,
+        space = GlobalConfig::SPACE,
+        seeds = [b"global-config-v1"],
+        bump
+    )]
+    pub global_config: Account<'info, GlobalConfig>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct CreateVault<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+    #[account(
+        init,
+        payer = owner,
+        space = Vault::SPACE,
+        seeds = [b"vault-v1", owner.key().as_ref()],
+        bump
+    )]
+    pub vault: Account<'info, Vault>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct FundVault<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"vault-v1", owner.key().as_ref()],
+        bump = vault.bump,
+        has_one = owner @ VaultError::UnauthorizedOwner
+    )]
+    pub vault: Account<'info, Vault>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct VaultOwnerOnly<'info> {
+    pub owner: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"vault-v1", owner.key().as_ref()],
+        bump = vault.bump,
+        has_one = owner @ VaultError::UnauthorizedOwner
+    )]
+    pub vault: Account<'info, Vault>,
+}
+
+#[derive(Accounts)]
+pub struct WithdrawVault<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"vault-v1", owner.key().as_ref()],
+        bump = vault.bump,
+        has_one = owner @ VaultError::UnauthorizedOwner
+    )]
+    pub vault: Account<'info, Vault>,
+}
+
+#[derive(Accounts)]
+#[instruction(bot_account: Pubkey)]
+pub struct CreateUserSlot<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+    #[account(
+        init,
+        payer = owner,
+        space = UserSlot::SPACE,
+        seeds = [b"user-slot-v1", owner.key().as_ref(), bot_account.as_ref()],
+        bump
+    )]
+    pub user_slot: Account<'info, UserSlot>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct UpdateSlotLimits<'info> {
+    pub owner: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"user-slot-v1", owner.key().as_ref(), user_slot.bot_account.as_ref()],
+        bump = user_slot.bump,
+        has_one = owner @ VaultError::UnauthorizedOwner
+    )]
+    pub user_slot: Account<'info, UserSlot>,
+}
+
+#[derive(Accounts)]
+#[instruction(strategy_hash: [u8;32], max_position_bps: u16, max_slippage_bps: u16, fee_bps: u16)]
+pub struct RegisterBot<'info> {
+    #[account(mut)]
+    pub creator: Signer<'info>,
+    /// CHECK: stored as bot_account in registry
+    pub bot_account: AccountInfo<'info>,
+    #[account(
+        init,
+        payer = creator,
+        space = BotRegistry::SPACE,
+        seeds = [b"bot-registry-v1", creator.key().as_ref(), bot_account.key().as_ref()],
+        bump
+    )]
+    pub bot_registry: Account<'info, BotRegistry>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct SettleCreatorFee<'info> {
+    pub authority: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"user-slot-v1", user_slot.owner.as_ref(), user_slot.bot_account.as_ref()],
+        bump = user_slot.bump
+    )]
+    pub user_slot: Account<'info, UserSlot>,
+    #[account(
+        seeds = [b"bot-registry-v1", bot_registry.creator.as_ref(), user_slot.bot_account.as_ref()],
+        bump = bot_registry.bump
+    )]
+    pub bot_registry: Account<'info, BotRegistry>,
+}
+
+#[derive(Accounts)]
+pub struct ClaimCreatorFee<'info> {
+    #[account(mut)]
+    pub creator: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"user-slot-v1", user_slot.owner.as_ref(), user_slot.bot_account.as_ref()],
+        bump = user_slot.bump
+    )]
+    pub user_slot: Account<'info, UserSlot>,
+    #[account(
+        mut,
+        seeds = [b"vault-v1", vault.owner.as_ref()],
+        bump = vault.bump,
+        has_one = owner @ VaultError::UnauthorizedOwner
+    )]
+    pub vault: Account<'info, Vault>,
+    /// CHECK: vault owner
+    pub owner: AccountInfo<'info>,
+    #[account(
+        seeds = [b"bot-registry-v1", creator.key().as_ref(), user_slot.bot_account.as_ref()],
+        bump = bot_registry.bump,
+        has_one = creator @ VaultError::UnauthorizedOwner
+    )]
+    pub bot_registry: Account<'info, BotRegistry>,
+}
+
+// ── Legacy compatibility contexts ─────────────────────────────────────────
+
+#[derive(Accounts)]
+pub struct Initialize<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+    #[account(
+        init,
+        payer = owner,
+        space = Vault::SPACE,
+        seeds = [b"vault-v1", owner.key().as_ref()],
+        bump
+    )]
+    pub vault: Account<'info, Vault>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct SetExecutor<'info> {
+    pub owner: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"vault-v1", owner.key().as_ref()],
+        bump = vault.bump,
+        has_one = owner @ VaultError::UnauthorizedOwner
+    )]
+    pub vault: Account<'info, Vault>,
+}
+
+#[derive(Accounts)]
+pub struct RevokeExecutor<'info> {
+    pub owner: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"vault-v1", owner.key().as_ref()],
+        bump = vault.bump,
+        has_one = owner @ VaultError::UnauthorizedOwner
+    )]
+    pub vault: Account<'info, Vault>,
+}
+
+#[derive(Accounts)]
+pub struct LegacyOwnerOnly<'info> {
+    pub owner: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"vault-v1", owner.key().as_ref()],
+        bump = vault.bump,
+        has_one = owner @ VaultError::UnauthorizedOwner
+    )]
+    pub vault: Account<'info, Vault>,
+}
+
+#[derive(Accounts)]
+pub struct ExecuteSwap<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"global-config-v1"],
+        bump = global_config.bump
+    )]
+    pub global_config: Account<'info, GlobalConfig>,
+    #[account(
+        mut,
+        seeds = [b"vault-v1", owner.key().as_ref()],
+        bump = vault.bump,
+        has_one = owner @ VaultError::UnauthorizedOwner
+    )]
+    pub vault: Account<'info, Vault>,
+    #[account(
+        mut,
+        seeds = [b"user-slot-v1", owner.key().as_ref(), user_slot.bot_account.as_ref()],
+        bump = user_slot.bump,
+        has_one = owner @ VaultError::UnauthorizedOwner
+    )]
+    pub user_slot: Account<'info, UserSlot>,
+    #[account(mut)]
+    pub source_token_account: Account<'info, anchor_spl::token::TokenAccount>,
+    #[account(mut)]
+    pub destination_token_account: Account<'info, anchor_spl::token::TokenAccount>,
+    pub input_mint: Account<'info, anchor_spl::token::Mint>,
+    pub output_mint: Account<'info, anchor_spl::token::Mint>,
+    /// CHECK: validated by address constraint
+    #[account(address = JUPITER_V6_ID @ VaultError::InvalidJupiterProgram)]
+    pub jupiter_program: AccountInfo<'info>,
+    pub token_program: Program<'info, anchor_spl::token::Token>,
+    pub associated_token_program: Program<'info, anchor_spl::associated_token::AssociatedToken>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct SettleExit<'info> {
+    pub authority: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"vault-v1", vault.owner.as_ref()],
+        bump = vault.bump
+    )]
+    pub vault: Account<'info, Vault>,
+}
+
+#[derive(Accounts)]
+pub struct LegacyWithdraw<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"vault-v1", owner.key().as_ref()],
+        bump = vault.bump,
+        has_one = owner @ VaultError::UnauthorizedOwner
+    )]
+    pub vault: Account<'info, Vault>,
+}
+
+#[derive(Accounts)]
+pub struct ChargeCreationFee<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    pub global_config: Account<'info, GlobalConfig>,
+    /// CHECK: validated as fee_recipient from global_config
+    #[account(
+        mut,
+        constraint = fee_recipient_account.key() == global_config.fee_recipient @ VaultError::UnauthorizedOwner
+    )]
+    pub fee_recipient_account: AccountInfo<'info>,
+    #[account(
+        init_if_needed,
+        payer = payer,
+        space = Treasury::SPACE,
+        seeds = [b"website-treasury"],
+        bump
+    )]
+    pub treasury: Account<'info, Treasury>,
+    pub price_update: Account<'info, PriceUpdateV2>,
+    pub system_program: Program<'info, System>,
+}
+
 // ── Errors ────────────────────────────────────────────────────────────────
 
 #[error_code]
