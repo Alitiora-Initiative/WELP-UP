@@ -30,7 +30,3 @@ solana-program = "1.18.26"
 welp-vault-checks = { path = "../vault-checks" }
 pyth-solana-receiver-sdk = "0.4.0"
 
-[dev-dependencies]
-solana-program-test = "1.18.26"
-solana-sdk = "1.18.26"
-tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
