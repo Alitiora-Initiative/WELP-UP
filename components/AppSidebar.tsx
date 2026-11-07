@@ -1,9 +1,9 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { Activity, ArrowDownUp, Bot, BookOpen, FileText, Home, LayoutDashboard, LineChart, LockKeyhole, Settings, Shield, ShieldCheck, Trophy, UserRound, Vault } from 'lucide-react';
+import { Activity, ArrowDownUp, Bot, BookOpen, Coins, FileText, Home, LayoutDashboard, LineChart, LockKeyhole, Settings, Shield, ShieldCheck, Trophy, UserRound, Vault } from 'lucide-react';
 
 type AppSidebarProps = {
-  active: 'home' | 'console' | 'signals' | 'autonomous' | 'swap' | 'vault' | 'safety' | 'profile' | 'activity' | 'terms' | 'privacy' | 'settings' | 'leaderboard';
+  active: 'home' | 'console' | 'signals' | 'autonomous' | 'launchpad' | 'swap' | 'vault' | 'safety' | 'profile' | 'activity' | 'terms' | 'privacy' | 'settings' | 'leaderboard';
   signalCount?: number | string;
   status?: string;
   network?: 'mainnet';
@@ -22,6 +22,7 @@ export function AppSidebar({ active, signalCount = '—', status = 'Ready when w
         <Link className={`nav-item${active === 'console' ? ' active' : ''}`} href="/dashboard" aria-current={active === 'console' ? 'page' : undefined}><LayoutDashboard size={17} /> Overview</Link>
         <Link className={`nav-item${active === 'signals' ? ' active' : ''}`} href="/signals" aria-current={active === 'signals' ? 'page' : undefined}><Activity size={17} /> Live signals <span className="nav-count">{signalCount || '—'}</span></Link>
         <Link className={`nav-item${active === 'autonomous' ? ' active' : ''}`} href="/autonomous" aria-current={active === 'autonomous' ? 'page' : undefined}><Bot size={17} /> Agent status</Link>
+        <Link className={`nav-item${active === 'launchpad' ? ' active' : ''}`} href="/launchpad" aria-current={active === 'launchpad' ? 'page' : undefined}><Coins size={17} /> Launchpad</Link>
         <Link className={`nav-item${active === 'leaderboard' ? ' active' : ''}`} href="/leaderboard" aria-current={active === 'leaderboard' ? 'page' : undefined}><Trophy size={17} /> Leaderboard</Link>
         <Link className={`nav-item${active === 'vault' ? ' active' : ''}`} href="/vault" aria-current={active === 'vault' ? 'page' : undefined}><Vault size={17} /> Vault status</Link>
         <Link className={`nav-item${active === 'swap' ? ' active' : ''}`} href="/swap" aria-current={active === 'swap' ? 'page' : undefined}><ArrowDownUp size={17} /> Swap</Link>

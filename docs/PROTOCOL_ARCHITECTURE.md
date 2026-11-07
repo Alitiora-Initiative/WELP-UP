@@ -32,7 +32,7 @@ Proposed instruction lifecycle:
 Fee design:
 - Preferred initial denomination: 0.50 USDC, paid in the same on-chain launch transaction. This avoids a USD/SOL oracle dependency for the fee itself.
 - Existing fee routing preference: 60% developer/operator and 40% platform treasury. For a 0.50 USDC launch fee, that is 0.30 USDC and 0.20 USDC.
-- Developer/operator wallet previously specified: `6uyKhdb2iT8kWhk6SKyJjudWthYLESrVj3G7WHHydoEQ`.
+- Developer/operator fee wallet: `ETuGxX6Znxr9q59THJtcYDJKt6RvCfN7wp79tRnbG1xG`.
 - Platform treasury address has not been supplied. Do not invent one, and do not enable fee collection or claim a split is live until the treasury is configured and reviewed.
 - The existing 0.10 USD per-trade/deposit/withdrawal fee policy is separate from this proposed 0.50 USD launch fee. Do not silently change or combine the fee schedules.
 
