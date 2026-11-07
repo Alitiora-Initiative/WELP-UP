@@ -202,6 +202,7 @@ test('Anchor SBF build preserves Cargo 1.75-compatible lockfiles', () => {
   assert.match(compatibilityScript, /pin_if_present "\$manifest" blake3 1\.8\.7 1\.8\.2/);
   assert.match(compatibilityScript, /pin_if_present "\$manifest" constant_time_eq 0\.4\.2 0\.3\.1/);
   assert.match(compatibilityScript, /pin_if_present "\$manifest" base64ct 1\.8\.3 1\.7\.3/);
+  assert.match(compatibilityScript, /pin_if_present "\$manifest" zeroize_derive 1\.5\.0 1\.4\.2/);
   assert.match(compatibilityScript, /pin_if_present "\$manifest" indexmap 2\.14\.2 2\.11\.4/);
   assert.match(compatibilityScript, /package_version_exists/);
   assert.ok(workflow.includes('bash scripts/pin-sbf-compatible-locks.sh'));
