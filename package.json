@@ -17,7 +17,8 @@
     "test:program-gates": "node --experimental-strip-types --test tests/program-gates.test.mjs",
     "test:market-scoring": "node --experimental-strip-types --test tests/market-scoring.test.mjs",
     "test:fees": "node --experimental-strip-types --test tests/fee-policy.test.mjs",
-    "test:vercel-deploy-gate": "node --experimental-strip-types --test tests/vercel-ignore-build.test.mjs"
+    "test:vercel-deploy-gate": "node --experimental-strip-types --test tests/vercel-ignore-build.test.mjs",
+    "test:launchpad-config": "node --experimental-strip-types --test tests/launchpad-config.test.mjs"
   },
   "dependencies": {
     "@solana/kit": "8.5.0",

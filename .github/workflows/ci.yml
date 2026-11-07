@@ -58,6 +58,7 @@ jobs:
       - run: npm run test:agent
       - run: npm run test:program-gates
       - run: npm run test:market-scoring
+      - run: npm run test:launchpad-config
       - run: npm run test:vercel-deploy-gate
       - run: npm run build
       - name: Report dependency audit findings

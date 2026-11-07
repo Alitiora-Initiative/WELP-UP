@@ -1,106 +1,184 @@
-# Next-phase implementation backlog: Launchpad and platform hardening
+# Launchpad implementation backlog — custom supply, bonding curve and security
 
-**Status: planned only.** This document is the implementation checklist for the next launchpad milestone. The current Launchpad route is a locked discovery/status page; no launch program, purchase flow, graduation CPI, or launch fee settlement is being represented as live.
+**Status: design + implementation backlog. Not deployed.** The launch program, purchases, refunds, Raydium graduation CPI, LP burning and launch fee settlement must remain disabled until their release gates pass.
 
-This work is separate from the existing vault and trading work. Do not activate unattended trading, enable vault deposits, deploy a new program to Mainnet-Beta, or change unrelated trade-size policy while completing this backlog.
+This backlog replaces the earlier incorrect fixed-supply wording. **200,000,000 is an example creator choice, not a global supply limit.**
 
-## 1. Launchpad product and UI
+## 0.1 Progress in the custom-supply implementation branch
 
-- [ ] Upgrade the existing `app/launchpad/page.tsx` route in the current Next.js App Router; do not create a parallel `src/pages` application.
-- [ ] Build a responsive creator studio and launch discovery view with clear launch states: Active, Graduated, and Refundable.
-- [ ] Show verified mint, creator, supply, funding cap, SOL raised, progress, start/end slot or time, token allocation, fee, liquidity/pool address, and transaction links only when backed by confirmed on-chain data.
-- [ ] Keep creation, purchase, refund, and graduation actions disabled until the matching program is deployed, verified, and enabled by a reviewed release.
-- [ ] Use empty and unavailable states when no verified launch data exists. No fabricated launches, volumes, prices, pool addresses, holders, progress, or transactions.
-- [ ] Show exact purchase allocation, slippage/minimum received, network fee estimate, protocol fee, destination split, and irreversible actions before the wallet is asked to sign.
+The following configuration-only slice is now implemented on \`feature/launchpad-custom-supply-spec\`:
 
-## 2. Anchor launch program
+- \`lib/launchpad-config.ts\`: BigInt-only validation for 1..1,000,000,000 whole tokens; decimals 0/6/9; raw mint-unit conversion; u64 bounds; dynamic 5% cap; exact base-unit formatting.
+- \`components/LaunchpadCreatorStudio.tsx\`: creator input/precision preview, dynamic 5% wallet-cap display and explicit disabled state.
+- \`app/launchpad/page.tsx\` + \`app/launchpad/launchpad.css\`: responsive creator/discovery layout and restrained glass / emerald pill styling.
+- \`tests/launchpad-config.test.mjs\`: boundary tests for 200m as an example, the 1b maximum, decimal choices, zero/invalid input and exact integer formatting.
 
-**Target file:** `programs/launchpad/src/lib.rs`  
-**Workspace integration:** add `programs/launchpad` to `Anchor.toml` only after the new crate and its tests are ready.
+This is **not** the on-chain launch implementation. The creator UI is a configuration preview only. The following remain unimplemented and must not be represented as live: mint initialization, supply minting/authority revocation, sale curve, quote escrow, buys, refunds, anti-snipe program enforcement, fee transfer, Raydium CPMM CPI, LP burn, live event indexing or transaction execution. The launch action remains disabled. CI results for the pull request must be inspected before this slice is considered validated.
 
-- [ ] Create a deployment-specific Anchor program with a verified program ID; never reuse the undeployed vault placeholder ID.
-- [ ] Define `TokenLaunchAccount` as an owner- and seed-constrained PDA. It must persist at minimum: `total_sol_raised`, `funding_cap`, `max_supply` (200,000,000 tokens in clearly defined base units), `creator_pubkey`, launch state, mint, start/end slot or timestamp, and bump.
-- [ ] Define launch states `Active`, `Graduated`, and `Refundable`, with explicit, tested state transitions. A launch must not be able to graduate twice or accept purchases/refunds in an incompatible state.
-- [ ] Define the launch escrow PDA separately from the state account. Validate seeds, bump, account owner, creator, mint, token program, system program, and every writable/signer account for every instruction.
-- [ ] Implement `buy_tokens`: transfer SOL from the signing buyer into the launch escrow with the System Program; calculate the token allocation with checked integer arithmetic (use a sufficiently wide intermediate such as `u128`, checked operations, and an explicit rounding policy); enforce a caller-supplied minimum output; and transfer tokens from the program-controlled token vault to the buyer ATA through the correct SPL Token or Token-2022 CPI.
-- [ ] Specify token decimals and raw-unit conversion before implementing the price formula. Enforce total minted/distributed supply never exceeds 200,000,000 tokens.
-- [ ] Create buyer ATAs idempotently where appropriate, validate the canonical mint and token-program owner, and reject substituted accounts or unexpected transfer-fee/hook behavior unless explicitly supported and tested.
-- [ ] Implement per-wallet purchase accounting in a launch-scoped PDA. During a configurable, on-chain early-slot window, reject a wallet whose cumulative allocation would exceed **5% of max supply** (10,000,000 tokens when max supply is 200,000,000). Emit a dedicated anti-sniper custom error. Test boundary slots, split purchases, multiple ATAs, and attempted account substitution.
-- [ ] Implement the refund path for launches that expire without meeting their funding cap. A refund must be claimable only by the original buyer for their recorded contribution, protected against duplicate claims, and backed by available escrow SOL.
-- [ ] Implement `graduate_launch` with a one-time state transition and an on-chain `total_sol_raised >= funding_cap` check. Do not treat a Jupiter swap router as an AMM pool-initialization program: select and pin the exact AMM program and supported pool type (Raydium CPMM/CLMM or another reviewed adapter), validate every CPI account, token mint, pool, vault, and returned LP-token amount, and test the CPI under ProgramTest before integration.
-- [ ] Route the LP tokens to the explicitly specified burn address only after the pool and LP mint are verified. LP burning is irreversible; document it, make the destination a fixed reviewed constant, and test that no substituted mint or token account can redirect the LP tokens.
-- [ ] Use checked arithmetic, replay-protected nonces/receipts, explicit rent handling, transaction rollback assumptions, and bounded account arrays. Reject arbitrary remaining-account forwarding and arbitrary program IDs.
-- [ ] Add event records for launch creation, purchase, refund, graduation, and fee settlement so the UI/indexer can reconcile state from confirmed signatures.
 
-## 3. TypeScript connector and transaction assembly
+## 1. Product contract and supply rules
 
-**Current architecture:** Next.js App Router, `@solana/kit`, `@solana/react`, and `@solana/kit-plugin-wallet`. The repository does not currently depend on `@solana/wallet-adapter-react`; use the existing wallet client pattern (or plan and test a deliberate wallet-stack migration) rather than mixing incompatible wallet-adapter hooks into the current app.
+- [ ] The creator configuration range is **0 through 1,000,000,000** whole tokens inclusive. Zero may be previewed but cannot become a tradable sale; the on-chain sale initializer rejects zero supply.
+- [ ] Treat 200,000,000 as one valid example only. Never use it as the UI default, global maximum, hardcoded program constant or shared anti-snipe quantity.
+- [ ] Support decimals 0, 6 and 9. Decimals are written into the mint during creation and immutable thereafter.
+- [ ] Parse the whole supply as an integer string; do not use JavaScript number/floating-point conversions.
+- [ ] Calculate \`raw_supply = whole_supply * 10^decimals\` with checked on-chain arithmetic and ensure it fits the SPL mint's u64 supply.
+- [ ] Calculate the early-window wallet cap dynamically as floor(raw supply × 500 / 10,000). It is 5% of each launch's configured supply.
+- [ ] If the exact 5% cap is below one indivisible base unit, early-window purchases must fail; do not round the cap up above 5%.
+- [ ] Display the configured whole supply, raw base units, decimals and launch-specific anti-snipe limit before signing.
+- [ ] Initial token standard is original SPL Token Program. Do not imply Token-2022 support until every allowed extension is specifically implemented and tested.
 
-- [ ] Add a typed launchpad service in the existing source layout (for example, `lib/launchpad-service.ts`) and integrate it with `app/launchpad/page.tsx`.
-- [ ] Derive launch, escrow, buyer-accounting, mint-authority, and token-vault PDAs deterministically from the verified program ID and documented seeds.
-- [ ] Build purchase transactions with the required ATA creation instruction when the buyer ATA does not exist, followed by the launch program's `buy_tokens` instruction.
-- [ ] Add Compute Budget instructions with a bounded compute-unit limit and a priority fee derived from recent Helius estimates. Clamp estimates to an application-defined ceiling; do not blindly trust external fee recommendations.
-- [ ] Keep Helius credentials and any authenticated RPC URL on the server. If transaction composition needs privileged RPC methods, expose a narrow, validated backend endpoint rather than placing an API key in a `NEXT_PUBLIC_*` variable or browser bundle.
-- [ ] Use the connected wallet only for user signatures. Verify transaction message contents, recipient accounts, mint, amount, fee split, program ID, and blockhash before prompting the signer.
-- [ ] Return typed outcomes for validation errors, rejected signatures, expired blockhashes, RPC errors, program errors, pending confirmations, confirmed transactions, and finalized transactions.
-- [ ] Verify transaction status against the configured Mainnet-Beta RPC and show the signature only as submitted until its confirmed/finalized status is actually observed.
+Detailed reference: [LAUNCHPAD_PROTOCOL_SPEC.md](./LAUNCHPAD_PROTOCOL_SPEC.md).
 
-## 4. Helius RPC, backend boundary, and resilience
+## 2. Launchpad program and token mint
 
-- [ ] Confirm the existing Helius Mainnet-Beta RPC configuration and document the exact server-side environment variable names. Do not invent or commit an RPC URL containing credentials.
-- [ ] Use server-only environment variables for Helius API credentials, Jupiter keys, monitoring credentials, signing/deployment infrastructure credentials, and any other provider secrets. No provider key may use a `NEXT_PUBLIC_` prefix.
-- [ ] Keep user wallet signing in Phantom or another connected wallet. Never accept, store, log, transmit, or proxy users' seed phrases, exported wallet JSON, or private keys to the backend.
-- [ ] Create narrow server-side routes for privileged Helius calls, priority-fee estimates, launch state/indexer reads, and transaction status checks. Validate input schema and restrict allowed RPC methods and destination hosts.
-- [ ] Add provider timeouts, bounded retries with jitter for transient 429/5xx errors, circuit breakers, health checks, and a configured fallback RPC list. Never silently fall back to an unverified endpoint or report stale data as live.
-- [ ] Close HTTP sessions and WebSocket subscriptions on shutdown; prevent duplicate indexer/worker loops and bound concurrent RPC requests.
+**Target:** create \`programs/launchpad/src/lib.rs\` and its unit/integration tests. Integrate it into \`Anchor.toml\` only after the crate builds and tests. Do not reuse the vault program's placeholder deployment ID.
 
-## 5. Fixed protocol fee enforcement
+- [ ] Create a deployment-specific program ID and versioned launch state PDA, SOL escrow PDA, token inventory ATA and buyer position PDA.
+- [ ] Initialize a new mint for each creator launch with the selected decimals.
+- [ ] Mint exactly the creator-selected raw supply into the program-controlled inventory vault.
+- [ ] Permanently revoke mint authority after full supply is minted; ensure no freeze authority remains.
+- [ ] Store name, symbol and metadata URI using the chosen token metadata standard; validate lengths/URI and disclose metadata mutability.
+- [ ] State must record creator, mint, quote asset, whole supply, raw supply, decimals, allocated units, raised quote units, funding cap, curve version/parameters, start slot, early-window end slot, expiry, status, pool references and bumps.
+- [ ] Reject zero supply, supply above 1,000,000,000 whole tokens, decimals outside 0/6/9, raw-supply overflow, incorrect mint owner and token-program substitution.
+- [ ] All balance/state-modifying instructions require the correct signer and owner-checked PDA accounts.
 
-The existing policy in `docs/FEES_AND_TREASURY.md` is the source of truth and must be enforced by reviewed on-chain instructions, not by a browser-only check or mutable server setting.
+## 3. Bonding curve and purchases
 
-| Operation | Fixed fee | Developer/operator share (60%) | Protocol treasury share (40%) |
-| --- | ---: | ---: | ---: |
-| Each supported trade | $0.10 USDC | $0.06 USDC | $0.04 USDC |
-| Each supported transfer | $0.10 USDC | $0.06 USDC | $0.04 USDC |
-| Token launch creation | $0.50 USDC | $0.30 USDC | $0.20 USDC |
+- [ ] Freeze an exact, versioned curve formula before enabling buys. The current manifesto says "linear" but does not specify initial/terminal price, sale inventory or complete cost conversion. Do not invent curve defaults or ship an unreviewed economic formula.
+- [ ] Store all curve parameters on-chain and expose them in the UI; they cannot be overridden by the backend or an AI model.
+- [ ] Use deterministic integer math and checked arithmetic. Use a reviewed wide-integer helper or a proven bounded decomposition for products beyond u128.
+- [ ] Implement a bounded quote-in / token-out calculation with caller-provided maximum quote in and minimum token output.
+- [ ] Round token output down and quote cost up to avoid over-allocating inventory or accepting underpayment; return unused quote to the buyer rather than silently keeping dust.
+- [ ] Enforce remaining sale inventory and funding cap in the same instruction as transfers and state updates.
+- [ ] Create buyer ATAs idempotently when necessary and validate the canonical mint, token program, token-account authority and ATA derivation.
+- [ ] Emit versioned launch-created and purchase events with raw units, quote units, slot/time and nonce.
 
-- [ ] Define and hardcode the fee amounts and 60/40 split in the relevant reviewed on-chain instruction logic. The backend may prepare the transaction; it may not override the amount or redirect either recipient.
-- [ ] Charge once for each supported trade and each supported transfer. Define operation types so the same underlying action cannot be charged twice through overlapping instruction paths.
-- [ ] Charge the launch creation fee exactly once for a successful launch-creation operation. Failed/rolled-back creation must not leave a detached fee payment.
-- [ ] Validate canonical USDC mint, token program, developer recipient ATA, treasury PDA/ATA, and token account ownership on-chain.
-- [ ] Collect both fee portions atomically with the operation being charged; add operation-specific nonces/receipts and replay protection. If either fee transfer fails, the whole operation must fail atomically.
-- [ ] Keep the existing public receiving wallet in `docs/FEES_AND_TREASURY.md` as a public destination only; it is not a signing credential. Do not expose any private key or deployment secret.
-- [ ] Disclose the fee amount and split before wallet approval. Fees remain **not collected** until SBF-backed tests, deployed-source verification, and independent security review pass.
+## 4. Anti-snipe and buyer accounting
 
-## 6. Security hardening and privacy
+- [ ] Record launch start slot and a protocol-bounded early-window end slot (initial design example: 500 slots).
+- [ ] Calculate 5% from the per-launch max supply in raw base units.
+- [ ] Maintain one position PDA per launch/buyer. Increment cumulative early-window purchases across transactions.
+- [ ] Require canonical buyer ATA and do not lower purchase accounting when tokens are transferred elsewhere.
+- [ ] Emit a specific custom anti-snipe error and test exact start/end boundaries, 5% boundary, split purchases and alternate token-account attempts.
+- [ ] Document the limit accurately: it is per wallet. It cannot prove one person controls a wallet or prevent a Sybil buyer from using multiple independent wallets.
 
-- [ ] Keep provider secrets, Helius credentials, API keys, privileged configuration, deployment credentials, and sensitive operational data server-side. Use the hosting platform's encrypted secret store and rotate any credential suspected of exposure.
-- [ ] Keep the public wallet address only where operationally required. Do not publish personal names, email addresses, phone numbers, physical location, age, school, personal background, or private account details in app content, docs, metadata, analytics, logs, or examples.
-- [ ] Implement a secure privacy-request and legal-contact workflow before collecting account-level personal data. The current Support Centre is self-service only and must not be described as accepting privacy requests.
-- [ ] Never log request authorization headers, RPC keys, wallet exports, signed transaction bytes, or private data. Redact wallet-linked data from error reporting unless it is essential and disclosed.
-- [ ] Apply strict request schemas, size limits, rate limits and abuse controls to every API route. Bind permissions to the connected wallet and verify all ownership/creator relationships on-chain.
-- [ ] Add CSRF/origin protections where cookie-authenticated routes exist, secure headers/CSP, strict CORS, SSRF-safe outbound host allowlists, content-type validation, and safe error responses.
-- [ ] Use idempotency keys and on-chain nonces for launch creation, buys, refunds, graduation, transfer, and fee receipts. Prevent replay, duplicate execution, race conditions, and cross-wallet data access.
-- [ ] Add dependency and supply-chain scanning, lockfile enforcement, static analysis, secret scanning, SBF build checks, adversarial account-composition tests, fuzz/property tests, and independent Solana security review.
-- [ ] Add structured security events, monitoring, alerting, incident response, rollback, RPC/provider outage runbooks, and documented program upgrade-authority controls.
-- [ ] Ensure AI components are read-only unless separately authorized. Model output must never become an on-chain authorization or bypass deterministic risk and ownership checks.
+## 5. Quote assets, escrow and refunds
 
-## 7. Test and release gates
+- [ ] Store the quote asset in the launch state and enforce a strict on-chain allowlist. Never accept an arbitrary user-supplied quote mint.
+- [ ] Initial quote candidates: native SOL and canonical Mainnet-Beta USDC. USDC uses the mint already recorded in the fee policy.
+- [ ] For SOL, deposit lamports into a launch-specific PDA; wrap the exact amount to WSOL and SyncNative for Raydium CPMM initialization.
+- [ ] For USDC, transfer quote units to the launch-state-owned USDC ATA using the canonical Token Program.
+- [ ] Synthetic stocks/commodities/baskets require separate issuer/mint allowlisting, metadata verification, oracle/price-source policy and AMM-compatibility review; they are not enabled by arbitrary mint input.
+- [ ] Implement \`Active -> Refundable\` only after expiry below the funding goal.
+- [ ] Permit each original buyer to claim only the recorded contribution once; prevent duplicate claims, claimant substitution and escrow insolvency.
+- [ ] No creator/operator sweep or admin withdrawal path from buyer escrow.
 
-- [ ] Rust unit tests for token math, supply caps, 5% early-slot wallet cap, all launch state transitions, refunds, checked arithmetic, and fee amounts/splits.
-- [ ] Anchor/SBF ProgramTest for create, buy, ATA creation, escrow balance, refund, graduation CPI, LP burn, fee settlement, pause/revoke where applicable, and transaction rollback.
-- [ ] Adversarial tests for wrong creator, wrong PDA/bump, fake mint, wrong token program, wrong ATA, substituted CPI program, writable/signer escalation, duplicate nonce, re-entrancy-like instruction composition, and account substitution.
-- [ ] TypeScript tests for PDA derivation, transaction instruction ordering, ATA idempotency, compute budget bounds, Helius response parsing, and typed error handling.
-- [ ] End-to-end devnet verification with a dedicated test wallet and no production secrets.
-- [ ] Verify program source/binary, program ID, mint authority, upgrade authority, fee recipients, treasury ATA, and AMM/LP burn destination independently.
-- [ ] Complete an independent audit and remediate all critical/high findings before any mainnet launch or public deposits.
-- [ ] Promote to Mainnet-Beta only through a separately reviewed release process. Closing a GitHub issue must never be a deployment or trading-enable switch.
+## 6. Lifecycle and Raydium CPMM
+
+- [ ] Use status values: Active (0), Graduated (1), Complete (2), Refundable (3).
+- [ ] On funding/sale condition, transition Active -> Graduated and disable buys/refunds.
+- [ ] Make \`graduate_launch\` permissionless after graduation. The finalizer is not controlled by a privileged creator/admin.
+- [ ] Pin Raydium CPMM's official source/IDL and independently verify the exact Mainnet-Beta program ID and configuration before coding the CPI.
+- [ ] Validate the AMM config, authority, pool state, ordered mints, LP mint, launch-controlled input token accounts, pool vaults, pool fee destination, observation state, token programs, associated-token program, system program and rent.
+- [ ] Do not forward arbitrary remaining accounts or accept a caller-selected AMM program ID.
+- [ ] Wrap native SOL to WSOL when required; deposit the exact quote and token amounts from launch-controlled accounts.
+- [ ] Verify pool state, pool vaults, LP mint and deposited amounts before setting status Complete.
+- [ ] Burn the received LP tokens with the SPL Token Program's BurnChecked instruction from the launch-PDA-owned LP token account, signed by the launch PDA.
+- [ ] Do **not** send LP tokens to \`11111111111111111111111111111111\`. That is not a token burn. Verify the LP mint supply decreases by the burned amount.
+- [ ] Complete pool initialization, LP burn, events and state transition atomically. A failed CPI must leave the launch Graduated and retryable with assets still accounted.
+- [ ] Document that burning the initial LP tokens does not guarantee all future liquidity, market prices or trading activity remain safe forever.
+
+Official sources:
+- https://github.com/raydium-io/raydium-cp-swap
+- https://github.com/raydium-io/raydium-cp-swap/blob/master/programs/cp-swap/src/instructions/initialize.rs
+- https://solana.com/docs/tokens/basics/burn-tokens
+
+## 7. Fixed WELP fee settlement
+
+Source of truth: [FEES_AND_TREASURY.md](./FEES_AND_TREASURY.md). Fixed Mainnet-Beta USDC values:
+
+| Operation | Fee | Developer/operator (60%) | Protocol treasury (40%) |
+|---|---:|---:|---:|
+| Launch creation | $0.50 USDC | $0.30 | $0.20 |
+| Each supported trade | $0.10 USDC | $0.06 | $0.04 |
+| Each WELP-supported transfer operation | $0.10 USDC | $0.06 | $0.04 |
+
+- [ ] Hardcode fee amounts, split and destination public keys in reviewed program constants/config; browser and backend may not override them.
+- [ ] Validate the exact canonical USDC mint, Token Program ownership, developer recipient ATA and treasury PDA/ATA.
+- [ ] Atomically transfer both shares with the launch/trade/supported-transfer instruction being charged.
+- [ ] Use unique operation-specific receipt/nonce PDAs to make charges idempotent and prevent replay.
+- [ ] A direct wallet-to-wallet SPL transfer that does not invoke WELP cannot be intercepted. WELP transfer fees apply only to an explicitly supported WELP instruction path.
+- [ ] Show the USDC fee, split, recipients, SOL/USDC contribution and separate network/rent/pool costs before wallet signing.
+- [ ] Keep fees disabled until SBF tests, independent review, source verification and release approval.
+
+## 8. TypeScript service and transaction assembly
+
+**Current stack:** Next.js App Router, \`@solana/kit\`, \`@solana/react\`, \`@solana/kit-plugin-wallet\`.
+
+- [ ] Implement \`lib/launchpad-service.ts\` using the existing Kit wallet stack; do not import \`@solana/wallet-adapter-react\`.
+- [ ] Keep transaction messages, addresses, raw amount types and signatures type-safe; use bigint for supply, token amounts and fee math.
+- [ ] Derive launch, escrow, position, inventory, quote and fee receipt PDAs using the program ID and documented seeds.
+- [ ] Compose ATA creation, launch instruction, fixed fees and bounded Compute Budget instructions in the correct order.
+- [ ] Clamp server-provided priority fees and compute-unit limits.
+- [ ] Verify program ID, all accounts, token mints, quote amount, min output, fee destinations and blockhash before prompting the user to sign.
+- [ ] Distinguish prepared, rejected, submitted, confirmed, finalized and failed transaction statuses.
+
+## 9. RPC, client-side indexing and resilience
+
+- [ ] Keep Helius keys and credential-bearing RPC URLs server-only. Never commit keys or expose them through NEXT_PUBLIC variables.
+- [ ] Use public browser RPC subscriptions only when the endpoint is intended for public access and configured for the expected load.
+- [ ] Create narrow Next.js App Router handlers under \`app/api/**/route.ts\` for privileged fee/provider calls, not \`src/pages/api\`.
+- [ ] Validate schemas, method allowlists, upstream host allowlists, request sizes, origin/CSRF where relevant, and rate limits.
+- [ ] Add bounded retries with jitter for transient failures, explicit timeouts, circuit breakers and verified fallback endpoints.
+- [ ] Client-side WebSocket indexing may avoid a persistent database, but it is not unlimited or guaranteed zero-cost. Load-test RPC quotas, subscriptions, bandwidth and browser resource usage.
+- [ ] Use \`logsSubscribe\` with a single address per mentions filter; decode versioned Anchor event records against the matching IDL.
+- [ ] Confirm transaction signatures and reconcile finalized data; backfill missing events through paginated history queries after reconnect.
+- [ ] Deduplicate events, cache bounded history in IndexedDB and clean up subscriptions on navigation.
+- [ ] Do not fabricate market cap, USD price, volume or candles without verified token/quote deltas and a valid price source.
+
+Official references:
+- https://solana.com/docs/rpc/websocket/logssubscribe
+- https://nextjs.org/docs/app/getting-started/route-handlers
+
+## 10. UI/UX and creator experience
+
+- [ ] Refactor the Launchpad route to an open, spacious deep-space layout inspired by the information hierarchy of stonkfun.xyz, not a copy of its branding.
+- [ ] Use #09090B canvas, faint zinc glass panels, subtle borders/backdrop blur and natural spacing; remove nested box/grid clutter.
+- [ ] Use prominent metrics, monospaced addresses and technical metadata.
+- [ ] Use pill-shaped zinc-gradient primary controls with subtle emerald outline/glow and stronger hover glow. Disabled controls must remain visibly disabled.
+- [ ] Mobile is a one-column flow; desktop expands into spacious columns.
+- [ ] Creator form supports name, ticker, custom whole supply 1..1B, decimals 0/6/9, quote asset and finalized curve configuration.
+- [ ] Display dynamic 5% cap, raw supply and fee disclosure before signing.
+- [ ] Discovery only shows real, confirmed launches; no mock tokens, fake volume, generated prices or simulated transaction data.
+- [ ] Use existing CSS architecture. There is no Tailwind dependency/config or \`src/styles/globals.css\` in the current project.
+
+## 11. AI security and micro-API scope
+
+- [ ] Run deterministic CI gates against the shared launch program source/build: Anchor/SBF build, tests, fuzz/property tests, static analysis, dependency/secret scans and reproducible artifacts.
+- [ ] AI may summarize findings and suggest tests. It must not issue a "verified" security certificate or pass Mainnet deployment solely because a model score exceeds 90.
+- [ ] The same audited launch program handles all token launches; there is no per-creator custom Anchor source file to submit for runtime AI approval.
+- [ ] If metadata moderation is added, treat model output as advisory; on-chain account validation remains authoritative.
+- [ ] Replace arbitrary AI-generated database schemas/SQL with an allowlisted metric API, validated parameters and fixed query templates.
+
+## 12. Validation, audit and release gates
+
+- [ ] Rust unit/property/fuzz tests for custom supply, decimals, curve math, anti-snipe, fees, state transitions, refund claims and overflow edges.
+- [ ] Anchor/SBF ProgramTest for creation, mint authority revocation, SOL/WSOL and USDC escrow, purchase, fee settlement, refund, CPMM CPI, LP burn and rollback.
+- [ ] Adversarial tests for spoofed creator, wrong PDA/bump, wrong mint, wrong Token Program, fake ATA, changed AMM program, substituted pool vault, duplicate nonce, unauthorized writable accounts and split-order attacks.
+- [ ] TypeScript tests for supply validation, decimal conversion, PDA derivation, instruction order, ATA idempotency, fee/curve display, priority-fee bounds and RPC errors.
+- [ ] Devnet end-to-end test with dedicated test wallet/authority and no production secrets.
+- [ ] Verify program ID, deployed binary/source hash, IDL, mint/freeze authority state, treasury ATA, developer recipient, Raydium CPMM program/config, pool and LP burn.
+- [ ] Independent Solana security audit; remediate all critical/high issues.
+- [ ] Confirm upgrade-authority / multisig controls, monitoring, outage runbooks, incident response and recovery.
+- [ ] Mainnet enablement only by separate reviewed release. Closing GitHub issues or merging documentation never switches on deposits/trading.
 
 ## Current facts and boundaries
 
-- The existing public route is `app/launchpad/page.tsx`; it is currently a locked discovery/status page with no verified listings.
-- The Anchor workspace currently includes `programs/vault`; the new launchpad crate does not exist yet.
-- The current frontend uses Solana Kit and the Solana React client, not `@solana/wallet-adapter-react`.
-- The existing fee schedule is documented but fee collection is not enabled.
-- No launchpad smart contract, buyer escrow, pool-creation CPI, LP burn, Helius-backed launch connector, or autonomous launch execution is complete.
-- The public wallet address in the fee policy may be retained as a receiving destination. It must never be treated as a secret key.
+- \`app/launchpad/page.tsx\` is the existing route; the prior version was a locked discovery/status page.
+- The current Anchor workspace contains \`programs/vault\`; no deployable launchpad crate or verified launchpad program ID exists yet.
+- The current client uses Solana Kit. \`@solana/web3.js\` and wallet-adapter hooks are not current project dependencies.
+- Tailwind is not currently configured.
+- The fee policy is documented but not collected on-chain.
+- Helius configuration has not been proven by the tracked source; the client currently uses \`NEXT_PUBLIC_SOLANA_RPC_URL\` or the public Solana Mainnet RPC default. Hosting environment variables must be checked separately.
+- No production launchpad, bonding curve, quote escrow, refund program, CPMM CPI, LP burn or launch execution is claimed by this backlog.
