@@ -370,7 +370,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
 
           <div className="mainnet-banner" role="note">
             <ShieldCheck size={19} />
-            <div><strong>Mainnet trading is on.</strong><span>Swaps move real assets. Check the amount, recipient and fees in Phantom before every approval.</span></div>
+            <div><strong>Wallet-approved swaps are currently gated.</strong><span>Live market data is available, but swap signing and submission remain disabled until the disclosed fee is enforced atomically and the release checks pass. No unattended trading is active.</span></div>
             <a href="https://docs.jup.ag/user-docs/trade/swap" target="_blank" rel="noreferrer" aria-label="Read swap documentation"><CircleHelp size={17} /></a>
           </div>
 
