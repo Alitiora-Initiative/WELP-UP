@@ -37,7 +37,7 @@ export function validateLaunchSupply(
   decimals: number | null,
 ): LaunchSupplyValidation {
   const input = rawSupply.trim();
-  if (!/^\\d+$/.test(input)) {
+  if (!/^\d+$/.test(input)) {
     return { ok: false, error: 'Enter a whole-token supply using digits only.' };
   }
   if (
@@ -51,7 +51,7 @@ export function validateLaunchSupply(
   }
 
   // Normalize leading zeroes and reject excessive input before BigInt parsing.
-  const normalizedSupply = input.replace(/^0+(?=\\d)/, '');
+  const normalizedSupply = input.replace(/^0+(?=\d)/, '');
   if (normalizedSupply.length > MAX_TOTAL_SUPPLY_WHOLE.toString().length) {
     return { ok: false, error: 'Total supply cannot exceed one billion whole tokens.' };
   }
