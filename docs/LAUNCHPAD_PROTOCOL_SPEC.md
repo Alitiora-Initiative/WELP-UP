@@ -294,25 +294,20 @@ Official reference: https://solana.com/docs/tokens/basics/burn-tokens
 
 The burn amount, LP mint, source account and authority are validated. The burn is irreversible and must be clearly disclosed to the creator before launch. Burning initial LP tokens removes the redemption claim represented by those tokens; it does not guarantee that all future liquidity, token trading or market prices will remain safe forever.
 
-## 8. Fixed WELP fee schedule
+## 8. WELP protocol swap fee
 
-All amounts below are fixed policy values, not editable launch settings:
+WELP's fee policy is **0.50% (50 basis points) of gross input** for each swap that actually executes through a WELP-controlled on-chain instruction. It is not 0.5% of a creator fee and is not a fixed USDC charge.
 
-| Operation | Total fee | Developer/operator (60%) | Protocol treasury (40%) |
-|---|---:|---:|---:|
-| Launch creation | $0.50 USDC | $0.30 USDC | $0.20 USDC |
-| Each supported trade | $0.10 USDC | $0.06 USDC | $0.04 USDC |
-| Each WELP-supported transfer operation | $0.10 USDC | $0.06 USDC | $0.04 USDC |
+| Allocation | Share of protocol fee |
+|---|---:|
+| Developer/operator | 60% |
+| Protocol treasury | 40% |
 
-USDC uses the canonical Mainnet-Beta mint already recorded in \`docs/FEES_AND_TREASURY.md\`, with six decimals. The developer/operator destination is the public receiving wallet recorded in that policy. The treasury destination is the reviewed treasury PDA and its canonical USDC ATA, derived only after the final program ID is established.
+Calculate the fee from the input asset's raw base units using checked integer arithmetic. Derive both recipient accounts for that exact input mint; never accept arbitrary fee destinations from a caller. The swap, fee transfers, receipt/nonce and launch accounting must commit atomically. If any leg fails, the entire transaction must roll back.
 
-The program hardcodes fee base-unit amounts, the split and destination public keys in the reviewed deployment configuration. A backend may prepare a transaction but cannot select a different price or recipient. Both transfers must occur atomically with the operation being charged, with an operation-specific receipt/nonce to prevent duplicate charges.
+WELP cannot intercept ordinary wallet-to-wallet SPL transfers or swaps routed directly to another DEX. A fee applies only to WELP-controlled instructions. Post-graduation Raydium swaps cannot be described as taxed by WELP unless a reviewed adapter or other supported on-chain mechanism actually receives and routes the fee.
 
-A normal SPL transfer from one wallet to another does not call WELP and cannot be intercepted by WELP. The transfer fee applies only to a transfer operation that actually passes through the supported WELP instruction path; UI copy must not imply that WELP taxes every wallet transfer on Solana.
-
-If a user buys with SOL, the $0.10 USDC trade fee is additional to the SOL contribution and network fee; the creator's $0.50 USDC creation fee is also separate from account rent and pool-creation costs. Disclose each charge and its destination before wallet approval. If the connected wallet lacks the USDC amount, the atomic operation fails and no token purchase/launch is created.
-
-The policy remains **not collected** until SBF-backed tests, independent review, verified deployment and explicit release approval are complete.
+**Current status:** the fee policy and integer calculations are in application source, but the launchpad program is not deployed, generic input-token fee accounts and a buy/sell instruction are absent, and the current Jupiter order/execute path cannot accept extra custom fee instructions. Trading stays fail-closed until a composable transaction route and on-chain settlement are deployed, verified and audited.
 
 ## 9. Frontend and transaction service
 
