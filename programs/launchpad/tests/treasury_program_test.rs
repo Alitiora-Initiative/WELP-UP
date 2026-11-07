@@ -91,8 +91,7 @@ async fn send_as_payer(
 async fn treasury_initialization_epoch_gate_distribution_and_reserve_are_enforced() {
     let program_id = id();
     let (treasury, _) = Pubkey::find_program_address(&[TREASURY_SEED], &program_id);
-    let (treasury_vault, _) =
-        Pubkey::find_program_address(&[TREASURY_VAULT_SEED], &program_id);
+    let (treasury_vault, _) = Pubkey::find_program_address(&[TREASURY_VAULT_SEED], &program_id);
 
     // BPF_OUT_DIR is set by the Anchor/SBF workflow. ProgramTest loads the
     // compiled welp_launchpad.so rather than a native Rust processor.
@@ -174,8 +173,7 @@ async fn treasury_initialization_epoch_gate_distribution_and_reserve_are_enforce
         unix_timestamp: initialized_at + 3_600,
     });
     let caller = context.payer.pubkey();
-    let premature_instruction =
-        disburse_ix(caller, treasury, treasury_vault, DEVELOPER_WALLET);
+    let premature_instruction = disburse_ix(caller, treasury, treasury_vault, DEVELOPER_WALLET);
     let premature = send_as_payer(&mut context, premature_instruction).await;
     assert!(premature.is_err(), "premature disbursal must fail");
 
@@ -195,8 +193,7 @@ async fn treasury_initialization_epoch_gate_distribution_and_reserve_are_enforce
         leader_schedule_epoch: 1,
         unix_timestamp: initialized_at - 1,
     });
-    let backwards_instruction =
-        disburse_ix(caller, treasury, treasury_vault, DEVELOPER_WALLET);
+    let backwards_instruction = disburse_ix(caller, treasury, treasury_vault, DEVELOPER_WALLET);
     let backwards = send_as_payer(&mut context, backwards_instruction).await;
     assert!(backwards.is_err(), "clock rollback must fail");
 
@@ -227,8 +224,7 @@ async fn treasury_initialization_epoch_gate_distribution_and_reserve_are_enforce
         leader_schedule_epoch: 1,
         unix_timestamp: matured_at,
     });
-    let matured_instruction =
-        disburse_ix(caller, treasury, treasury_vault, DEVELOPER_WALLET);
+    let matured_instruction = disburse_ix(caller, treasury, treasury_vault, DEVELOPER_WALLET);
     send_as_payer(&mut context, matured_instruction)
         .await
         .expect("matured epoch disbursal succeeds");
@@ -259,10 +255,7 @@ async fn treasury_initialization_epoch_gate_distribution_and_reserve_are_enforce
     // but they are not recorded and can never be harvested by this instruction.
     assert_eq!(state_after_distribution.locked_reserve_lamports, 400);
     assert_eq!(state_after_distribution.total_developer_disbursed, 600);
-    assert_eq!(
-        after_distribution.lamports,
-        vault_account.lamports - 600
-    );
+    assert_eq!(after_distribution.lamports, vault_account.lamports - 600);
     assert_eq!(
         after_distribution.lamports,
         Rent::default().minimum_balance(0) + 400 + 300
