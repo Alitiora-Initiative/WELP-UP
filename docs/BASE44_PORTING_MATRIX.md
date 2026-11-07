@@ -11,7 +11,7 @@
 | `Signals.jsx` | `/signals` | Preserve published score weights, hard blockers, warnings, and eligible/blocked filters. No profit prediction. |
 | `Swap.jsx` | `/swap` | Preserve token search, quote freshness, amount/risk checks, and explicit external wallet signing. Never silently retry or charge. |
 | `Automation.jsx` | `/automation` | Preserve user-defined read-only watch policies and explainable evaluations. Browser-local rules are not bots and cannot submit orders. Any AI analysis must identify its provider, timestamp, input snapshot, and failure state. |
-| `Agent.jsx` | `/agent` | Original file is missing from the archive. Preserve only verified current market-analysis behavior; do not invent an autonomous runtime or agent activity. |
+| `Agent.jsx` | `/agent` | Original file is missing from the archive. The Next.js port now provides an optional server-side, read-only OpenAI market analyst using a fresh Jupiter snapshot. It has no wallet or execution tools; see [AI agent runtime](AI_AGENT_RUNTIME.md). |
 | `Vault.jsx` | `/vault` | The source page includes Base44 entity calls and consent/status UI; that is not proof of a deployed vault. Keep funding and execution disabled until audited on-chain implementation and release gates pass. |
 | `Portfolio.jsx` | `/portfolio` | Preserve public wallet balance reads; label snapshots and incomplete history accurately. |
 | `History.jsx` | `/history` | Use confirmed on-chain records and explicit RPC coverage limits. Do not call a partial wallet scan a complete ledger. |
@@ -53,4 +53,5 @@ Do not use the old operator address or old per-action fee wording as production 
 3. Reconcile every source-derived field and rule with the current API contract and tests.
 4. Remove or clearly disable all demo, fixture, local-only, and non-settling marketplace behavior.
 5. Complete vault and bot program work behind fail-closed feature gates; do not expose deposits or autonomous execution during development.
-6. Update README, whitepaper, docs, terms, safety and status surfaces together whenever shipped behavior changes.
+6. Add and validate the read-only analyst adapter with server-only credentials and explicit cost/abuse controls.
+7. Update README, whitepaper, docs, terms, safety and status surfaces together whenever shipped behavior changes.
