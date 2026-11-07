@@ -153,10 +153,54 @@ pub mod welp_vault {
         Ok(())
     }
 
-    /// Owner deposits SOL; mints shares proportional to their contribution.
-    /// Funding remains disabled until the complete vault program is reviewed and released.
-    pub fn fund_vault(_ctx: Context<FundVault>, _amount: u64) -> Result<()> {
-        err!(VaultError::FundingDisabled)
+    /// Owner deposits SOL and receives proportional vault shares.
+    /// This is a user-signed deposit only; it does not authorize bot execution.
+    pub fn fund_vault(ctx: Context<FundVault>, amount: u64) -> Result<()> {
+        require!(amount > 0, VaultError::ZeroAmount);
+        {
+            let vault = &ctx.accounts.vault;
+            require!(
+                vault.state == VaultState::Funded || vault.state == VaultState::Active,
+                VaultError::InvalidState
+            );
+        }
+
+        // Price new shares against the currently accounted assets, not the
+        // lifetime deposit counter. This remains correct after withdrawals.
+        let shares = compute_shares(
+            amount,
+            ctx.accounts.vault.available_lamports,
+            ctx.accounts.vault.total_shares,
+        ).map_err(map_err)?;
+
+        let transfer_accounts = anchor_lang::system_program::Transfer {
+            from: ctx.accounts.owner.to_account_info(),
+            to: ctx.accounts.vault.to_account_info(),
+        };
+        anchor_lang::system_program::transfer(
+            CpiContext::new(ctx.accounts.system_program.to_account_info(), transfer_accounts),
+            amount,
+        )?;
+
+        let vault = &mut ctx.accounts.vault;
+        vault.available_lamports = vault.available_lamports
+            .checked_add(amount)
+            .ok_or(VaultError::Overflow)?;
+        vault.total_deposited_lamports = vault.total_deposited_lamports
+            .checked_add(amount)
+            .ok_or(VaultError::Overflow)?;
+        vault.total_shares = vault.total_shares
+            .checked_add(shares)
+            .ok_or(VaultError::Overflow)?;
+        vault.state = VaultState::Active;
+
+        emit!(FundEvent {
+            owner: vault.owner,
+            amount,
+            shares_minted: shares,
+            timestamp: Clock::get()?.unix_timestamp,
+        });
+        Ok(())
     }
 
     /// Owner pauses their vault (Active or Funded → Paused).
