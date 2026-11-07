@@ -11,8 +11,9 @@ export type SupportedTokenDecimals = (typeof SUPPORTED_TOKEN_DECIMALS)[number];
 
 export const U64_MAX = (1n << 64n) - 1n;
 export const BASIS_POINTS_DENOMINATOR = 10_000n;
-export const MAX_CREATOR_FEE_BPS = 300;
-export const TREASURY_SHARE_OF_CREATOR_FEE_BPS = 50n;
+export const PROTOCOL_SWAP_FEE_BPS = 50n; // 0.50% of gross swap input
+export const DEVELOPER_FEE_SHARE_BPS = 6_000n; // 60% of collected protocol fee
+export const TREASURY_FEE_SHARE_BPS = 4_000n; // 40% retained by protocol treasury
 
 export type LaunchSupplyValidation =
   | {
@@ -27,110 +28,47 @@ export type LaunchSupplyValidation =
     }
   | { ok: false; error: string };
 
-export type CreatorFeeRoute = {
-  creatorFeeLamports: bigint;
-  treasuryShareLamports: bigint;
-  creatorRewardLamports: bigint;
-  nextRemainder: bigint;
+export type ProtocolSwapFeeRoute = {
+  grossInputBaseUnits: bigint;
+  protocolFeeBaseUnits: bigint;
+  developerFeeBaseUnits: bigint;
+  treasuryFeeBaseUnits: bigint;
+  netSwapInputBaseUnits: bigint;
 };
 
 /**
- * Accepts whole tokens, never a JavaScript floating-point amount.
- * Zero is previewable but is not a launchable mint/sale.
- * 200000000 is one valid creator choice, not a platform-wide default.
- */
-export function validateLaunchSupply(
-  wholeSupplyInput: string,
-  decimalsInput: number | null,
-): LaunchSupplyValidation {
-  const normalized = wholeSupplyInput.trim();
-  if (normalized.length === 0 || normalized.length > 10) {
-    return { ok: false, error: 'Enter a whole-number supply with at most 10 digits.' };
-  }
-  if (!/^[0-9]+$/.test(normalized)) {
-    return { ok: false, error: 'Enter a whole-number token supply.' };
-  }
-
-  const wholeSupply = BigInt(normalized);
-  if (wholeSupply < MIN_TOTAL_SUPPLY_WHOLE) {
-    return { ok: false, error: 'Supply must be a non-negative whole number.' };
-  }
-  if (wholeSupply > MAX_TOTAL_SUPPLY_WHOLE) {
-    return { ok: false, error: 'Maximum supply is 1,000,000,000 whole tokens.' };
-  }
-  if (
-    decimalsInput === null ||
-    !Number.isInteger(decimalsInput) ||
-    decimalsInput < 0 ||
-    decimalsInput > 9
-  ) {
-    return { ok: false, error: 'Choose a decimal precision from 0 through 9.' };
-  }
-
-  const decimals = decimalsInput as SupportedTokenDecimals;
-  const scale = 10n ** BigInt(decimals);
-  const maxSupplyBaseUnits = wholeSupply * scale;
-  if (maxSupplyBaseUnits > U64_MAX) {
-    return { ok: false, error: 'This supply and decimal combination exceeds the on-chain u64 limit.' };
-  }
-
-  // Floor the exact 5% basis-point calculation. Never use floating point.
-  const earlyWalletLimitBaseUnits =
-    (maxSupplyBaseUnits * 500n) / BASIS_POINTS_DENOMINATOR;
-
-  return {
-    ok: true,
-    wholeSupply,
-    decimals,
-    launchable: wholeSupply > 0n,
-    maxSupplyBaseUnits,
-    earlyWalletLimitBaseUnits,
-    earlyWalletLimitWholeTokens: formatBaseUnits(earlyWalletLimitBaseUnits, decimals),
-    // If 5% is below one indivisible token unit, early-window buys must fail;
-    // do not round the cap up and silently exceed 5%.
-    earlyWindowPurchasesBlockedByGranularity: wholeSupply > 0n && earlyWalletLimitBaseUnits === 0n,
-  };
-}
-
-/**
- * Creator fee is a 0–3% rate on an eligible WELP-routed swap volume.
- * The treasury receives 0.5% of the *creator-fee amount*, not 0.5% of gross
- * volume. The remainder is the creator reward. Carrying the remainder makes
- * the cumulative split exact at lamport precision over repeated collections.
+ * Exact integer fee preview for a WELP-controlled swap:
+ * 0.50% is calculated from the gross input amount, then split 60/40.
  *
- * This is a calculation helper only. It does not prove that a swap occurred,
- * sign a transaction, or move funds.
+ * This function only calculates amounts. It does not prove that a swap
+ * occurred, sign a transaction, or collect funds. On-chain enforcement is
+ * required before the website may submit mainnet swaps using this policy.
  */
-export function calculateCreatorFeeRoute(
-  swapVolumeLamports: bigint,
-  creatorFeeBps: number,
-  priorRemainder = 0n,
-): CreatorFeeRoute {
-  if (swapVolumeLamports < 0n) throw new RangeError('Swap volume cannot be negative.');
-  if (
-    !Number.isInteger(creatorFeeBps) ||
-    creatorFeeBps < 0 ||
-    creatorFeeBps > MAX_CREATOR_FEE_BPS
-  ) {
-    throw new RangeError('Creator fee must be an integer from 0 to 300 basis points.');
+export function calculateProtocolSwapFee(grossInputBaseUnits: bigint): ProtocolSwapFeeRoute {
+  if (grossInputBaseUnits <= 0n) {
+    throw new RangeError('Gross swap input must be positive.');
   }
-  if (priorRemainder < 0n || priorRemainder >= BASIS_POINTS_DENOMINATOR) {
-    throw new RangeError('Fee-share remainder must be between 0 and 9,999.');
+  if (grossInputBaseUnits > U64_MAX) {
+    throw new RangeError('Gross swap input exceeds the on-chain u64 limit.');
   }
 
-  const creatorFeeLamports =
-    (swapVolumeLamports * BigInt(creatorFeeBps)) / BASIS_POINTS_DENOMINATOR;
-  const shareNumerator =
-    creatorFeeLamports * TREASURY_SHARE_OF_CREATOR_FEE_BPS + priorRemainder;
-  const treasuryShareLamports = shareNumerator / BASIS_POINTS_DENOMINATOR;
-  const nextRemainder = shareNumerator % BASIS_POINTS_DENOMINATOR;
-  const creatorRewardLamports = creatorFeeLamports - treasuryShareLamports;
+  const protocolFeeBaseUnits =
+    (grossInputBaseUnits * PROTOCOL_SWAP_FEE_BPS) / BASIS_POINTS_DENOMINATOR;
+  if (protocolFeeBaseUnits === 0n) {
+    throw new RangeError('Swap input is too small to express the 0.50% fee in base units.');
+  }
+
+  const developerFeeBaseUnits =
+    (protocolFeeBaseUnits * DEVELOPER_FEE_SHARE_BPS) / BASIS_POINTS_DENOMINATOR;
+  const treasuryFeeBaseUnits = protocolFeeBaseUnits - developerFeeBaseUnits;
+  const netSwapInputBaseUnits = grossInputBaseUnits - protocolFeeBaseUnits;
 
   return {
-    creatorFeeLamports,
-    treasuryShareLamports,
-    creatorRewardLamports,
-    nextRemainder,
+    grossInputBaseUnits,
+    protocolFeeBaseUnits,
+    developerFeeBaseUnits,
+    treasuryFeeBaseUnits,
+    netSwapInputBaseUnits,
   };
 }
 
