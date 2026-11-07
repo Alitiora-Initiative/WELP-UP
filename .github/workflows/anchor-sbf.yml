@@ -94,7 +94,7 @@ jobs:
           REAL_CARGO="$(command -v cargo)"
           cat > "$RUNNER_TEMP/cargo-wrapper/cargo" <<EOF
           #!/usr/bin/env bash
-          if [[ "${1:-}" == "metadata" ]]; then
+          if [[ "\${1:-}" == "metadata" ]]; then
             exec "$REAL_CARGO" "\$@" --locked
           fi
           exec "$REAL_CARGO" "\$@"
