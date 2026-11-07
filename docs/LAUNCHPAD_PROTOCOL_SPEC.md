@@ -521,7 +521,7 @@ The local crate now contains \`initialize_treasury\` and \`disburse_treasury_fun
 
 Raydium CPMM has separate trade-fee and creator-fee buckets. The creator-fee rate comes from `AmmConfig.creator_fee_rate` and is shared by pools using that config, while each pool stores an enable flag and fee side. A `CreatorFeeShare` PDA can override the creator's share rate for a specific creator/config pair; that split is applied at collection and the shared amount is moved to Raydium's protocol-fee bucket. That bucket is not the WELP Treasury PDA. See [Raydium CPMM fees](https://github.com/raydium-io/raydium-docs-v1/blob/main/products/cpmm/fees.mdx) and [creator-fee flow](https://github.com/raydium-io/raydium-docs-v1/blob/main/user-flows/how-creator-fees-work.mdx).
 
-WELP must not claim that its own instructions intercept post-graduation Raydium swaps. A reviewed collection adapter must be designed to route the accrued creator-fee proceeds to a launch-controlled account and split them to WELP treasury/creator. If that is not possible for the selected pool path, the custom fee must be disabled post-graduation.
+WELP must not claim that its own instructions intercept post-graduation Raydium swaps. Raydium's native creator-fee mechanism is independent of the WELP 0.50% protocol swap fee and does not automatically credit the WELP treasury. No WELP creator-fee slider or post-graduation fee route is enabled. Do not advertise or configure any external fee unless its actual destination and collection path are verified.
 
 ## 15. Graduation economics — fixed target mismatch
 
@@ -548,7 +548,7 @@ The implementation branch leaves this decision unresolved and the sale action di
 
 The proposed initial buy is 0.02% of the selected total supply (2 basis points of supply). It must be an ordinary creator-signed purchase instruction placed after create/initialize in the same transaction. It must:
 - calculate the exact token amount in raw units;
-- calculate the quote cost using the same curve and creator-fee logic as any other buyer;
+- calculate the quote cost using the same curve and 0.50% protocol-fee logic as any other buyer;
 - count against the creator's 5% early-window per-wallet allocation;
 - be visible with its amount, fees, destinations and expected output before signing;
 - be optional or explicitly confirmed by the creator (never hidden);
