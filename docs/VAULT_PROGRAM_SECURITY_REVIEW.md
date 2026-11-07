@@ -16,7 +16,7 @@
 | High | Executor controls | Legacy `set_executor` / `revoke_executor` were no-op stubs. | Legacy entry points now return `ExecutorPolicyRequired`. New owner-only `ExecutorPolicy` PDA supports configuration, rotation and immediate revocation. |
 | High | Spending limits | Stored executor policy must enforce trade size, daily allowance, current vault assets and slippage. | Policy validates max trade >= 0.001 SOL, max trade <= daily cap <= current accounted assets, and slippage <= 1,000 bps. Pure Rust daily-spend helper is tested but is not yet wired into swap execution. |
 | High | Global configuration | First caller could initialize the singleton authority and fee recipients. | `initialize_global_config` returns `GlobalConfigInitDisabled` until a deployment-specific bootstrap authority is pinned. |
-| High | Bot registry | Earlier registry stored unvalidated position/slippage values; slots were not bound to an enabled registry. | Trading remains disabled. Registry/slot binding and policy-version consent remain required before re-enabling it. |
+| High | Bot registry and user-slot consent | Earlier registry stored unvalidated position/slippage values; slots were not bound to an enabled registry. | Registration now validates strategy hash, allocation, slippage and fee ranges. User-slot creation requires an enabled registry and snapshots strategy hash/version and risk limits. The future swap path must still enforce that snapshot. |
 | High | Creation fee | Previous fee instruction did not enforce idempotent bot nonce handling and recipient verification. | Fee collection returns `FeeSettlementDisabled`. |
 
 ## Implemented source controls
@@ -26,6 +26,7 @@
 - Owner-only share redemption with rent-exemption protection.
 - Owner pause/resume.
 - Per-vault executor policy PDA with owner/vault binding, versioned rotation, trade/day/slippage limits, and immediate owner revocation.
+- Bot registry validation and owner-signed user-slot creation with immutable strategy hash/version and risk-limit snapshots.
 - Pure Rust daily-spend authorization helper with per-trade ceiling, daily cap and monotonic UTC-day rollover tests.
 - Fail-closed legacy direct withdrawal, legacy executor setters, global config initialization, swap, settlement and fee movement.
 
@@ -36,7 +37,7 @@ The executor policy is not an active trading permission. The `execute_swap` inst
 ## Required before any instruction is re-enabled
 
 1. Pin deployment-specific bootstrap authority and upgrade/emergency policy.
-2. Bind user slots to an enabled bot registry and owner-approved strategy hash/version.
+2. Enforce the stored user-slot strategy hash/version and risk snapshot in every future swap instruction.
 3. Implement strict Jupiter CPI account validation and token-account/mint/owner checks.
 4. Consume executor policy atomically with exact-next nonce, max trade, daily cap, slippage, available-balance and policy-version checks.
 5. Reconcile actual pre/post token balances and derive realized P&L only from verified fills.
