@@ -102,3 +102,32 @@ test('global configuration cannot be claimed by the first arbitrary signer', () 
   assert.match(body, /GlobalConfigInitDisabled/);
   assert.doesNotMatch(body, /cfg\.authority = ctx\.accounts\.authority\.key\(\)/);
 });
+
+test('bot registration validates strategy hash, allocation, slippage and fee bounds', () => {
+  const body = instruction('pub fn register_bot(', '/// settle_creator_fee:');
+  assert.match(body, /strategy_hash != \[0u8; 32\]/);
+  assert.match(body, /max_position_bps > 0 && max_position_bps <= 10_000/);
+  assert.match(body, /max_slippage_bps <= 1_000/);
+  assert.match(body, /validate_fee_bps/);
+  assert.match(body, /bot_account\.key\(\) != ctx\.accounts\.creator\.key\(\)/);
+});
+
+test('user slots require an enabled bot registry and snapshot the approved strategy', () => {
+  const body = instruction('pub fn create_user_slot(', '/// Owner advances the order nonce');
+  assert.match(body, /registry\.enabled/);
+  assert.match(body, /registry\.strategy_hash/);
+  assert.match(body, /slot\.strategy_hash = registry\.strategy_hash/);
+  assert.match(body, /slot\.registry_version = registry\.version/);
+  assert.match(body, /slot\.max_position_bps = registry\.max_position_bps/);
+  assert.match(body, /slot\.max_slippage_bps = registry\.max_slippage_bps/);
+
+  const context = source.slice(source.indexOf('pub struct CreateUserSlot'), source.indexOf('pub struct UpdateSlotLimits'));
+  assert.match(context, /b"bot-registry-v1"/);
+  assert.match(context, /bot_registry\.enabled/);
+
+  const account = source.slice(source.indexOf('pub struct UserSlot {'), source.indexOf('impl UserSlot'));
+  assert.match(account, /pub strategy_hash: \[u8; 32\]/);
+  assert.match(account, /pub registry_version: u32/);
+  assert.match(account, /pub max_position_bps: u16/);
+  assert.match(account, /pub max_slippage_bps: u16/);
+});
