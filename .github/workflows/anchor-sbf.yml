@@ -64,7 +64,13 @@ jobs:
         run: solana --version
 
       - name: Install Anchor CLI 0.30.1
-        run: cargo install --git https://github.com/coral-xyz/anchor --tag v0.30.1 anchor-cli --locked
+        run: |
+          git clone --depth 1 --branch v0.30.1 https://github.com/coral-xyz/anchor.git "$RUNNER_TEMP/anchor"
+          # Anchor 0.30.1's lockfile pins time 0.3.29, which fails to compile on
+          # modern Rust because of a compiler inference change in Rust 1.80.
+          # Update only that transitive dependency while keeping Anchor itself pinned.
+          cargo update --manifest-path "$RUNNER_TEMP/anchor/cli/Cargo.toml" -p time --precise 0.3.36
+          cargo install --path "$RUNNER_TEMP/anchor/cli" --locked
 
       - name: Verify Anchor CLI
         run: anchor --version
