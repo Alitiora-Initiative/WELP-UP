@@ -4,6 +4,18 @@
 
 This backlog replaces the earlier incorrect fixed-supply wording. **200,000,000 is an example creator choice, not a global supply limit.**
 
+## 0.1 Progress in the custom-supply implementation branch
+
+The following configuration-only slice is now implemented on \`feature/launchpad-custom-supply-spec\`:
+
+- \`lib/launchpad-config.ts\`: BigInt-only validation for 1..1,000,000,000 whole tokens; decimals 0/6/9; raw mint-unit conversion; u64 bounds; dynamic 5% cap; exact base-unit formatting.
+- \`components/LaunchpadCreatorStudio.tsx\`: creator input/precision preview, dynamic 5% wallet-cap display and explicit disabled state.
+- \`app/launchpad/page.tsx\` + \`app/launchpad/launchpad.css\`: responsive creator/discovery layout and restrained glass / emerald pill styling.
+- \`tests/launchpad-config.test.mjs\`: boundary tests for 200m as an example, the 1b maximum, decimal choices, zero/invalid input and exact integer formatting.
+
+This is **not** the on-chain launch implementation. The creator UI is a configuration preview only. The following remain unimplemented and must not be represented as live: mint initialization, supply minting/authority revocation, sale curve, quote escrow, buys, refunds, anti-snipe program enforcement, fee transfer, Raydium CPMM CPI, LP burn, live event indexing or transaction execution. The launch action remains disabled. CI results for the pull request must be inspected before this slice is considered validated.
+
+
 ## 1. Product contract and supply rules
 
 - [ ] Each creator selects a whole-token maximum supply from **1 through 1,000,000,000** inclusive. Zero is invalid and must be rejected.
