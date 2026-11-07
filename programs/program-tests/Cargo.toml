@@ -11,8 +11,8 @@ solana-program-test = "=1.18.26"
 solana-banks-client = "=1.18.26"
 solana-sdk = "=1.18.26"
 tokio = { version = "1.29.1", features = ["macros", "rt-multi-thread"] }
-welp-vault = { path = "../vault" }
-welp-launchpad = { path = "../launchpad" }
+welp-vault = { path = "../vault", features = ["no-entrypoint"] }
+welp-launchpad = { path = "../launchpad", features = ["no-entrypoint"] }
 
 [[test]]
 name = "vault_program_test"
