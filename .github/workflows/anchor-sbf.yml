@@ -86,7 +86,7 @@ jobs:
           done
 
       - name: Build Solana BPF/SBF program and IDL
-        run: anchor build
+        run: anchor build -- --locked
 
       - name: Run Solana ProgramTest against the built SBF binary
         run: cargo test --manifest-path programs/vault/Cargo.toml --test anchor_program_test
