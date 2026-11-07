@@ -61,6 +61,10 @@ for manifest in "$@"; do
   pin_if_present "$manifest" blake3 1.8.7 1.8.2
   pin_if_present "$manifest" constant_time_eq 0.4.2 0.3.1
 
+  # zeroize_derive 1.5.0 uses Cargo's unstable edition-2024 manifest feature.
+  # Keep the Solana 1.18 bundled Cargo 1.75-compatible derive release.
+  pin_if_present "$manifest" zeroize_derive 1.5.0 1.4.2
+
   # Newer crypto/TOML transitive releases also exceed the bundled Cargo.
   pin_if_present "$manifest" base64ct 1.8.3 1.7.3
   # Keep only the incompatible indexmap 2.x release constrained; indexmap 1.x
@@ -74,6 +78,7 @@ for manifest in "$@"; do
     "blake3:1.8.7" \
     "constant_time_eq:0.4.2" \
     "base64ct:1.8.3" \
+    "zeroize_derive:1.5.0" \
     "indexmap:2.14.2" \
     "proc-macro-crate:3.5.0" \
     "borsh:1.8.1" \
