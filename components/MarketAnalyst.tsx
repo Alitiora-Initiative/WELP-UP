@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Bot, LoaderCircle, LockKeyhole, RefreshCw, Sparkles } from 'lucide-react';
 
@@ -34,7 +34,7 @@ export function MarketAnalyst() {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
 
-  async function checkStatus() {
+  const checkStatus = useCallback(async () => {
     setChecking(true);
     try {
       const response = await fetch('/api/agent', { cache: 'no-store' });
@@ -46,12 +46,12 @@ export function MarketAnalyst() {
     } finally {
       setChecking(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void checkStatus(), 0);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [checkStatus]);
 
   async function ask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
