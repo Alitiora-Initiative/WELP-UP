@@ -29,8 +29,15 @@ test('the maximum is one billion whole tokens, not a fixed 200 million', () => {
   assert.equal(result.earlyWalletLimitWholeTokens, '50000000');
 });
 
-test('rejects zero, fractions, negative values and supply above one billion', () => {
-  for (const invalid of ['0', '0.5', '-1', '1000000001', '1e6', '']) {
+test('zero is previewable but not launchable; rejects fractions, negatives and supply above one billion', () => {
+  const zero = validateLaunchSupply('0', 9);
+  assert.equal(zero.ok, true);
+  if (zero.ok) {
+    assert.equal(zero.launchable, false);
+    assert.equal(zero.maxSupplyBaseUnits, 0n);
+    assert.equal(zero.earlyWalletLimitBaseUnits, 0n);
+  }
+  for (const invalid of ['0.5', '-1', '1000000001', '1e6', '']) {
     assert.equal(validateLaunchSupply(invalid, 9).ok, false, invalid);
   }
   assert.equal(MAX_TOTAL_SUPPLY_WHOLE, 1_000_000_000n);
