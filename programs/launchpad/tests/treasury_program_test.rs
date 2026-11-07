@@ -103,12 +103,11 @@ async fn treasury_initialization_epoch_gate_distribution_and_reserve_are_enforce
         unix_timestamp: initialized_at,
     });
 
-    send_as_payer(
-        &mut context,
-        initialize_ix(context.payer.pubkey(), treasury),
-    )
-    .await
-    .expect("treasury initialization succeeds");
+    let payer = context.payer.pubkey();
+    let initialize_instruction = initialize_ix(payer, treasury);
+    send_as_payer(&mut context, initialize_instruction)
+        .await
+        .expect("treasury initialization succeeds");
 
     let mut treasury_account = context
         .banks_client
@@ -153,11 +152,9 @@ async fn treasury_initialization_epoch_gate_distribution_and_reserve_are_enforce
         leader_schedule_epoch: 1,
         unix_timestamp: initialized_at + 3_600,
     });
-    let premature = send_as_payer(
-        &mut context,
-        disburse_ix(context.payer.pubkey(), treasury, DEVELOPER_WALLET),
-    )
-    .await;
+    let caller = context.payer.pubkey();
+    let premature_instruction = disburse_ix(caller, treasury, DEVELOPER_WALLET);
+    let premature = send_as_payer(&mut context, premature_instruction).await;
     assert!(premature.is_err(), "premature disbursal must fail");
 
     let after_premature = context
@@ -176,11 +173,8 @@ async fn treasury_initialization_epoch_gate_distribution_and_reserve_are_enforce
         leader_schedule_epoch: 1,
         unix_timestamp: initialized_at - 1,
     });
-    let backwards = send_as_payer(
-        &mut context,
-        disburse_ix(context.payer.pubkey(), treasury, DEVELOPER_WALLET),
-    )
-    .await;
+    let backwards_instruction = disburse_ix(caller, treasury, DEVELOPER_WALLET);
+    let backwards = send_as_payer(&mut context, backwards_instruction).await;
     assert!(backwards.is_err(), "clock rollback must fail");
 
     // An address substitution must not redirect the developer distribution.
@@ -193,11 +187,8 @@ async fn treasury_initialization_epoch_gate_distribution_and_reserve_are_enforce
         leader_schedule_epoch: 1,
         unix_timestamp: initialized_at + DISTRIBUTION_EPOCH_SECONDS,
     });
-    let substituted = send_as_payer(
-        &mut context,
-        disburse_ix(context.payer.pubkey(), treasury, attacker),
-    )
-    .await;
+    let substituted_instruction = disburse_ix(caller, treasury, attacker);
+    let substituted = send_as_payer(&mut context, substituted_instruction).await;
     assert!(substituted.is_err(), "developer destination substitution must fail");
 
     // Exactly 14 days is sufficient. The program uses a >= check, so it
@@ -210,12 +201,10 @@ async fn treasury_initialization_epoch_gate_distribution_and_reserve_are_enforce
         leader_schedule_epoch: 1,
         unix_timestamp: matured_at,
     });
-    send_as_payer(
-        &mut context,
-        disburse_ix(context.payer.pubkey(), treasury, DEVELOPER_WALLET),
-    )
-    .await
-    .expect("matured epoch disbursal succeeds");
+    let matured_instruction = disburse_ix(caller, treasury, DEVELOPER_WALLET);
+    send_as_payer(&mut context, matured_instruction)
+        .await
+        .expect("matured epoch disbursal succeeds");
 
     let after_distribution = context
         .banks_client
@@ -255,11 +244,8 @@ async fn treasury_initialization_epoch_gate_distribution_and_reserve_are_enforce
         leader_schedule_epoch: 2,
         unix_timestamp: matured_at + DISTRIBUTION_EPOCH_SECONDS,
     });
-    let second_harvest = send_as_payer(
-        &mut context,
-        disburse_ix(context.payer.pubkey(), treasury, DEVELOPER_WALLET),
-    )
-    .await;
+    let second_harvest_instruction = disburse_ix(caller, treasury, DEVELOPER_WALLET);
+    let second_harvest = send_as_payer(&mut context, second_harvest_instruction).await;
     assert!(
         second_harvest.is_err(),
         "previous reserve and unaccounted deposits are not distributable"
