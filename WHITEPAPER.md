@@ -23,7 +23,7 @@ The project is exploring a future non-custodial vault and constrained strategy-a
 
 ### 3.1 Market data and signals
 
-The web app reads live Solana token/market information through the configured providers. A deterministic rule engine evaluates available fields and returns a score with rule-based eligibility. Missing or stale inputs must not be presented as a successful signal. A score range such as 80–98 is a filter output, not a statistical probability of profit.
+The web app reads live Solana token/market information from Jupiter Token API v2. The recovered WELP scoring model maps six inputs into an 80–98 ranking band: organic activity 32%, liquidity depth 20%, turnover 15%, holder count 13%, buy pressure 12%, and one-hour momentum 8%. Hard blockers are live freeze authority, liquidity below US$100,000, 24-hour volume below US$100,000, and top-holder concentration above 60%. Warnings include active mint authority, small holder base, liquidity below US$250,000, top holders above 40%, low organic score, sharp drawdown, unverified status, and missing risk fields. Missing market cap or one-hour change contributes no score and is surfaced as a warning. A score is a rule-based ranking, not a statistical probability of profit.
 
 ### 3.2 Wallet and swap flow
 
