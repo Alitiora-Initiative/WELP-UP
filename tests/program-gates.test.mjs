@@ -151,8 +151,8 @@ test('Anchor SBF build preserves pinned Cargo lockfiles', () => {
   assert.match(workflow, /anchor build -- -- --locked/);
   assert.match(workflow, /Prevent Anchor metadata from upgrading the SBF lockfile/);
   assert.match(workflow, /\$\{1:-\}.*metadata/);
-  assert.ok(workflow.includes(String.raw`if [[ "${1:-}" == "metadata" ]]; then`));
-  assert.ok(workflow.includes(String.raw`exec "$REAL_CARGO" "$@" --locked`));
+  assert.ok(workflow.includes('if [[ "${1:-}" == "metadata" ]]; then'));
+  assert.ok(workflow.includes('exec "$REAL_CARGO" "$@" --locked'));
   assert.match(workflow, /exec "\$REAL_CARGO" "\$@" --locked/);
   assert.match(workflow, /grep -qx 'version = 3' programs\/vault\/Cargo\.lock/);
   assert.match(workflow, /for lockfile in programs\/vault\/Cargo\.lock/);
