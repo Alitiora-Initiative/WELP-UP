@@ -468,6 +468,20 @@ mod tests {
     }
 
     #[test]
+    fn repeat_deposit_after_partial_withdrawal_uses_current_assets() {
+        // Start with 100 lamports / 100 shares, redeem half, then deposit
+        // 50 into the remaining 50. New depositor receives 50 shares,
+        // not 25 based on the lifetime-deposit counter.
+        let initial_shares = compute_shares(100, 0, 0).unwrap();
+        let redeemed = compute_redeem(50, 100, initial_shares).unwrap();
+        let remaining_assets = 100 - redeemed;
+        let remaining_shares = initial_shares - 50;
+        assert_eq!(remaining_assets, 50);
+        assert_eq!(remaining_shares, 50);
+        assert_eq!(compute_shares(50, remaining_assets, remaining_shares), Ok(50));
+    }
+
+    #[test]
     fn compute_shares_rejects_zero_amount() {
         assert_eq!(
             compute_shares(0, 10_000_000, 10_000_000),
