@@ -12,7 +12,7 @@ WELP uses an Anchor program with one vault PDA per owner. The owner keeps their 
 |---|---|---|
 | `Vault` | `[b"vault-v1", owner]` | SOL accounting and share supply |
 | `ExecutorPolicy` | `[b"executor-policy-v1", vault]` | Delegated executor key and limits |
-| `UserSlot` | `[b"user-slot-v1", owner, bot_account]` | Per-bot user state; trading is not enabled |
+| `UserSlot` | `[b"user-slot-v1", owner, bot_account]` | Owner-approved per-bot state and immutable strategy/risk snapshot |
 | `BotRegistry` | `[b"bot-registry-v1", creator, bot_account]` | Bot metadata; registration does not authorize swaps |
 | `GlobalConfig` | `[b"global-config-v1"]` | Reserved singleton; initialization is currently disabled |
 
@@ -43,6 +43,10 @@ The owner may configure or rotate the executor only when the vault is Active or 
 
 A pure Rust authorization helper validates executor identity, enabled state, per-trade size, daily cap and UTC-day rollover. It deliberately refuses to reset spend when the observed clock moves backwards.
 
+## Bot registry and user-slot consent
+
+Bot registration rejects a zero strategy hash, zero or greater-than-100% position allocation, slippage above 10%, invalid fee basis points, and a bot identity equal to the creator. Creating a `UserSlot` requires an existing enabled `BotRegistry` PDA. The owner-signed creation snapshots the registry's strategy hash, version, maximum position allocation and slippage into the slot. A future swap instruction must compare and enforce that snapshot; current `execute_swap` remains disabled.
+
 **Important:** The helper and policy account are not yet consumed by a swap instruction. No daily spend is currently recorded on-chain because `execute_swap` is deliberately fail-closed. The policy is configuration groundwork, not live trading authorization.
 
 ## Instruction status
@@ -55,6 +59,8 @@ A pure Rust authorization helper validates executor identity, enabled state, per
 | `pause_vault` / `resume_vault` | Owner-only state transitions implemented in source |
 | `configure_executor_policy` | Owner-only per-vault executor and spending policy implemented in source |
 | `revoke_executor_policy` | Owner-only immediate executor revocation implemented in source |
+| `register_bot` | Validates strategy hash, allocation, slippage and fee metadata in source |
+| `create_user_slot` | Requires an enabled bot registry and snapshots the owner's approved strategy/risk settings |
 | `execute_swap` | Returns `TradingDisabled`; no CPI or token movement |
 | `settle_exit` | Returns `TradingDisabled`; no caller-supplied P&L accepted |
 | Creator-fee settlement/claim | Returns `FeeSettlementDisabled` |
@@ -66,7 +72,7 @@ A pure Rust authorization helper validates executor identity, enabled state, per
 ## What remains before delegated trading
 
 1. Pin a deployment-specific bootstrap authority and define upgrade/emergency authority.
-2. Bind each user slot to an enabled bot registry and a user-approved strategy hash/version.
+2. Enforce the user-slot strategy hash/version snapshot and registry risk limits in the future swap path; creation-time binding is now implemented.
 3. Implement a narrow Jupiter CPI path with strict program, account-meta, token-account owner/mint, mint allowlist, and pre/post balance checks.
 4. Consume the executor policy atomically: exact-next nonce, per-trade cap, daily cap, current available balance, slippage ceiling and policy version.
 5. Derive realized P&L from reconciled on-chain fills; never trust caller-supplied profit.
