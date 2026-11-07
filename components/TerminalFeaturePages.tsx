@@ -185,7 +185,7 @@ function VaultPage() {
       <Stat label="PROGRAM ADDRESS" value="UNCONFIGURED" detail="Placeholder ID is not fundable" />
       <Stat label="NETWORK STATUS" value="NOT DEPLOYED" detail="No Devnet or Mainnet release" />
       <Stat label="EXECUTOR POLICY" value="SOURCE ONLY" detail="No executor is configured" />
-      <Stat label="OWNER RECOVERY" value="IMPLEMENTED" detail="Share redemption · pause · revoke" />
+      <Stat label="OWNER RECOVERY" value="SOURCE ONLY" detail="Share redemption · pause · policy revoke" />
     </div>
     <div className="feature-grid two">
       <Panel title="Launch gates" eyebrow="SOURCE VS RELEASE">{gates.map((gate) => <div className="gate-row" key={gate[0]}><span className={'gate-state ' + (gate[1] === 'PARTIAL' ? 'partial' : '')}>{gate[1]}</span><div><strong>{gate[0]}</strong><small>{gate[2]}</small></div></div>)}</Panel>
