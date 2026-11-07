@@ -8,7 +8,7 @@ Per-user PDA SOL vault (Anchor source implementation, not yet deployed). Current
 - `docs/vault/ARCHITECTURE.md`
 - `docs/PRODUCTION_READINESS.md`
 
-**Deployment status: not deployed to Devnet or Mainnet. Mainnet funds are disabled.** The program ID in source is a placeholder. Do not derive a user deposit address or accept funds from this source build. `execute_swap` fails closed with `TradingDisabled`; Jupiter CPI, policy consumption and strategy-snapshot enforcement by the swap path, SPL-token accounting, local-validator tests, and independent audit are not complete. Legacy direct withdrawal is disabled to prevent share-accounting bypass.
+**Deployment status: not deployed to Devnet or Mainnet. Mainnet funds are disabled.** The program ID in source is a placeholder. Do not derive a user deposit address or accept funds from this source build. `execute_swap` fails closed with `TradingDisabled`; Jupiter CPI, policy consumption and strategy-snapshot enforcement by the swap path, SPL-token accounting, local-validator tests, and independent audit are not complete. Legacy direct withdrawal is disabled to prevent share-accounting bypass; the legacy initializer is disabled because its cap arguments were not persisted.
 
 Do not derive a deposit address from the placeholder program ID. Do not deploy this program or accept deposits until all launch gates have been completed and independently reviewed.
 
