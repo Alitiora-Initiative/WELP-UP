@@ -155,6 +155,8 @@ test('Anchor SBF build preserves pinned Cargo lockfiles', () => {
   assert.ok(workflow.includes('"$REAL_CARGO" "\\$@"'));
   assert.ok(workflow.includes('status=\\$?'));
   assert.ok(workflow.includes('if [[ \\$status -ne 0 ]]; then exit "\\$status"; fi'));
+  assert.ok(workflow.includes(String.raw`if [[ -f "\$lockfile" ]]; then`));
+  assert.ok(workflow.includes(String.raw`sed -i 's/^version = 4$/version = 3/' "\$lockfile"`));
   assert.match(workflow, /metadata --manifest-path programs\/launchpad\/Cargo\.toml/);
   assert.match(workflow, /for lockfile in programs\/vault\/Cargo\.lock programs\/launchpad\/Cargo\.lock/);
   assert.match(workflow, /test -s target\/deploy\/welp_launchpad\.so/);
