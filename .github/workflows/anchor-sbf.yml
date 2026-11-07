@@ -5,6 +5,7 @@ on:
     paths:
       - 'programs/**'
       - 'Anchor.toml'
+      - 'scripts/pin-sbf-compatible-locks.sh'
       - '.github/workflows/anchor-sbf.yml'
   push:
     branches:
@@ -121,6 +122,12 @@ jobs:
           sed -i 's/^version = 4$/version = 3/' programs/launchpad/Cargo.lock
           grep -qx 'version = 3' programs/launchpad/Cargo.lock
           echo "$RUNNER_TEMP/cargo-wrapper" >> "$GITHUB_PATH"
+
+      - name: Pin Solana 1.18-compatible transitive crate versions
+        run: |
+          bash scripts/pin-sbf-compatible-locks.sh \
+            programs/vault/Cargo.toml \
+            programs/launchpad/Cargo.toml
 
       - name: Build Solana BPF/SBF program and IDL
         run: |
