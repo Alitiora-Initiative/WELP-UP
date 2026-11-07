@@ -8,7 +8,8 @@ All amounts are denominated in mainnet USDC (mint EPjFWdd5AufqSSqeM2qN1xzybapC8G
 
 | Operation | Total | 60% developer/operator | 40% protocol treasury |
 |---|---:|---:|---:|
-| Supported trade or supported transfer | $0.10 USDC | $0.06 | $0.04 |
+| Each supported trade | $0.10 USDC | $0.06 | $0.04 |
+| Each supported transfer | $0.10 USDC | $0.06 | $0.04 |
 | Token launch creation | $0.50 USDC | $0.30 | $0.20 |
 
 The developer/operator fee destination is the newly supplied public Solana wallet:
@@ -25,7 +26,7 @@ The current Anchor program ID is an undeployed placeholder. Therefore the treasu
 
 ## On-chain enforcement requirements
 
-The Rust program, not browser JavaScript or a mutable web server setting, must enforce the fixed fee amounts and split. The backend may build a transaction for a connected wallet to review and sign, but it must not custody a user's signing key.
+The Rust program, not browser JavaScript or a mutable web server setting, must enforce the fixed fee amounts and split. The $0.10 USDC trade fee, $0.10 USDC supported-transfer fee, $0.50 USDC launch-creation fee, and 60/40 split are fixed protocol constants—not operator-adjustable runtime settings. Charge each qualifying operation exactly once and atomically with that operation. The backend may build a transaction for a connected wallet to review and sign, but it must not custody a user's signing key.
 
 Before fees are enabled:
 1. Create the treasury PDA and its USDC associated token account.
