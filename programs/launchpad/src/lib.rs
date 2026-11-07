@@ -11,8 +11,7 @@ use anchor_lang::prelude::*;
 declare_id!("BrcdB9sV7z9DvF9rDHG263HUxXgJM3iCQdF36TcxbFEn");
 
 pub const TREASURY_SEED: &[u8] = b"treasury-v1";
-pub const DEVELOPER_WALLET: Pubkey =
-    pubkey!("ETuGxX6Znxr9q59THJtcYDJKt6RvCfN7wp79tRnbG1xG");
+pub const DEVELOPER_WALLET: Pubkey = pubkey!("ETuGxX6Znxr9q59THJtcYDJKt6RvCfN7wp79tRnbG1xG");
 
 pub const BASIS_POINTS_DENOMINATOR: u128 = 10_000;
 pub const CREATOR_FEE_PROTOCOL_SHARE_BPS: u128 = 50; // 0.5% of the creator fee
@@ -235,8 +234,8 @@ pub fn calculate_creator_fee_route(
 
     let treasury_share = share_numerator / BASIS_POINTS_DENOMINATOR;
     let next_remainder = share_numerator % BASIS_POINTS_DENOMINATOR;
-    let treasury_share = u64::try_from(treasury_share)
-        .map_err(|_| error!(TreasuryError::ArithmeticOverflow))?;
+    let treasury_share =
+        u64::try_from(treasury_share).map_err(|_| error!(TreasuryError::ArithmeticOverflow))?;
 
     let creator_reward = creator_fee
         .checked_sub(treasury_share)
