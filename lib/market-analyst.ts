@@ -3,11 +3,18 @@ export type AnalystAsset = {
   symbol: string;
   priceUsd: number | null;
   priceChange24h: number | null;
+  priceChange1h: number | null;
   liquidityUsd: number | null;
   volume24hUsd: number | null;
+  marketCapUsd: number | null;
+  holders: number;
+  turnover: number | null;
+  buyPressure: number | null;
+  topHoldersPercent: number | null;
   organicScore: number | null;
   score: number | null;
   verified: boolean;
+  suspicious: boolean;
   eligible: boolean;
   blockers: string[];
   warnings: string[];
@@ -46,11 +53,18 @@ export function buildAnalystSnapshot(value: unknown): { updatedAt: string | null
       symbol: typeof asset.symbol === 'string' ? asset.symbol.slice(0, 20) : '—',
       priceUsd: finite(asset.priceUsd),
       priceChange24h: finite(asset.priceChange24h),
+      priceChange1h: finite(asset.priceChange1h),
       liquidityUsd: finite(asset.liquidityUsd),
       volume24hUsd: finite(asset.volume24hUsd),
+      marketCapUsd: finite(asset.marketCapUsd),
+      holders: Math.max(0, Math.trunc(finite(asset.holders) ?? 0)),
+      turnover: finite(asset.turnover),
+      buyPressure: finite(asset.buyPressure),
+      topHoldersPercent: finite(asset.topHoldersPercent),
       organicScore: finite(asset.organicScore),
       score: finite(asset.score),
       verified: asset.verified === true,
+      suspicious: asset.suspicious === true,
       eligible: asset.eligible === true,
       blockers: strings(asset.blockers),
       warnings: strings(asset.warnings),
