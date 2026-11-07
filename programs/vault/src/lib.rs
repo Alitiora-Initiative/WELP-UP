@@ -422,6 +422,8 @@ pub mod welp_vault {
         err!(VaultError::FeeSettlementDisabled)
     }
 
+}
+
 // ── Errors ────────────────────────────────────────────────────────────────
 
 #[error_code]
