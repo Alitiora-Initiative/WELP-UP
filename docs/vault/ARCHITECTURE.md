@@ -90,7 +90,7 @@ Host-side pure checks:
 cargo test --manifest-path programs/vault-checks/Cargo.toml
 ```
 
-Anchor build and SBF-backed ProgramTest, using the pinned Anchor 0.30.1 / Solana 1.18.17 toolchain:
+Anchor build and SBF-backed ProgramTest, using the pinned Anchor 0.30.1 / Solana 1.18.26 toolchain:
 
 ```bash
 anchor build
