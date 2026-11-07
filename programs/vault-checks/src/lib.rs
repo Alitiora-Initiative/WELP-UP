@@ -478,7 +478,10 @@ mod tests {
         let remaining_shares = initial_shares - 50;
         assert_eq!(remaining_assets, 50);
         assert_eq!(remaining_shares, 50);
-        assert_eq!(compute_shares(50, remaining_assets, remaining_shares), Ok(50));
+        assert_eq!(
+            compute_shares(50, remaining_assets, remaining_shares),
+            Ok(50)
+        );
     }
 
     #[test]
