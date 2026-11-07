@@ -1,5 +1,5 @@
 use anchor_lang::{AccountDeserialize, AccountSerialize, InstructionData, ToAccountMetas};
-use solana_program_test::{processor, ProgramTest};
+use solana_program_test::ProgramTest;
 use solana_sdk::{
     account::{Account, AccountSharedData},
     clock::Clock,
@@ -83,11 +83,9 @@ async fn treasury_initialization_epoch_gate_distribution_and_reserve_are_enforce
     let program_id = id();
     let (treasury, _) = Pubkey::find_program_address(&[TREASURY_SEED], &program_id);
 
-    let mut program_test = ProgramTest::new(
-        "welp_launchpad",
-        program_id,
-        processor!(welp_launchpad::entry),
-    );
+    // BPF_OUT_DIR is set by the Anchor/SBF workflow. ProgramTest loads the
+    // compiled welp_launchpad.so rather than a native Rust processor.
+    let mut program_test = ProgramTest::new("welp_launchpad", program_id, None);
     program_test.add_account(DEVELOPER_WALLET, system_account(1));
 
     let mut context = program_test.start_with_context().await;
