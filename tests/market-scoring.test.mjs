@@ -91,3 +91,17 @@ test('missing market-cap, momentum and audit fields are explicit and do not rece
   assert.match(scored.warnings.join(' | '), /Holder concentration is unavailable/);
   assert.match(scored.warnings.join(' | '), /Freeze-authority status is not reported/);
 });
+
+test('Jupiter suspicious-token audit flag is a hard eligibility blocker', () => {
+  const scored = scoreToken({
+    ...strongToken,
+    audit: {
+      freezeAuthorityDisabled: true,
+      mintAuthorityDisabled: true,
+      topHoldersPercentage: 10,
+      isSus: true,
+    },
+  });
+  assert.equal(scored.eligible, false);
+  assert.match(scored.blockers.join(' | '), /Jupiter audit flags this token as suspicious/);
+});
