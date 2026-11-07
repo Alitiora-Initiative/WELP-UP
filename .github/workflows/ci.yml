@@ -100,6 +100,8 @@ jobs:
         run: cargo fmt --check --manifest-path programs/vault/Cargo.toml
       - name: Clippy — vault-checks
         run: cargo clippy --manifest-path programs/vault-checks/Cargo.toml -- -D warnings
+      - name: Pin vault transitive Solana dependencies to 1.18
+        run: bash scripts/pin-solana-118-locks.sh programs/vault/Cargo.toml
       - name: Clippy — vault program
         run: cargo clippy --manifest-path programs/vault/Cargo.toml -- -D warnings
       - name: Unit tests — vault-checks
