@@ -87,7 +87,7 @@ const blocks = parseTerms(terms);
 export default function TermsPage() {
   return (
     <main className="app-shell">
-      <AppSidebar active="terms" status="Terms v1.0 · effective 21 Oct 2026" />
+      <AppSidebar active="terms" status="Terms v2.0 · effective 7 Nov 2026" />
       <section className="workspace" id="top">
         <header className="topbar">
           <div className="breadcrumb">
@@ -109,7 +109,7 @@ export default function TermsPage() {
               </p>
             </div>
             <div className="date-pill">
-              <span className="date-dot" /> EFFECTIVE 21 OCT 2026
+              <span className="date-dot" /> EFFECTIVE 7 NOV 2026
             </div>
           </section>
           <div className="terms-draft-banner">
@@ -141,7 +141,7 @@ export default function TermsPage() {
             })}
           </article>
           <footer className="footer">
-            <span>WELP UP · Terms v1.0 · effective 21 October 2026</span>
+            <span>WELP UP · Terms v2.0 · effective 7 November 2026</span>
             <span>Contact: jaymnyon@gmail.com · jaymn2006@gmail.com</span>
             <Link href="/">Back to home</Link>
           </footer>
