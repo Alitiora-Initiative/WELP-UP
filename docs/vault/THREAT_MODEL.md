@@ -1,16 +1,16 @@
 # WELP vault threat model (draft — Phase 1)
 
-**Status:** Design only. No on-chain program is deployed. Mainnet funds must not be enabled until roadmap vault launch gates are complete.
+**Status:** Source implementation in progress; not deployed to Devnet or Mainnet and not independently audited. The current program supports owner-signed SOL deposits and owner-only SOL withdrawals with share accounting. Mainnet funds must remain disabled until roadmap vault launch gates are complete.
 
 ## Goal
 
 Isolated per-user vault that:
 
-- Is funded only by an explicit user-signed transfer of SOL the user chooses.
+- Is funded only by an explicit user-signed System Program transfer of SOL the user chooses.
 - Enforces a total allocation cap and a per-position ceiling (design default 0.02 SOL) **on-chain**.
 - Lets a narrowly scoped executor trade only through the vault authority.
 - Does not accept wallet secrets. Actions run only after a wallet connects on the website.
-- Allows the user to pause, revoke, and withdraw available assets without the agent’s cooperation.
+- Allows the user to pause and withdraw available SOL without the agent’s cooperation. Executor revocation is not implemented in the current account schema yet.
 
 ## Actors
 
