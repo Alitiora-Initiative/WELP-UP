@@ -110,3 +110,7 @@ jobs:
         run: cargo clippy --manifest-path programs/launchpad/Cargo.toml -- -D warnings
       - name: Unit tests — launchpad treasury core
         run: cargo test --lib --manifest-path programs/launchpad/Cargo.toml
+      - name: Format host-only Solana integration tests
+        run: cargo fmt --check --manifest-path programs/program-tests/Cargo.toml
+      - name: Compile host-only Solana integration tests
+        run: cargo check --manifest-path programs/program-tests/Cargo.toml --tests
