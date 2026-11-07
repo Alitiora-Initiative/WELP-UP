@@ -194,11 +194,11 @@ Design and current implementation detail: [TREASURY_AND_CREATOR_FEES.md](./TREAS
 - [x] Enforce the 1,209,600-second minimum epoch before any disbursal.
 - [x] Pay 60% of new, previously undistributed fee inflows to the fixed developer account.
 - [x] Add the remaining 40% to \`locked_reserve_lamports\` and exclude it from every future harvest, preventing repeated 60/40 calls from slowly draining the reserve.
-- [x] Test fee math, remainder carry, exact epoch boundary, backwards clock, 60/40 split and treasury account sizing.
+- [x] Test 50-bps gross-input fee math, exact epoch boundary, backwards clock, one-time 60/40 epoch release and treasury account sizing.
 - [x] Keep host-only ProgramTest dependencies outside the Anchor SBF workspace in `programs/program-tests`.
 - [x] Add `scripts/pin-sbf-compatible-locks.sh` to constrain edition2024-sensitive transitive crates for the Solana 1.18/Cargo 1.75 SBF toolchain.
 - [x] Keep host-only ProgramTest dependencies outside the Anchor SBF workspace in `programs/program-tests`.
-- [ ] Connect the tested creator-fee helper to a verified buy/sell instruction and atomically transfer the treasury/creator amounts.
+- [ ] Connect the 50-bps gross-input fee helper to a verified buy/sell instruction and atomically credit 100% of the fee to the matching treasury vault.
 - [ ] Add operation receipt/nonces, replay tests and event reconciliation for each fee-bearing swap.
 - [x] Add treasury ProgramTest integration coverage for rent preservation, unauthorized destination substitution, unsolicited donations, fee-ledger reconciliation, premature withdrawal rollback and repeated epochs in `programs/program-tests/tests/treasury_program_test.rs`.
 - [ ] Confirm both SBF artifacts build and both ProgramTest suites pass against the built binaries in the dedicated Anchor SBF workflow.
