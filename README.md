@@ -61,7 +61,8 @@ The configured developer fee destination is a public Solana address, not a signi
 - programs/vault/ — Anchor/Rust on-chain program scaffold.
 - programs/vault-checks/ — host-side pure Rust invariants.
 - docs/ — protocol design, threat models, release gates, fee policy and runbooks.
-- [Launchpad and platform hardening backlog](docs/LAUNCHPAD_AND_SECURITY_BACKLOG.md) — planned work and release gates; not a live launch contract.
+- [Launchpad protocol specification](docs/LAUNCHPAD_PROTOCOL_SPEC.md) — custom supply/decimals, curve, escrow, anti-snipe, CPMM, fees, indexing and release design; not a live deployment.
+- [Launchpad and platform hardening backlog](docs/LAUNCHPAD_AND_SECURITY_BACKLOG.md) — implementation checklist and release gates; not a live launch contract.
 
 ## Local development
 
