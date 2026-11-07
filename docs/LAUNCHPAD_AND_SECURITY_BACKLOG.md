@@ -76,6 +76,7 @@ The existing policy in `docs/FEES_AND_TREASURY.md` is the source of truth and mu
 
 - [ ] Keep provider secrets, Helius credentials, API keys, privileged configuration, deployment credentials, and sensitive operational data server-side. Use the hosting platform's encrypted secret store and rotate any credential suspected of exposure.
 - [ ] Keep the public wallet address only where operationally required. Do not publish personal names, email addresses, phone numbers, physical location, age, school, personal background, or private account details in app content, docs, metadata, analytics, logs, or examples.
+- [ ] Implement a secure privacy-request and legal-contact workflow before collecting account-level personal data. The current Support Centre is self-service only and must not be described as accepting privacy requests.
 - [ ] Never log request authorization headers, RPC keys, wallet exports, signed transaction bytes, or private data. Redact wallet-linked data from error reporting unless it is essential and disclosed.
 - [ ] Apply strict request schemas, size limits, rate limits and abuse controls to every API route. Bind permissions to the connected wallet and verify all ownership/creator relationships on-chain.
 - [ ] Add CSRF/origin protections where cookie-authenticated routes exist, secure headers/CSP, strict CORS, SSRF-safe outbound host allowlists, content-type validation, and safe error responses.
