@@ -162,6 +162,10 @@ test('Anchor SBF build preserves pinned Cargo lockfiles', () => {
   assert.match(workflow, /test -s target\/deploy\/welp_launchpad\.so/);
   assert.match(workflow, /test -s target\/idl\/welp_launchpad\.json/);
   assert.match(workflow, /cargo test --locked --manifest-path programs\/vault\/Cargo\.toml/);
+  assert.match(workflow, /cargo test --locked --manifest-path programs\\/launchpad\\/Cargo\\.toml --features program-test --test treasury_program_test/);
+  const launchpadManifest = readFileSync(new URL('../programs/launchpad/Cargo.toml', import.meta.url), 'utf8');
+  assert.match(launchpadManifest, /program-test\\s*=\\s*\\[[\\s\\S]*"dep:solana-program-test"/);
+  assert.match(launchpadManifest, /required-features\\s*=\\s*\\["program-test"\\]/);
   assert.match(workflow, /CARGO: \$\{\{ runner\.temp \}\}\/cargo-wrapper\/cargo/);
   assert.match(workflow, /grep -qx 'version = 3' "\$lockfile"/);
   assert.doesNotMatch(workflow, /for lockfile in programs\/vault\/Cargo\.lock programs\/vault-checks/);
