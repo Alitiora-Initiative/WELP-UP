@@ -1,42 +1,44 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Solana 1.18.26's bundled Cargo is 1.75. Newer transitive releases used by
-# the Anchor/Solana graph can declare edition2024, which that Cargo cannot
-# parse. Resolve dependencies using host Cargo first, then constrain the SBF
-# lockfiles to the last compatible releases documented by the Solana toolchain.
-#
-# Run after cargo metadata has created each deployable program's Cargo.lock and
-# before cargo-build-sbf/anchor build consumes it.
+# Solana 1.18.26's bundled Cargo is 1.75 and cannot parse manifests that
+# require Cargo edition-2024 support. Keep known transitive packages on
+# compatible releases before cargo-build-sbf reads the generated lockfiles.
+
+package_version_exists() {
+  local lockfile="$1"
+  local package="$2"
+  local version="$3"
+
+  awk -v wanted_name="$package" -v wanted_version="$version" '
+    /^\[\[package\]\]$/ { name = ""; version = "" }
+    /^name = / {
+      name = $0
+      sub(/^name = "/, "", name)
+      sub(/"$/, "", name)
+    }
+    /^version = / {
+      version = $0
+      sub(/^version = "/, "", version)
+      sub(/"$/, "", version)
+      if (name == wanted_name && version == wanted_version) found = 1
+    }
+    END { exit(found ? 0 : 1) }
+  ' "$lockfile"
+}
 
 pin_if_present() {
   local manifest="$1"
   local package="$2"
-  local version="$3"
+  local current_version="$3"
+  local target_version="$4"
   local lockfile
   lockfile="$(dirname "$manifest")/Cargo.lock"
 
-  if ! grep -q "^name = \"$package\"$" "$lockfile"; then
-    return 0
+  if package_version_exists "$lockfile" "$package" "$current_version"; then
+    cargo update --manifest-path "$manifest" \
+      -p "$package@$current_version" --precise "$target_version"
   fi
-
-  local current_versions
-  current_versions="$(
-    awk -v wanted="$package" '
-      /^\[\[package\]\]$/ { package = ""; version = "" }
-      $0 == "name = \"" wanted "\"" { package = wanted }
-      package == wanted && /^version = / {
-        gsub(/"/, "", $3); print $3; package = ""
-      }
-    ' "$lockfile" | sort -u
-  )"
-
-  for current in $current_versions; do
-    if [[ "$current" != "$version" ]]; then
-      cargo update --manifest-path "$manifest" \
-        -p "$package@$current" --precise "$version"
-    fi
-  done
 }
 
 for manifest in "$@"; do
@@ -46,27 +48,29 @@ for manifest in "$@"; do
     exit 1
   fi
 
-  # blake3 1.8.3+ uses constant_time_eq 0.4.2+, whose manifest requires the
-  # Cargo edition2024 feature. Pin both to the compatible 1.8.2 / 0.3.1 pair.
-  pin_if_present "$manifest" blake3 1.8.2
-  pin_if_present "$manifest" constant_time_eq 0.3.1
+  # blake3 1.8.3+ pulls constant_time_eq 0.4.2+, both edition-2024-only.
+  pin_if_present "$manifest" blake3 1.8.7 1.8.2
+  pin_if_present "$manifest" constant_time_eq 0.4.2 0.3.1
 
-  # These packages can also resolve to edition2024 releases through modern
-  # proc-macro/TOML dependency chains. Pin only when present in this lockfile.
-  pin_if_present "$manifest" base64ct 1.7.3
-  pin_if_present "$manifest" indexmap 2.11.4
+  # Newer crypto/TOML transitive releases also exceed the bundled Cargo.
+  pin_if_present "$manifest" base64ct 1.8.3 1.7.3
+  # Keep only the incompatible indexmap 2.x release constrained; indexmap 1.x
+  # may be needed by unrelated host-side transitive dependencies.
+  pin_if_present "$manifest" indexmap 2.14.2 2.11.4
 
-  # Fail closed if any known incompatible version remains.
-  if grep -q 'name = "blake3"' "$lockfile"; then
-    grep -A2 'name = "blake3"' "$lockfile" | grep -q 'version = "1.8.2"' || {
-      echo "blake3 was not pinned to 1.8.2 for $manifest" >&2
+  sed -i 's/^version = 4$/version = 3/' "$lockfile"
+  grep -qx 'version = 3' "$lockfile"
+
+  for entry in \
+    "blake3:1.8.7" \
+    "constant_time_eq:0.4.2" \
+    "base64ct:1.8.3" \
+    "indexmap:2.14.2"; do
+    package="${entry%%:*}"
+    version="${entry##*:}"
+    if package_version_exists "$lockfile" "$package" "$version"; then
+      echo "Incompatible package remains: $package $version in $lockfile" >&2
       exit 1
-    }
-  fi
-  if grep -q 'name = "constant_time_eq"' "$lockfile"; then
-    grep -A2 'name = "constant_time_eq"' "$lockfile" | grep -q 'version = "0.3.1"' || {
-      echo "constant_time_eq was not pinned to 0.3.1 for $manifest" >&2
-      exit 1
-    }
-  fi
+    fi
+  done
 done
