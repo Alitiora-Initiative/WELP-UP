@@ -85,17 +85,24 @@ jobs:
             grep -qx 'version = 3' "$lockfile"
           done
 
-      - name: Prevent Anchor metadata from upgrading the SBF lockfile
+      - name: Refresh Cargo metadata and normalize the SBF lockfile
         run: |
-          # Anchor 0.30 invokes host `cargo metadata` before cargo-build-sbf.
-          # Cargo 1.85 upgrades v3 lockfiles to v4 during metadata resolution,
-          # but Solana 1.18's bundled Cargo cannot read v4. Keep metadata locked.
+          # The committed lockfile predates the current ProgramTest dev-dependencies.
+          # Let host Cargo metadata add the missing packages, then downgrade only the
+          # lockfile format so Solana 1.18's bundled Cargo can consume the resolved graph.
+          # Anchor invokes cargo metadata before cargo-build-sbf; this wrapper handles
+          # that one metadata call and leaves the later SBF invocation locked.
           mkdir -p "$RUNNER_TEMP/cargo-wrapper"
           REAL_CARGO="$(command -v cargo)"
           cat > "$RUNNER_TEMP/cargo-wrapper/cargo" <<EOF
           #!/usr/bin/env bash
           if [[ "\${1:-}" == "metadata" ]]; then
-            exec "$REAL_CARGO" "\$@" --locked
+            "$REAL_CARGO" "\$@"
+            status=$?
+            if [[ $status -ne 0 ]]; then exit "$status"; fi
+            sed -i 's/^version = 4$/version = 3/' programs/vault/Cargo.lock
+            grep -qx 'version = 3' programs/vault/Cargo.lock
+            exit 0
           fi
           exec "$REAL_CARGO" "\$@"
           EOF
@@ -111,7 +118,7 @@ jobs:
           CARGO: ${{ runner.temp }}/cargo-wrapper/cargo
 
       - name: Run Solana ProgramTest against the built SBF binary
-        run: cargo test --manifest-path programs/vault/Cargo.toml --test anchor_program_test
+        run: cargo test --locked --manifest-path programs/vault/Cargo.toml --test anchor_program_test
         env:
           BPF_OUT_DIR: ${{ github.workspace }}/target/deploy
 
@@ -127,5 +134,6 @@ jobs:
           path: |
             target/deploy/welp_vault.so
             target/idl/welp_vault.json
+            programs/vault/Cargo.lock
           if-no-files-found: error
           retention-days: 7
