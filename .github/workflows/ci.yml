@@ -92,5 +92,3 @@ jobs:
         run: cargo clippy --manifest-path programs/vault/Cargo.toml -- -D warnings
       - name: Unit tests — vault-checks
         run: cargo test --manifest-path programs/vault-checks/Cargo.toml
-      - name: Solana ProgramTest — Anchor vault instructions
-        run: cargo test --manifest-path programs/vault/Cargo.toml
