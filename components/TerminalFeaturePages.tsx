@@ -163,6 +163,10 @@ function AutomationPage() {
       </Panel>
     </div>
     {results ? <Panel title="Evaluation results" eyebrow="LIVE FEED · NO ORDERS"><div className="compact-asset-list">{results.map((asset) => <div key={asset.mint}><strong>{asset.symbol}</strong><span>{asset.name}</span><b>{asset.score}</b><Link href={'/swap?mint=' + encodeURIComponent(asset.mint)}>Route →</Link></div>)}</div>{!results.length ? <p className="muted-copy">No assets currently satisfy all of this policy’s filters.</p> : null}</Panel> : null}
+    <section style={{ marginTop: 28 }}>
+      <div className="page-heading"><div><div className="eyebrow"><i className="eyebrow-dot" /> AI ANALYST · READ ONLY</div><h2>Ask the desk about this market.</h2><p>The model reviews a fresh public snapshot. It cannot execute a policy or submit a trade.</p></div></div>
+      <MarketAnalyst />
+    </section>
   </main>;
 }
 
