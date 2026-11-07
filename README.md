@@ -12,7 +12,7 @@
 2. **Signals** — deterministic scoring with visible rules and blockers.
 3. **Trade desk** — swap preparation, fee disclosure and explicit wallet approval.
 4. **Personal safes** — each user creates and controls their own on-chain safe, chooses what to fund and signs its setup, permissions, deposits and withdrawals. The application operator has no user seed phrase or unilateral signing key.
-5. **Launchpad** — creator-configured token supply and decimals, verified mint creation, launch records, market discovery and creator-reward accounting.
+5. **Launchpad** — planned creator-configured token supply and decimals, on-chain launch records, bonding-curve purchases and verifiable liquidity-pool graduation. The current creator form is a configuration preview only; launch transactions are not enabled.
 6. **Portfolio** — wallet-derived balances, transaction history, allocation and P&L only where the underlying data supports a defensible calculation.
 7. **Security Lab** — reproducible static analysis, dependency scanning, adversarial tests and AI-assisted review with evidence-linked findings.
 
