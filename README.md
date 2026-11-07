@@ -48,7 +48,7 @@ Browser-local records are not a complete on-chain ledger, verified account histo
 - Production bot-creation fees, treasury routing, or fee distribution.
 - Fiat on-ramps, perpetual futures, tokenized-stock execution, or centralized-exchange trading.
 
-The Anchor vault source now includes owner-signed SOL deposits with proportional shares, owner-only share redemption, and owner pause/resume controls. It remains unlaunched: no program ID, deployment, source verification, audit, or release evidence is approved. Bot swaps, position settlement, and fee instructions remain fail-closed pending the security review. Never invite users to deposit based on a UI, a source file, a local validator, or a successful frontend build.
+The Anchor vault source now includes owner-signed SOL deposits with proportional shares, owner-only share redemption, owner pause/resume, and a per-vault executor policy PDA with owner-controlled configuration and revocation. It remains unlaunched: no program ID, deployment, source verification, audit, or release evidence is approved. Executor policy is configuration only; swap execution, settlement, and fee instructions remain fail-closed. Legacy direct withdrawal is disabled to protect share accounting. Never invite users to deposit based on a UI, a source file, a local validator, or a successful frontend build.
 
 ## Non-negotiable security and product rules
 
