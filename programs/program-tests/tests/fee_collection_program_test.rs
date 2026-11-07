@@ -1,21 +1,14 @@
 use anchor_lang::{AccountDeserialize, InstructionData, ToAccountMetas};
 use solana_program_test::{processor, ProgramTest};
 use solana_sdk::{
-    account::Account,
-    instruction::Instruction,
-    program_option::COption,
-    program_pack::Pack,
-    pubkey::Pubkey,
-    rent::Rent,
-    signature::Signer,
-    system_program,
-    transaction::Transaction,
+    account::Account, instruction::Instruction, program_option::COption, program_pack::Pack,
+    pubkey::Pubkey, rent::Rent, signature::Signer, system_program, transaction::Transaction,
 };
 use spl_associated_token_account::get_associated_token_address;
 use spl_token::state::{Account as SplAccount, AccountState, Mint as SplMint};
 use welp_launchpad::{
-    accounts, id, instruction, FeeReceipt, TreasuryAccount, DEVELOPER_WALLET,
-    PLATFORM_USDC_MINT, FEE_RECEIPT_SEED, TREASURY_SEED, TREASURY_VAULT_SEED,
+    accounts, id, instruction, FeeReceipt, TreasuryAccount, DEVELOPER_WALLET, FEE_RECEIPT_SEED,
+    PLATFORM_USDC_MINT, TREASURY_SEED, TREASURY_VAULT_SEED,
 };
 
 fn system_account(lamports: u64) -> Account {
@@ -161,14 +154,11 @@ async fn send(
 async fn supported_transfer_collects_fixed_usdc_fee_atomically_and_rejects_replay() {
     let program_id = id();
     let (treasury, _) = Pubkey::find_program_address(&[TREASURY_SEED], &program_id);
-    let (treasury_vault, _) =
-        Pubkey::find_program_address(&[TREASURY_VAULT_SEED], &program_id);
+    let (treasury_vault, _) = Pubkey::find_program_address(&[TREASURY_VAULT_SEED], &program_id);
 
     let source_mint = Pubkey::new_unique();
-    let developer_usdc_ata =
-        get_associated_token_address(&DEVELOPER_WALLET, &PLATFORM_USDC_MINT);
-    let treasury_usdc_ata =
-        get_associated_token_address(&treasury, &PLATFORM_USDC_MINT);
+    let developer_usdc_ata = get_associated_token_address(&DEVELOPER_WALLET, &PLATFORM_USDC_MINT);
+    let treasury_usdc_ata = get_associated_token_address(&treasury, &PLATFORM_USDC_MINT);
 
     let mut program_test = ProgramTest::new("welp_launchpad", program_id, None);
     program_test.add_program(
@@ -223,7 +213,11 @@ async fn supported_transfer_collects_fixed_usdc_fee_atomically_and_rejects_repla
 
     let operation_id = [7_u8; 32];
     let (fee_receipt, _) = Pubkey::find_program_address(
-        &[FEE_RECEIPT_SEED, actual_payer.as_ref(), operation_id.as_ref()],
+        &[
+            FEE_RECEIPT_SEED,
+            actual_payer.as_ref(),
+            operation_id.as_ref(),
+        ],
         &program_id,
     );
     let developer_before = read_token_amount(
@@ -340,19 +334,34 @@ async fn supported_transfer_collects_fixed_usdc_fee_atomically_and_rejects_repla
     assert!(replay.is_err(), "duplicate operation receipt must fail");
     assert_eq!(
         read_token_amount(
-            &context.banks_client.get_account(payer_usdc_ata).await.unwrap().unwrap()
+            &context
+                .banks_client
+                .get_account(payer_usdc_ata)
+                .await
+                .unwrap()
+                .unwrap()
         ),
         payer_usdc_after
     );
     assert_eq!(
         read_token_amount(
-            &context.banks_client.get_account(developer_usdc_ata).await.unwrap().unwrap()
+            &context
+                .banks_client
+                .get_account(developer_usdc_ata)
+                .await
+                .unwrap()
+                .unwrap()
         ),
         developer_after
     );
     assert_eq!(
         read_token_amount(
-            &context.banks_client.get_account(treasury_usdc_ata).await.unwrap().unwrap()
+            &context
+                .banks_client
+                .get_account(treasury_usdc_ata)
+                .await
+                .unwrap()
+                .unwrap()
         ),
         treasury_after
     );
