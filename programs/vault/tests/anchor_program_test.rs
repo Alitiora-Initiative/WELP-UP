@@ -110,11 +110,68 @@ async fn owner_can_create_fund_redeem_and_revoke_executor_policy() {
     assert_eq!(state.total_shares, 750_000_000);
     assert_eq!(state.total_deposited_lamports, 1_000_000_000);
 
+    // A later deposit is priced against current assets and outstanding shares.
+    let second_deposit = Instruction {
+        program_id,
+        accounts: accounts::FundVault {
+            owner,
+            vault,
+            system_program: system_program::id(),
+        }
+        .to_account_metas(None),
+        data: instruction::FundVault {
+            amount: 250_000_000,
+        }
+        .data(),
+    };
+    send_ix(&mut context, second_deposit).await.unwrap();
+
+    let account = context
+        .banks_client
+        .get_account(vault)
+        .await
+        .unwrap()
+        .expect("vault account exists after repeat deposit");
+    let state: Vault = decode_account(&account.data);
+    assert_eq!(state.available_lamports, 1_000_000_000);
+    assert_eq!(state.total_shares, 1_000_000_000);
+    assert_eq!(state.total_deposited_lamports, 1_250_000_000);
+
+    // The legacy amount-based withdrawal cannot bypass the share ledger.
+    let legacy_withdraw = Instruction {
+        program_id,
+        accounts: accounts::LegacyWithdraw { owner, vault }.to_account_metas(None),
+        data: instruction::Withdraw {
+            amount: 1_000_000,
+        }
+        .data(),
+    };
+    assert!(send_ix(&mut context, legacy_withdraw).await.is_err());
+
     let executor = solana_sdk::pubkey::Pubkey::new_unique();
     let (executor_policy, _) = solana_sdk::pubkey::Pubkey::find_program_address(
         &[b"executor-policy-v1", vault.as_ref()],
         &program_id,
     );
+    let invalid_config = Instruction {
+        program_id,
+        accounts: accounts::ConfigureExecutorPolicy {
+            owner,
+            vault,
+            executor_policy,
+            system_program: system_program::id(),
+        }
+        .to_account_metas(None),
+        data: instruction::ConfigureExecutorPolicy {
+            executor,
+            max_trade_lamports: 20_000_000,
+            max_daily_lamports: 10_000_000,
+            max_slippage_bps: 100,
+        }
+        .data(),
+    };
+    assert!(send_ix(&mut context, invalid_config).await.is_err());
+
     let configure = Instruction {
         program_id,
         accounts: accounts::ConfigureExecutorPolicy {
@@ -149,6 +206,45 @@ async fn owner_can_create_fund_redeem_and_revoke_executor_policy() {
     assert_eq!(policy.max_slippage_bps, 100);
     assert!(policy.enabled);
     assert_eq!(policy.version, 1);
+
+    // A different signer cannot revoke this vault owner's executor.
+    let attacker = Keypair::new();
+    let fund_attacker = system_instruction::transfer(&owner, &attacker.pubkey(), 10_000_000);
+    let blockhash = context.banks_client.get_latest_blockhash().await.unwrap();
+    let fund_transaction = Transaction::new_signed_with_payer(
+        &[fund_attacker],
+        Some(&owner),
+        &[&context.payer],
+        blockhash,
+    );
+    context
+        .banks_client
+        .process_transaction(fund_transaction)
+        .await
+        .unwrap();
+
+    let unauthorized_revoke = Instruction {
+        program_id,
+        accounts: accounts::RevokeExecutorPolicy {
+            owner: attacker.pubkey(),
+            vault,
+            executor_policy,
+        }
+        .to_account_metas(None),
+        data: instruction::RevokeExecutorPolicy {}.data(),
+    };
+    let blockhash = context.banks_client.get_latest_blockhash().await.unwrap();
+    let unauthorized_transaction = Transaction::new_signed_with_payer(
+        &[unauthorized_revoke],
+        Some(&owner),
+        &[&context.payer, &attacker],
+        blockhash,
+    );
+    assert!(context
+        .banks_client
+        .process_transaction(unauthorized_transaction)
+        .await
+        .is_err());
 
     let revoke = Instruction {
         program_id,
