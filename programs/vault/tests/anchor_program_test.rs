@@ -32,11 +32,7 @@ fn decode_account<T: AccountDeserialize>(data: &[u8]) -> T {
 }
 
 async fn start_program() -> ProgramTestContext {
-    ProgramTest::new(
-        "welp_vault",
-        welp_vault::id(),
-        None,
-    )
+    ProgramTest::new("welp_vault", welp_vault::id(), None)
     .start_with_context()
     .await
 }
