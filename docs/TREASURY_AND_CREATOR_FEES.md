@@ -30,7 +30,7 @@ The existing local Anchor design derives a state PDA from the treasury-v1 seed a
 
 The 40% reserve must be separately accounted and protected from later disbursements. At collection, 100% of the fee is credited to treasury. At epoch maturity, 60% of eligible new inflows is transferred to the developer recipient and the remaining 40% is added to the protected reserve. The same fee must never be split twice.
 
-**Important asset limitation:** the current treasury vault is a SOL System Program PDA. It is not a generic SPL-token vault. A 0.50% fee on an SPL-token input requires a token account owned by the treasury PDA for that exact mint (and a verified developer recipient account for that mint). That generic token-account path is not implemented. No arbitrary token should be transferred into an unverified or guessed address.
+**Important asset limitation:** the current treasury vault is a SOL System Program PDA. It is not a generic SPL-token vault. A 0.50% fee on an SPL-token input requires a token account owned by the treasury PDA for that exact mint, token CPI settlement and matching epoch accounting. That generic token-account path is not implemented. No arbitrary token should be transferred into an unverified or guessed address.
 
 The checked-in launchpad program ID is a sample local ID, not a deployed mainnet ID. There is no production keypair associated with it. Do not derive deposit or payment addresses from it.
 
