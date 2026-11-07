@@ -843,3 +843,66 @@ html, body {
     padding-left: 14px;
   }
 }
+
+
+/* WELP UP brand restoration: charcoal surfaces, neon-green actions, semantic states. */
+:root {
+  --terminal-bg: #080908;
+  --terminal-panel: #10120f;
+  --terminal-panel-raised: #141713;
+  --terminal-border: #292c26;
+  --terminal-border-soft: #1d211b;
+  --terminal-text: #f0f3ec;
+  --terminal-muted: #8c9587;
+  --terminal-subtle: #b5bcae;
+  --terminal-accent: #c6ff3e;
+  --terminal-accent-dim: #222b15;
+  --terminal-green: #71dfa9;
+  --terminal-red: #fa7771;
+  --terminal-blue: #8ea6ff;
+}
+html, body { background: #080908 !important; color: #f0f3ec !important; }
+.terminal-site { background: #080908 !important; color: #f0f3ec !important; }
+.site-header { background: rgba(7, 8, 7, .96) !important; border-bottom-color: #1b1e18 !important; }
+.site-nav-trigger { color: #a4aa9c !important; }
+.site-nav-trigger:hover, .site-nav-trigger.is-active {
+  border-color: #30352b !important; background: #1a1d17 !important; color: #f3f6ed !important;
+}
+.site-nav-trigger.is-active { box-shadow: inset 0 -2px 0 #c6ff3e !important; }
+.mega-menu { background: rgba(10, 12, 9, .98) !important; border-color: #30352b !important; }
+.market-search, .explorer-search, .field-label input, .field-label select, .market-sort select {
+  border-color: #30352b !important; background: #0d100c !important; color: #e6ecdf !important;
+}
+.terminal-site :is(.primary-action, .primary-button, .connect-button, .studio-create-button, .home-primary-link, .swap-submit-button, .vault-primary-button) {
+  border: 1px solid #d8ff78 !important;
+  background: linear-gradient(180deg, #e3ff91 0%, #c6ff3e 42%, #91cf20 100%) !important;
+  color: #101509 !important; font-weight: 800 !important;
+  text-shadow: 0 1px 0 rgba(255,255,255,.32);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.82), inset 0 -2px 0 rgba(54,91,0,.22), 0 5px 18px rgba(166,225,45,.18) !important;
+}
+.terminal-site :is(.primary-action, .primary-button, .connect-button, .studio-create-button, .home-primary-link, .swap-submit-button, .vault-primary-button):hover:not(:disabled) {
+  background: linear-gradient(180deg, #efffb8 0%, #d5ff70 45%, #a6e52c 100%) !important;
+  border-color: #edffb7 !important; color: #101509 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 0 22px rgba(198,255,62,.26), 0 8px 24px rgba(0,0,0,.3) !important;
+}
+.terminal-site :is(.vault-danger-button, .danger-button, .delete-button) {
+  border: 1px solid #ffaaa3 !important;
+  background: linear-gradient(180deg, #ffaaa3 0%, #fa7771 48%, #d94b47 100%) !important;
+  color: #240908 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 5px 16px rgba(250,119,113,.16) !important;
+}
+.terminal-site :is(.outline-button, .desk-link, .home-secondary-link, .text-link, .profile-copy-button, .refresh-button, .vault-secondary-button, .leaderboard-copy-button, .leaderboard-cancel-button) {
+  border-color: #3a4033 !important;
+  background: linear-gradient(145deg, rgba(255,255,255,.13), rgba(255,255,255,.035) 58%), #151912 !important;
+  color: #e5ecdc !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.28), inset 0 -1px 0 rgba(0,0,0,.35), 0 5px 16px rgba(0,0,0,.28) !important;
+}
+.terminal-site :is(button:not(.primary-action):not(.primary-button):not(.connect-button):not(.studio-create-button):not(.vault-primary-button):not(.vault-danger-button):not(.danger-button):not(.delete-button):not(.text-action):not(.sort-heading):not(.watch-button):not(.mobile-nav-toggle):not(.leaderboard-modal-close):not(.icon-button), .outline-button, .desk-link, .home-secondary-link, .text-link):hover:not(:disabled) {
+  border-color: rgba(198,255,62,.48) !important; color: #d9ff8b !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 15px rgba(198,255,62,.08), 0 7px 20px rgba(0,0,0,.3) !important;
+}
+.terminal-site :where(.market-tabs button.selected, .filter-chip.active, .watch-button.is-watched) {
+  border-color: #849d4d !important; background: #20291a !important; color: #c6ff3e !important;
+}
+.terminal-site :where(.market-tabs button.selected b) { background: #c6ff3e !important; color: #11150a !important; }
+.terminal-site :where(a, button, input, select, textarea):focus-visible { outline-color: #c6ff3e !important; }
