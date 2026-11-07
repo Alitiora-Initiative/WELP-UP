@@ -936,6 +936,8 @@ html, body { background: #080908 !important; color: #f0f3ec !important; }
 }
 .primary-action:hover:not(:disabled),
 .connect-button:hover:not(:disabled) {
+  background: linear-gradient(180deg, #f4ffd9 0%, #e0ff9b 22%, #c6f65c 58%, #97c83a 100%) !important;
+  border-color: #f0ffc2 !important;
   filter: brightness(1.06) saturate(1.04);
   transform: translateY(-1px);
   box-shadow:
