@@ -12,18 +12,13 @@ There is no separate fixed $0.10 trade fee, $0.10 transfer fee, or $0.50 token-l
 
 ## Allocation
 
-The fee is split once:
-
-| Recipient | Share of protocol fee |
-|---|---:|
-| Developer/operator | 60% |
-| WELP protocol treasury | 40% |
+At collection, 100% of the 0.50% fee is credited to the protocol treasury. After at least one 14-day epoch, the program releases 60% of eligible new fee inflows to the developer/operator and adds the remaining 40% to the protected treasury reserve. The same fee is split once, at epoch distribution—not once at collection and again at distribution.
 
 The published developer receiving address is:
 
 ETuGxX6Znxr9q59THJtcYDJKt6RvCfN7wp79tRnbG1xG
 
-It is a public receiving address, not a private key or signing credential. The 40% treasury allocation belongs to the WELP treasury; it is not an additional developer payment. Any future treasury release policy must not split the same amount a second time.
+It is a public receiving address, not a private key or signing credential. This address is the sole developer recipient for the epoch's 60% release. The 40% reserve remains in treasury and must not be included in later distribution calculations.
 
 ## Scope and limitations
 
@@ -38,7 +33,7 @@ A successful swap and its fee transfers must be one Solana transaction. If eithe
 1. Validate the exact mainnet program IDs, source mint, source token account, token program, signer and destination accounts.
 2. Derive the developer and treasury token accounts for the actual input mint; do not accept arbitrary fee destinations from the caller.
 3. Calculate exactly 50 basis points from gross input using checked integer arithmetic.
-4. Transfer 60% of the fee to the published developer recipient and 40% to the treasury PDA's token account.
+4. Credit 100% of the fee to the treasury at collection. After the epoch matures, release 60% of new, not-yet-distributed inflows to the developer and lock the remaining 40% in the protected reserve.
 5. Bind an operation receipt/nonce to the payer and swap so an operation cannot be charged twice.
 6. Emit an event recording the payer, input mint, gross input, fee amount, both recipient amounts and slot.
 7. Display the 0.50% fee, amount and recipient split before the wallet is asked to sign.
@@ -51,7 +46,7 @@ The TypeScript policy and integer fee calculation are defined in source. This is
 
 The current Anchor welp_launchpad crate is **not deployed on Solana mainnet** and has no production deployment keypair. Its sample program ID must not be used to derive a payment address. The current source does not yet have a production bonding-curve swap instruction or a composable Jupiter swap CPI with both fee transfers. The application order and execute endpoints therefore remain fail-closed; they do not submit mainnet swaps that omit the protocol fee.
 
-The previous fixed-amount USDC supported-transfer path is being removed from the on-chain source; this policy does not charge direct SPL transfers. No fees are currently collected by WELP.
+The previous fixed-amount USDC supported-transfer instruction and its integration test have been removed from the program source. No direct SPL transfer fee is charged. The current treasury vault is a SOL System Program PDA, not a generic SPL-token vault. Asset-specific token vaults and token transfer CPIs are not implemented, so non-SOL input-asset fees remain unsupported.
 
 ## Treasury release and upgrade authority
 
