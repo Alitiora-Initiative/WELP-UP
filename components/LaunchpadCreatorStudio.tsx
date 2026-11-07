@@ -156,7 +156,7 @@ export function LaunchpadCreatorStudio() {
       <div className="lp-studio-footer">
         <p>
           WELP protocol swap fee: <strong>0.50% of gross swap input</strong>.
-          Of the collected fee, 60% is allocated to the published developer recipient and 40% to the protocol treasury.
+          One hundred percent is credited to the treasury at collection. After the 14-day epoch, 60% of eligible new fees is released to the published developer recipient and 40% remains as protected treasury reserve.
           The fee must be transferred atomically with each WELP-controlled swap. No fee is being collected by this page.
         </p>
         <p className="lp-warning" role="status">
