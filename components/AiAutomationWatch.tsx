@@ -20,6 +20,7 @@ type MarketAsset = {
   organicScore: number;
   priceChange24h: number;
   score: number;
+  verified: boolean;
 };
 
 type MarketFeed = {
@@ -46,9 +47,9 @@ function isWatchPolicy(value: unknown): value is WatchPolicy {
   const row = value as Record<string, unknown>;
   return typeof row.id === 'string' &&
     typeof row.name === 'string' &&
-    Number.isFinite(row.liquidity) &&
-    Number.isInteger(row.organic) &&
-    Number.isFinite(row.drawdown) &&
+    typeof row.liquidity === 'number' && Number.isFinite(row.liquidity) &&
+    typeof row.organic === 'number' && Number.isInteger(row.organic) &&
+    typeof row.drawdown === 'number' && Number.isFinite(row.drawdown) &&
     typeof row.verified === 'boolean';
 }
 
@@ -130,7 +131,7 @@ export function AiAutomationWatch() {
             asset.liquidityUsd >= policy.liquidity &&
             asset.organicScore >= policy.organic &&
             asset.priceChange24h >= -policy.drawdown &&
-            (!policy.verified || (asset as MarketAsset & { verified?: boolean }).verified === true),
+            (!policy.verified || asset.verified),
           )
           .map((asset) => ({ policy, asset, key: policy.id + ':' + asset.mint })),
       ).sort((a, b) => b.asset.score - a.asset.score || b.asset.liquidityUsd - a.asset.liquidityUsd);
