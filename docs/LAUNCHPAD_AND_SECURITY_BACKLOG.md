@@ -18,7 +18,7 @@ This is **not** the on-chain launch implementation. The creator UI is a configur
 
 ## 1. Product contract and supply rules
 
-- [ ] Each creator selects a whole-token maximum supply from **1 through 1,000,000,000** inclusive. Zero is invalid and must be rejected.
+- [ ] The creator configuration range is **0 through 1,000,000,000** whole tokens inclusive. Zero may be previewed but cannot become a tradable sale; the on-chain sale initializer rejects zero supply.
 - [ ] Treat 200,000,000 as one valid example only. Never use it as the UI default, global maximum, hardcoded program constant or shared anti-snipe quantity.
 - [ ] Support decimals 0, 6 and 9. Decimals are written into the mint during creation and immutable thereafter.
 - [ ] Parse the whole supply as an integer string; do not use JavaScript number/floating-point conversions.
