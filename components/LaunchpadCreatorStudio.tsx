@@ -66,8 +66,7 @@ export function LaunchpadCreatorStudio() {
           <span>Total supply <b>WHOLE TOKENS</b></span>
           <input
             inputMode="numeric"
-            max="1000000000"
-            min="1"
+            maxLength={10}
             onChange={(event) => setSupply(event.target.value)}
             placeholder="Enter 1 to 1,000,000,000"
             value={supply}
@@ -107,7 +106,12 @@ export function LaunchpadCreatorStudio() {
           <span className="lp-preview-badge">NOT A DEPLOYED TOKEN</span>
         </div>
 
-        {validation.ok ? (
+        {!supply.trim() || decimals === null ? (
+          <p className="lp-preview-instruction">
+            Enter a whole-token supply and choose decimal precision to calculate
+            the raw mint amount and launch-specific 5% wallet cap.
+          </p>
+        ) : validation.ok ? (
           <div className="lp-metric-grid">
             <div className="lp-metric">
               <span>Maximum supply</span>
