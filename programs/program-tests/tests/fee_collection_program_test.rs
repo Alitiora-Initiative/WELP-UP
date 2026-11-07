@@ -23,14 +23,16 @@ fn system_account(lamports: u64) -> Account {
 
 fn mint_account(decimals: u8) -> Account {
     let mut data = vec![0; SplMint::LEN];
-    SplMint {
-        mint_authority: COption::None,
-        supply: 0,
-        decimals,
-        is_initialized: true,
-        freeze_authority: COption::None,
-    }
-    .pack(&mut data)
+    SplMint::pack(
+        SplMint {
+            mint_authority: COption::None,
+            supply: 0,
+            decimals,
+            is_initialized: true,
+            freeze_authority: COption::None,
+        },
+        &mut data,
+    )
     .expect("pack SPL mint");
     Account {
         lamports: Rent::default().minimum_balance(SplMint::LEN),
@@ -43,17 +45,19 @@ fn mint_account(decimals: u8) -> Account {
 
 fn token_account(mint: Pubkey, authority: Pubkey, amount: u64) -> Account {
     let mut data = vec![0; SplAccount::LEN];
-    SplAccount {
-        mint,
-        owner: authority,
-        amount,
-        delegate: COption::None,
-        state: AccountState::Initialized,
-        is_native: COption::None,
-        delegated_amount: 0,
-        close_authority: COption::None,
-    }
-    .pack(&mut data)
+    SplAccount::pack(
+        SplAccount {
+            mint,
+            owner: authority,
+            amount,
+            delegate: COption::None,
+            state: AccountState::Initialized,
+            is_native: COption::None,
+            delegated_amount: 0,
+            close_authority: COption::None,
+        },
+        &mut data,
+    )
     .expect("pack SPL token account");
     Account {
         lamports: Rent::default().minimum_balance(SplAccount::LEN),
@@ -163,8 +167,8 @@ async fn supported_transfer_collects_fixed_usdc_fee_atomically_and_rejects_repla
     let mut program_test = ProgramTest::new("welp_launchpad", program_id, None);
     program_test.add_program(
         "spl_token",
-        processor!(spl_token::processor::Processor::process),
         spl_token::id(),
+        processor!(spl_token::processor::Processor::process),
     );
     program_test.add_account(DEVELOPER_WALLET, system_account(1));
     program_test.add_account(PLATFORM_USDC_MINT, mint_account(6));
