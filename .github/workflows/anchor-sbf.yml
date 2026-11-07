@@ -133,8 +133,13 @@ jobs:
           # Anchor resolves Cargo through this variable before invoking metadata.
           CARGO: ${{ runner.temp }}/cargo-wrapper/cargo
 
-      - name: Run Solana ProgramTest against the built SBF binary
+      - name: Run vault Solana ProgramTest against the built SBF binary
         run: cargo test --locked --manifest-path programs/vault/Cargo.toml --test anchor_program_test
+        env:
+          BPF_OUT_DIR: ${{ github.workspace }}/target/deploy
+
+      - name: Run launchpad treasury ProgramTest against the built SBF binary
+        run: cargo test --locked --manifest-path programs/launchpad/Cargo.toml --test treasury_program_test
         env:
           BPF_OUT_DIR: ${{ github.workspace }}/target/deploy
 
