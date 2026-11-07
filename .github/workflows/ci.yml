@@ -69,7 +69,7 @@ jobs:
         run: npm audit --audit-level=moderate
 
   rust-checks:
-    name: Rust checks (vault crates)
+    name: Rust checks (Anchor crates)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
