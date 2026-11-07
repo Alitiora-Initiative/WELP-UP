@@ -65,6 +65,9 @@ for manifest in "$@"; do
   # Keep the Solana 1.18 bundled Cargo 1.75-compatible derive release.
   pin_if_present "$manifest" zeroize_derive 1.5.0 1.4.2
 
+  # unicode-segmentation 1.13.2+ requires Rust 1.85; Solana 1.18.26 SBF uses 1.75.
+  pin_if_present "$manifest" unicode-segmentation 1.13.3 1.12.0
+
   # Newer crypto/TOML transitive releases also exceed the bundled Cargo.
   pin_if_present "$manifest" base64ct 1.8.3 1.7.3
   # Keep only the incompatible indexmap 2.x release constrained; indexmap 1.x
@@ -79,6 +82,7 @@ for manifest in "$@"; do
     "constant_time_eq:0.4.2" \
     "base64ct:1.8.3" \
     "zeroize_derive:1.5.0" \
+    "unicode-segmentation:1.13.3" \
     "indexmap:2.14.2" \
     "proc-macro-crate:3.5.0" \
     "borsh:1.8.1" \
