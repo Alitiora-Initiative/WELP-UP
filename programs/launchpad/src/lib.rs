@@ -11,6 +11,7 @@ use anchor_lang::prelude::*;
 declare_id!("BrcdB9sV7z9DvF9rDHG263HUxXgJM3iCQdF36TcxbFEn");
 
 pub const TREASURY_SEED: &[u8] = b"treasury-v1";
+pub const TREASURY_VAULT_SEED: &[u8] = b"treasury-vault-v1";
 pub const DEVELOPER_WALLET: Pubkey = pubkey!("ETuGxX6Znxr9q59THJtcYDJKt6RvCfN7wp79tRnbG1xG");
 
 pub const BASIS_POINTS_DENOMINATOR: u128 = 10_000;
@@ -31,6 +32,7 @@ pub mod welp_launchpad {
         let treasury = &mut ctx.accounts.treasury;
 
         treasury.developer_wallet = DEVELOPER_WALLET;
+        treasury.treasury_vault = ctx.accounts.treasury_vault.key();
         treasury.total_fees_collected = 0;
         treasury.total_creator_fees_processed = 0;
         treasury.total_developer_disbursed = 0;
@@ -38,9 +40,11 @@ pub mod welp_launchpad {
         treasury.last_distribution_timestamp = now;
         treasury.creator_fee_share_remainder = 0;
         treasury.bump = ctx.bumps.treasury;
+        treasury.vault_bump = ctx.bumps.treasury_vault;
 
         emit!(TreasuryInitialized {
             developer_wallet: DEVELOPER_WALLET,
+            treasury_vault: treasury.treasury_vault,
             timestamp: now,
         });
         Ok(())
@@ -79,12 +83,12 @@ pub mod welp_launchpad {
             TreasuryError::EpochNotElapsed
         );
 
-        let treasury_info = treasury.to_account_info();
+        let vault_info = ctx.accounts.treasury_vault.to_account_info();
         let developer_info = ctx.accounts.developer_wallet.to_account_info();
 
-        let current_balance = treasury_info.lamports();
-        let rent_floor = Rent::get()?.minimum_balance(TreasuryAccount::SPACE);
-        let protected_balance = rent_floor
+        let current_vault_balance = vault_info.lamports();
+        let vault_rent_floor = Rent::get()?.minimum_balance(0);
+        let protected_balance = vault_rent_floor
             .checked_add(treasury.locked_reserve_lamports)
             .ok_or(TreasuryError::ArithmeticOverflow)?;
 
@@ -101,7 +105,7 @@ pub mod welp_launchpad {
             .checked_add(distributable)
             .ok_or(TreasuryError::ArithmeticOverflow)?;
         require!(
-            current_balance >= minimum_accounted_balance,
+            current_vault_balance >= minimum_accounted_balance,
             TreasuryError::TreasuryAccountingInvariant
         );
         require!(distributable > 0, TreasuryError::NothingToDisburse);
@@ -117,32 +121,39 @@ pub mod welp_launchpad {
 
         require!(developer_amount > 0, TreasuryError::NothingToDisburse);
 
-        let new_treasury_balance = current_balance
-            .checked_sub(developer_amount)
-            .ok_or(TreasuryError::ArithmeticUnderflow)?;
-        let developer_balance = developer_info.lamports();
-        let new_developer_balance = developer_balance
-            .checked_add(developer_amount)
-            .ok_or(TreasuryError::ArithmeticOverflow)?;
         let new_locked_reserve = treasury
             .locked_reserve_lamports
             .checked_add(newly_locked)
             .ok_or(TreasuryError::ArithmeticOverflow)?;
-
-        // Direct lamport movement is valid because the treasury PDA is owned
-        // by this program; the destination is a checked SystemAccount.
-        **treasury_info.try_borrow_mut_lamports()? = new_treasury_balance;
-        **developer_info.try_borrow_mut_lamports()? = new_developer_balance;
-
-        treasury.locked_reserve_lamports = new_locked_reserve;
-        treasury.total_developer_disbursed = treasury
+        let new_developer_disbursed = treasury
             .total_developer_disbursed
             .checked_add(developer_amount)
             .ok_or(TreasuryError::ArithmeticOverflow)?;
+
+        // TreasuryVault is a separate System Program-owned PDA. A signed
+        // System Program transfer is required to debit this vault.
+        let bump_seed = [treasury.vault_bump];
+        let signer_seeds: &[&[u8]] = &[TREASURY_VAULT_SEED, &bump_seed];
+        let signer = &[signer_seeds];
+        system_program::transfer(
+            CpiContext::new_with_signer(
+                ctx.accounts.system_program.to_account_info(),
+                system_program::Transfer {
+                    from: vault_info,
+                    to: developer_info,
+                },
+                signer,
+            ),
+            developer_amount,
+        )?;
+
+        treasury.locked_reserve_lamports = new_locked_reserve;
+        treasury.total_developer_disbursed = new_developer_disbursed;
         treasury.last_distribution_timestamp = now;
 
         emit!(TreasuryDisbursed {
             developer_wallet: DEVELOPER_WALLET,
+            treasury_vault: treasury.treasury_vault,
             developer_amount,
             newly_locked_reserve: newly_locked,
             total_locked_reserve: new_locked_reserve,
@@ -165,6 +176,16 @@ pub struct InitializeTreasury<'info> {
         bump
     )]
     pub treasury: Account<'info, TreasuryAccount>,
+    /// CHECK: initialized as a zero-data System Program account at the vault PDA.
+    #[account(
+        init,
+        payer = payer,
+        space = 0,
+        seeds = [TREASURY_VAULT_SEED],
+        bump,
+        owner = system_program::ID
+    )]
+    pub treasury_vault: UncheckedAccount<'info>,
     pub system_program: Program<'info, System>,
 }
 
@@ -176,19 +197,29 @@ pub struct DisburseTreasuryFunds<'info> {
         mut,
         seeds = [TREASURY_SEED],
         bump = treasury.bump,
-        has_one = developer_wallet @ TreasuryError::InvalidDeveloperWallet
+        has_one = developer_wallet @ TreasuryError::InvalidDeveloperWallet,
+        has_one = treasury_vault @ TreasuryError::InvalidTreasuryVault
     )]
     pub treasury: Account<'info, TreasuryAccount>,
+    #[account(
+        mut,
+        seeds = [TREASURY_VAULT_SEED],
+        bump = treasury.vault_bump,
+        address = treasury.treasury_vault @ TreasuryError::InvalidTreasuryVault
+    )]
+    pub treasury_vault: SystemAccount<'info>,
     #[account(
         mut,
         address = DEVELOPER_WALLET @ TreasuryError::InvalidDeveloperWallet
     )]
     pub developer_wallet: SystemAccount<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 #[account]
 pub struct TreasuryAccount {
     pub developer_wallet: Pubkey,
+    pub treasury_vault: Pubkey,
     /// Cumulative lamports routed to TreasuryVault, not including creator share.
     pub total_fees_collected: u64,
     /// Cumulative creator-fee amount processed by the router.
@@ -201,10 +232,11 @@ pub struct TreasuryAccount {
     /// Invariant: value is always less than 10,000.
     pub creator_fee_share_remainder: u64,
     pub bump: u8,
+    pub vault_bump: u8,
 }
 
 impl TreasuryAccount {
-    pub const SPACE: usize = 8 + 32 + (8 * 6) + 1;
+    pub const SPACE: usize = 8 + 32 + 32 + (8 * 6) + 2;
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -316,12 +348,14 @@ fn mul_div_floor_u64(value: u64, numerator: u128, denominator: u128) -> Result<u
 #[event]
 pub struct TreasuryInitialized {
     pub developer_wallet: Pubkey,
+    pub treasury_vault: Pubkey,
     pub timestamp: i64,
 }
 
 #[event]
 pub struct TreasuryDisbursed {
     pub developer_wallet: Pubkey,
+    pub treasury_vault: Pubkey,
     pub developer_amount: u64,
     pub newly_locked_reserve: u64,
     pub total_locked_reserve: u64,
@@ -332,6 +366,8 @@ pub struct TreasuryDisbursed {
 pub enum TreasuryError {
     #[msg("The destination is not the hardcoded WELP developer wallet.")]
     InvalidDeveloperWallet,
+    #[msg("The treasury vault account is not the configured vault PDA.")]
+    InvalidTreasuryVault,
     #[msg("The two-week distribution epoch has not elapsed.")]
     EpochNotElapsed,
     #[msg("The Solana clock moved backwards relative to the stored timestamp.")]
@@ -450,6 +486,6 @@ mod tests {
 
     #[test]
     fn treasury_account_space_includes_anchor_discriminator_and_fields() {
-        assert_eq!(TreasuryAccount::SPACE, 89);
+        assert_eq!(TreasuryAccount::SPACE, 122);
     }
 }
