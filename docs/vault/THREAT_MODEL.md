@@ -1,57 +1,53 @@
-# WELP vault threat model (draft — Phase 1)
+# WELP UP! vault threat model
 
-**Status:** Source implementation in progress; not deployed to Devnet or Mainnet and not independently audited. The current program supports owner-signed SOL deposits and owner-only SOL withdrawals with share accounting. Mainnet funds must remain disabled until roadmap vault launch gates are complete.
+**Status:** Source implementation in progress; not deployed to Devnet or Mainnet and not independently audited. The source supports owner-signed SOL deposits, share-based withdrawals, and owner-managed executor policy configuration/revocation. Automated swaps remain disabled.
 
-## Goal
+## Security goals
 
-Isolated per-user vault that:
+- Keep the user's primary wallet key outside the agent and vault program.
+- Require an explicit owner signature for SOL deposits and withdrawals.
+- Price shares against current accounted assets and outstanding shares.
+- Preserve rent and prevent legacy amount-based withdrawals from bypassing share accounting.
+- Let the owner configure or revoke one delegated executor without exposing private keys.
+- Store per-trade, per-day and slippage limits on-chain before any trading instruction can be enabled.
+- Keep all trading, settlement and fee movement fail-closed until verified CPI and accounting paths exist.
 
-- Is funded only by an explicit user-signed System Program transfer of SOL the user chooses.
-- Enforces a total allocation cap and a per-position ceiling (design default 0.02 SOL) **on-chain**.
-- Lets a narrowly scoped executor trade only through the vault authority.
-- Does not accept wallet secrets. Actions run only after a wallet connects on the website.
-- Allows the user to pause and withdraw available SOL without the agent’s cooperation. Executor revocation is not implemented in the current account schema yet.
+## Accounts and authority
 
-## Actors
+| Actor/account | Authority |
+|---|---|
+| Owner wallet | Signs deposit, share redemption, pause/resume, executor configuration and revocation |
+| Vault PDA | Holds SOL and records accounted assets/share supply |
+| ExecutorPolicy PDA | Records executor public key and configured limits; contains no private key |
+| Executor key | Intended future caller for narrow trade instruction; currently cannot trade |
+| Bot registry / user slot | Metadata and per-bot state; neither grants swap authority by itself |
+| Jupiter / token programs / RPCs | External dependencies; treated as untrusted until account and balance checks are implemented |
 
-| Actor | Trust | Notes |
-|-------|--------|------|
-| User wallet | Trusted by user | Signs fund, revoke, withdraw |
-| Vault program | Must be audited | PDA-owned vault account |
-| Executor key / bot | Semi-trusted | Can only call allowed instructions within caps |
-| Jupiter / RPCs | Untrusted | Quotes can be stale or adversarial |
-| Operator host | Semi-trusted | Runs agent software; must not hold user keys |
+PDA derivations:
+- Vault: `[b"vault-v1", owner]`
+- Executor policy: `[b"executor-policy-v1", vault]`
+- User slot: `[b"user-slot-v1", owner, bot_account]`
+- Bot registry: `[b"bot-registry-v1", creator, bot_account]`
 
-## Assets
+## Current mitigations in source
 
-- SOL and SPL tokens inside each vault PDA.
-- User’s main wallet (never delegated as full owner).
-- Agent off-chain state (ledger, brain) — not a source of funds authority.
+1. **Unauthorized withdrawal:** share redemption requires the vault owner signer and matching vault PDA. The legacy direct-amount withdrawal returns an explicit error.
+2. **Share-price manipulation via lifetime deposits:** new shares are calculated using current accounted assets and outstanding shares, with checked arithmetic and a consistency invariant.
+3. **Executor key misuse:** policy configuration is owner-signed, bound to the owner's vault PDA, and versioned. The owner can revoke it without executor cooperation.
+4. **Excessive policy values:** max trade must be at least 0.001 SOL, no greater than the daily cap; daily cap cannot exceed current accounted assets; max slippage is at most 10%.
+5. **Daily reset manipulation:** the pure Rust spend-check helper resets only when the UTC day index advances. A backwards clock does not reset spend.
+6. **Premature global authority:** global configuration initialization is disabled until a deployment-specific bootstrap authority is pinned.
+7. **Unreviewed trading:** `execute_swap` and `settle_exit` return `TradingDisabled`; no Jupiter CPI occurs and no position accounting is changed.
+8. **Unverified fee movement:** creator-fee accrual/claims and bot-creation fee collection return `FeeSettlementDisabled`.
 
-## Threats and mitigations
+## Explicit gaps
 
-1. **Agent key compromise** — Caps and allowlists on-chain; revoke instruction; no seed storage.
-2. **Unlimited spending** — Total cap + per-position 0.02 SOL enforced in program.
-3. **Wrong program / CPI** — Strict allowlist of programs (e.g. Jupiter route programs only).
-4. **Frozen or fee-on-transfer tokens** — Pre-trade mint checks (freeze authority, transfer fee).
-5. **Orphan positions** — Reconciliation of on-chain balances vs ledger every cycle.
-6. **Upgrade rug** — Immutable or multi-sig upgrade authority; publish addresses before mainnet.
-7. **UI lying about limits** — On-chain state is source of truth; UI reads vault account.
-8. **Cross-user leakage** — One vault PDA seed per user pubkey; no shared authority.
+- The executor policy is configuration groundwork only. The daily spend helper is not wired into a swap instruction and no daily spend is currently consumed.
+- No Jupiter CPI, SPL-token custody/withdrawal, mint/account validation, exact-next order nonce, fill reconciliation or P&L settlement is active.
+- The vault account's placeholder program ID is not a valid deployment address.
+- Local-validator transaction tests, fuzzing, independent audit, secure upgrade authority, monitoring and incident response are outstanding.
+- The web vault UI must not derive a fundable address or accept deposits.
 
-## Authority diagram (target)
+## Launch rule
 
-```
-User wallet  --fund/revoke/withdraw-->  Vault PDA
-Executor key --trade within caps----->  Vault PDA  --CPI-->  Jupiter / token programs
-```
-
-## Out of scope for Phase 1
-
-- Mainnet deployment
-- Custody of user primary wallet keys
-- Guaranteed take-profit execution or price
-
-## Next gates
-
-See ROADMAP.md vault launch gates 2–7.
+No Devnet or Mainnet deployment or real-fund acceptance until the program ID is finalized, SBF build and validator tests pass, an independent audit is completed, all findings are fixed, and upgrade/emergency authorities and recovery procedures are reviewed.
