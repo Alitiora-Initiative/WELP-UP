@@ -42,6 +42,9 @@ export async function POST(request: Request) {
   }
 
   const now = Date.now();
+  if (requestCounts.size > 500) {
+    for (const [entry, value] of requestCounts) if (value.resetAt <= now) requestCounts.delete(entry);
+  }
   const key = clientKey(request);
   const current = requestCounts.get(key);
   if (!current || current.resetAt <= now) {
