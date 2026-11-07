@@ -103,7 +103,7 @@ export default function PrivacyPage() {
           <div className="terms-draft-banner">
             <strong>Privacy notice for the WELP UP! services.</strong>
             <span>
-              Contact: jaymnyon@gmail.com · jaymn2006@gmail.com. To exercise privacy rights (access, correction, or deletion), email either address.
+              The Support Centre provides self-service guidance only. A secure privacy-request channel is not currently available; do not submit personal information through public channels.
             </span>
           </div>
           <article className="panel terms-document">
@@ -133,7 +133,7 @@ export default function PrivacyPage() {
           </article>
           <footer className="footer">
             <span>WELP UP · Privacy notice dated 20 October 2026</span>
-            <span>Contact: jaymnyon@gmail.com · jaymn2006@gmail.com</span>
+            <span>Privacy requests: secure submission channel not yet available</span>
             <Link href="/">Back to home</Link>
           </footer>
         </div>
