@@ -58,7 +58,6 @@ export function TerminalShell({ children }: { children: ReactNode }) {
  const pathname=usePathname();
  const [open,setOpen]=useState(false);
  const [activeMenu,setActiveMenu]=useState<string|null>(null);
- useEffect(()=>{setOpen(false);setActiveMenu(null);},[pathname]);
  useEffect(()=>{const onKeyDown=(event:KeyboardEvent)=>{if(event.key==='Escape'){setOpen(false);setActiveMenu(null);}};window.addEventListener('keydown',onKeyDown);return()=>window.removeEventListener('keydown',onKeyDown);},[]);
  const isActive=(items:NavItem[])=>items.some(item=>pathname===item.href||(item.href!=='/'&&pathname.startsWith(item.href+'/')));
  const activeGroup=navGroups.find(group=>group.label===activeMenu);
