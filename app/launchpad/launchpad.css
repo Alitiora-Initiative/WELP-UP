@@ -316,3 +316,50 @@
   .lp-decimal-option small { font-size: 8px; }
   .lp-metric-grid { grid-template-columns: 1fr 1fr; }
 }
+
+
+.lp-stage-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 23px;
+}
+.lp-stage {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-content: start;
+  gap: 10px 12px;
+  min-width: 0;
+  padding: 15px;
+  border-radius: 15px;
+  background: rgba(9, 9, 11, .42);
+}
+.lp-stage > span {
+  color: #86efac;
+  font: 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.lp-stage > div { min-width: 0; }
+.lp-stage strong { color: #e4e4e7; font-size: 11px; }
+.lp-stage p {
+  margin: 7px 0 0;
+  color: #71717a;
+  font-size: 10px;
+  line-height: 1.65;
+}
+.lp-stage > small {
+  grid-column: 2;
+  color: #a1a1aa;
+  font: 9px ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.lp-discovery-v2 .launchpad-text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #86efac;
+  font-size: 11px;
+}
+.lp-discovery-v2 .launchpad-text-link:hover { color: #bbf7d0; }
+
+@media (max-width: 760px) {
+  .lp-stage-grid { grid-template-columns: 1fr; }
+}
