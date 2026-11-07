@@ -2,7 +2,7 @@
 
 ## welp-vault
 
-Per-user PDA SOL vault (Anchor source implementation, not yet deployed). Current instructions include vault creation, explicit owner-signed deposits, proportional share accounting, owner-only share withdrawals, pause/resume, and owner-managed per-vault executor policy configuration/revocation. The policy stores a maximum trade, daily cap, slippage ceiling and version, but is not yet consumed by a swap instruction. Bot registration validates strategy/risk metadata and user-slot creation requires an enabled registry and snapshots the owner's approved strategy hash/version. Automated swaps, SPL-token custody, settlement, and fees remain disabled or unimplemented. See:
+Per-user PDA SOL vault (Anchor source implementation, not yet deployed). Current instructions include vault creation, explicit owner-signed deposits, proportional share accounting, owner-only share withdrawals, pause/resume, and owner-managed per-vault executor policy configuration/revocation. The policy stores a maximum trade, daily cap, slippage ceiling and version, but is not yet consumed by a swap instruction. Bot registration validates strategy/risk metadata and user-slot creation requires an enabled registry and snapshots the owner's approved strategy hash/version. Automated swaps, SPL-token custody, settlement, and fees remain disabled or unimplemented. The disabled creation-fee instruction has no oracle account or Pyth dependency until a compatible, tested price-feed integration is implemented. See:
 
 - `docs/vault/THREAT_MODEL.md`
 - `docs/vault/ARCHITECTURE.md`
