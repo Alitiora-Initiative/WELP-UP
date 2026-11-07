@@ -48,7 +48,7 @@ Browser-local records are not a complete on-chain ledger, verified account histo
 - Production bot-creation fees, treasury routing, or fee distribution.
 - Fiat on-ramps, perpetual futures, tokenized-stock execution, or centralized-exchange trading.
 
-The current Anchor vault program is a scaffold and must be treated as unlaunched until its program ID, deployment, source verification, audit, integrations, and release evidence are confirmed. In the rebuild branch, funding, swap execution, position settlement, and fee instructions are explicitly fail-closed pending the security review. Never invite users to deposit based on a UI, a source file, a local validator, or a successful frontend build.
+The Anchor vault source now includes owner-signed SOL deposits with proportional shares, owner-only share redemption, and owner pause/resume controls. It remains unlaunched: no program ID, deployment, source verification, audit, or release evidence is approved. Bot swaps, position settlement, and fee instructions remain fail-closed pending the security review. Never invite users to deposit based on a UI, a source file, a local validator, or a successful frontend build.
 
 ## Non-negotiable security and product rules
 
