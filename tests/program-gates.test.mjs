@@ -145,6 +145,7 @@ test('Anchor SBF workspace includes both deployable programs and excludes host-o
   assert.match(config, /members\s*=\s*\[\s*"programs\/vault"\s*,\s*"programs\/launchpad"\s*\]/);
   assert.doesNotMatch(config, /members\s*=\s*\[\s*"programs\/\*"\s*\]/);
   assert.doesNotMatch(config, /"programs\/vault-checks"/);
+  assert.doesNotMatch(config, /"programs\/program-tests"/);
 });
 
 test('Anchor SBF build preserves pinned Cargo lockfiles', () => {
@@ -161,11 +162,17 @@ test('Anchor SBF build preserves pinned Cargo lockfiles', () => {
   assert.match(workflow, /for lockfile in programs\/vault\/Cargo\.lock programs\/launchpad\/Cargo\.lock/);
   assert.match(workflow, /test -s target\/deploy\/welp_launchpad\.so/);
   assert.match(workflow, /test -s target\/idl\/welp_launchpad\.json/);
-  assert.match(workflow, /cargo test --locked --manifest-path programs\/vault\/Cargo\.toml/);
-  assert.match(workflow, /cargo test --locked --manifest-path programs\/launchpad\/Cargo\.toml --features program-test --test treasury_program_test/);
+  assert.match(workflow, /cargo test --manifest-path programs\/program-tests\/Cargo\.toml --test vault_program_test/);
+  assert.match(workflow, /cargo test --manifest-path programs\/program-tests\/Cargo\.toml --test treasury_program_test/);
+  assert.match(workflow, /uses: dtolnay\/rust-toolchain@stable/);
   const launchpadManifest = readFileSync(new URL('../programs/launchpad/Cargo.toml', import.meta.url), 'utf8');
-  assert.match(launchpadManifest, /program-test\s*=\s*\[[\s\S]*"dep:solana-program-test"/);
-  assert.match(launchpadManifest, /required-features\s*=\s*\["program-test"\]/);
+  const vaultManifest = readFileSync(new URL('../programs/vault/Cargo.toml', import.meta.url), 'utf8');
+  const hostTestsManifest = readFileSync(new URL('../programs/program-tests/Cargo.toml', import.meta.url), 'utf8');
+  assert.doesNotMatch(launchpadManifest, /solana-program-test|solana-banks-client|\[\[test\]\]/);
+  assert.doesNotMatch(vaultManifest, /solana-program-test|solana-banks-client|\[dev-dependencies\]/);
+  assert.match(hostTestsManifest, /solana-program-test/);
+  assert.match(hostTestsManifest, /welp-vault = \{ path = "\.\.\/vault" \}/);
+  assert.match(hostTestsManifest, /welp-launchpad = \{ path = "\.\.\/launchpad" \}/);
   assert.match(workflow, /CARGO: \$\{\{ runner\.temp \}\}\/cargo-wrapper\/cargo/);
   assert.match(workflow, /grep -qx 'version = 3' "\$lockfile"/);
   assert.doesNotMatch(workflow, /for lockfile in programs\/vault\/Cargo\.lock programs\/vault-checks/);
