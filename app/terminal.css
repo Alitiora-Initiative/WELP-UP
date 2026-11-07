@@ -1143,3 +1143,35 @@ html, body { background: #080908 !important; color: #f0f3ec !important; }
 .light .ticker-item, .light .ticker-item strong, .light .footer-brand strong, .light .footer-column a { color:#243b29; }
 .light .launchpad-empty-icon { background:#e8f4e0; border-color:#b6d5a6; }
 .light .launchpad-table th, .light .launchpad-stage strong { color:#435646; }
+
+
+/* Button colour correction: every header control is green at rest, not only on hover. */
+.terminal-site .site-header :is(.site-nav-trigger, .desk-link, .connect-button) {
+  border: 1px solid #a9e95b !important;
+  border-radius: 999px !important;
+  background: linear-gradient(180deg, #dfff9b 0%, #c6ff63 48%, #a6e64b 100%) !important;
+  color: #14200b !important;
+  font-weight: 800 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.82),
+    inset 0 -2px 3px rgba(52,86,12,.18),
+    0 4px 13px rgba(150,210,66,.2) !important;
+  text-shadow: 0 1px 0 rgba(255,255,255,.28) !important;
+}
+.terminal-site .site-header :is(.site-nav-trigger:hover, .site-nav-trigger.is-active, .site-nav-trigger.is-expanded, .desk-link:hover, .connect-button:hover:not(:disabled)) {
+  border-color: #dfffaa !important;
+  background: linear-gradient(180deg, #eaffc0 0%, #d4ff83 48%, #b5ef5b 100%) !important;
+  color: #14200b !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 6px 17px rgba(150,210,66,.26) !important;
+}
+.terminal-site .site-header .site-nav-trigger.is-active {
+  box-shadow: inset 0 -2px 0 rgba(60,100,15,.25), inset 0 1px 0 rgba(255,255,255,.82), 0 4px 13px rgba(150,210,66,.2) !important;
+}
+.terminal-site .site-header .wallet-connected {
+  border-color: #a9e95b !important;
+  background: linear-gradient(180deg, #dfff9b 0%, #c6ff63 48%, #a6e64b 100%) !important;
+  color: #14200b !important;
+}
+.terminal-site .site-header .wallet-connected :is(.wallet-name, .wallet-address) { color: #243716 !important; }
