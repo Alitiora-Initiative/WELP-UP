@@ -25,10 +25,11 @@ function isSameOrigin(request: Request) {
 }
 
 export async function GET() {
-  const configured = Boolean(process.env.OPENAI_API_KEY);
+  const model = process.env.WELP_AI_MODEL?.trim() || null;
+  const configured = Boolean(process.env.OPENAI_API_KEY && model);
   return NextResponse.json({
     configured,
-    model: configured ? (process.env.WELP_AI_MODEL || 'gpt-5.5') : null,
+    model: configured ? model : null,
     mode: 'market-analysis-only',
     walletAccess: false,
     transactionAccess: false,
@@ -59,7 +60,8 @@ export async function POST(request: Request) {
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
+  const configuredModel = process.env.WELP_AI_MODEL?.trim();
+  if (!apiKey || !configuredModel) {
     return NextResponse.json({
       error: 'The market analyst is not configured yet. Add OPENAI_API_KEY and WELP_AI_MODEL as server-only environment variables.',
       configured: false,
@@ -90,7 +92,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'The live market snapshot is incomplete. No analysis was generated.' }, { status: 502 });
     }
 
-    const model = process.env.WELP_AI_MODEL || 'gpt-5.5';
+    const model = configuredModel;
     const upstream = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
