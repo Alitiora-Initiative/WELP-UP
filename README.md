@@ -5,13 +5,13 @@
 - **Website:** https://welpup.fun/
 - **Repository:** https://github.com/Alitiora-Initiative/WELP-UP
 - **Network target:** Solana Mainnet-Beta for production market reads and wallet-approved swaps
-- **Source blueprint:** [`welp-original-source`](./welp-original-source) — the complete recovered Base44 application source supplied for this rebuild
+- **Source blueprint:** [`welp-original-source`](./welp-original-source) — the recovered Base44 application source archive supplied as the rebuild reference (coverage and omissions are documented in [the source audit](docs/BASE44_SOURCE_AUDIT.md))
 
 > **Important — current production boundary:** WELP UP is not currently an autonomous real-funds trading platform, and its vault is not open for deposits. The recovered Base44 source defines the product blueprint and expected experience; it is not proof that every feature is implemented, deployed, audited, or safe to fund. No bot performance, TVL, ROI, user balances, vault activity, or AI execution should be fabricated or presented as live.
 
 ## Product direction
 
-The recovered source is the primary reference for product requirements, page structure, workflows, design language, and intended mechanics. The rebuild should preserve its intent while replacing the Base44 runtime with the repository's maintainable Next.js, React, Solana, and server-side architecture.
+The recovered source archive is the primary reference for product requirements, page structure, workflows, design language, and intended mechanics. It contains 134 captured file sections against 150 paths in its table of contents; see [the source audit](docs/BASE44_SOURCE_AUDIT.md) for the exact gaps. The rebuild should preserve its intent while replacing the Base44 runtime with the repository's maintainable Next.js, React, Solana, and server-side architecture.
 
 The intended product areas are:
 
@@ -102,7 +102,7 @@ The Base44 source archive is the reference for the intended product. The existin
 - `programs/vault/` — Anchor/Rust vault program scaffold.
 - `welp/` — Python research and agent modules.
 - `docs/` — architecture, threat model, production-readiness, runbooks, and release documentation.
-- `welp-original-source` — recovered full Base44 source archive used as the product blueprint.
+- `welp-original-source` — recovered Base44 source archive used as the product blueprint; see [the source audit](docs/BASE44_SOURCE_AUDIT.md) for completeness notes.
 
 ## Local development
 
