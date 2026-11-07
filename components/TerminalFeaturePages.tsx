@@ -9,6 +9,7 @@ import { client } from '@/components/Providers';
 import { WalletConnectionControl } from '@/components/WalletConnectionControl';
 import { TransactionHistory } from '@/components/TransactionHistory';
 import { getWalletHistory, type WalletHistory } from '@/lib/activity';
+import { MarketAnalyst } from '@/components/MarketAnalyst';
 
 export type FeatureKind = 'automation' | 'agent' | 'autonomous' | 'vault' | 'portfolio' | 'history' | 'activity' | 'marketplace' | 'support' | 'status' | 'governance' | 'risk' | 'apiKeys' | 'referral' | 'explorer';
 
@@ -185,19 +186,24 @@ function VaultPage() {
 }
 
 function AgentPage({ monitor = false }: { monitor?: boolean }) {
+  if (monitor) {
+    return <main className="terminal-page feature-page">
+      <Heading eyebrow="AGENT MONITOR · EXECUTION DISABLED" title={<>No hidden <span>executor.</span></>} detail="WELP has no unattended mainnet executor, delegated signer or verified live bot performance. The monitor reports the actual service boundary; it does not invent agent activity." />
+      <div className="feature-stats"><Stat label="PUBLIC MARKET DATA" value="READ ONLY" detail="Jupiter Token API v2" /><Stat label="MODEL ANALYSIS" value="SEPARATE" detail="No wallet permissions" /><Stat label="BOT EXECUTION" value="DISABLED" detail="No orders submitted by agents" /><Stat label="VAULT" value="NOT DEPLOYED" detail="No funding accepted" /></div>
+      <Panel title="Execution release gates" eyebrow="NOT ENABLED">
+        <div className="gate-row"><span className="gate-state">OFF</span><div><strong>Verified on-chain vault</strong><small>Program deployment, source verification and independent audit are incomplete.</small></div></div>
+        <div className="gate-row"><span className="gate-state">OFF</span><div><strong>Constrained bot instruction set</strong><small>Strategy parameters, allowlists, position caps and nonce protection must be enforced on-chain.</small></div></div>
+        <div className="gate-row"><span className="gate-state">OFF</span><div><strong>Keeper and reconciliation service</strong><small>Execution requires isolated infrastructure, confirmed transaction indexing and an emergency stop path.</small></div></div>
+        <div className="gate-row"><span className="gate-state">OFF</span><div><strong>Performance reporting</strong><small>No ROI or bot track record is shown until derived from reconciled on-chain events.</small></div></div>
+        <Link className="text-link" href="/vault">Review vault launch gates <ArrowUpRight size={13} /></Link>
+      </Panel>
+    </main>;
+  }
   return <main className="terminal-page feature-page">
-    <Heading eyebrow={monitor ? 'AGENT MONITOR · NOT ENABLED' : 'MARKET AGENT · ANALYSIS ONLY'} title={monitor ? <>Agent <span>runtime monitor.</span></> : <>Ask the desk. <span>Keep control.</span></>} detail={monitor ? 'WELP does not currently run a production autonomous executor. No bot orders, delegated signing sessions or verified live P&L are available.' : 'The code-based product currently has no hosted model runtime configured. This page does not pretend to generate AI answers or invent market commentary.'} />
-    <div className="feature-stats"><Stat label="MARKET FEED" value="AVAILABLE" detail="Read-only Jupiter feed" /><Stat label="MODEL RUNTIME" value="NOT CONFIGURED" detail="No production model endpoint" /><Stat label="WALLET ACCESS" value="NONE" detail="No signing capability" /><Stat label="AUTONOMOUS ORDERS" value="DISABLED" detail="No unattended executor" /></div>
-    <Panel title="Current service boundaries" eyebrow="WHAT IS ACTUALLY AVAILABLE">
-      <div className="gate-row"><span className="gate-state good">LIVE</span><div><strong>Public market data</strong><small>Token prices, liquidity, activity and audit fields are read from Jupiter.</small></div></div>
-      <div className="gate-row"><span className="gate-state good">LIVE</span><div><strong>Deterministic rule scoring</strong><small>Signals are calculated from published fields and rules.</small></div></div>
-      <div className="gate-row"><span className="gate-state">OFF</span><div><strong>Hosted AI analysis</strong><small>No model provider is connected to this Next.js deployment.</small></div></div>
-      <div className="gate-row"><span className="gate-state">OFF</span><div><strong>Autonomous execution</strong><small>No agent can sign, route or submit trades on a user&apos;s behalf.</small></div></div>
-      <Link className="text-link" href="/signals">Open the live signal engine <ArrowUpRight size={13} /></Link>
-    </Panel>
+    <Heading eyebrow="MARKET AGENT · ANALYSIS ONLY" title={<>Ask the desk. <span>Keep control.</span></>} detail="The analyst can interpret the current public market snapshot when a server-side model is configured. It has no wallet access, signing tools or execution permissions." />
+    <MarketAnalyst />
   </main>;
 }
-
 function GenericUnavailable({ kind }: { kind: FeatureKind }) {
   const config: Record<string, { eyebrow: string; title: ReactNode; description: string; status: string; details: string[] }> = {
     governance: { eyebrow: 'GOVERNANCE · NOT DEPLOYED', title: <>Governance with <span>verifiable authority.</span></>, description: 'WELP has no deployed governance program, proposal registry or vote-weighting contract in this release.', status: 'NOT ENABLED', details: ['No governance program is configured on Solana mainnet.','No proposals or votes are accepted or stored by this interface.','A future launch needs a published program, eligibility rules, quorum and transparent execution path.'] },
