@@ -1512,3 +1512,44 @@ html, body { background: #080908 !important; color: #f0f3ec !important; }
 @media (prefers-reduced-motion:reduce) {
   .terminal-site *, .terminal-site *:before, .terminal-site *:after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
 }
+
+
+/* Light theme counterpart for the shared visual system. */
+.light .terminal-site {
+  --terminal-bg:#f4f8ef; --terminal-panel:#ffffff; --terminal-panel-raised:#edf4e7;
+  --terminal-border:#d6e2cd; --terminal-border-soft:#e4ecde;
+  --terminal-text:#172314; --terminal-muted:#66745f; --terminal-subtle:#4c5d45;
+  --terminal-accent:#5a941d; --terminal-accent-dim:#e8f4dc;
+  background:radial-gradient(ellipse at 12% 0%,rgba(133,188,46,.09),transparent 34rem),#f4f8ef;
+  color:#172314;
+}
+.light .terminal-site .site-header,.light .terminal-site .ticker-strip {
+  background:rgba(247,251,243,.94); border-color:#dce8d3;
+}
+.light .terminal-site .site-brand strong,.light .terminal-site .ticker-item strong { color:#1b2b16; }
+.light .terminal-site .network-badge { color:#477b19; background:#edf7e5; border-color:#cfe4bd; }
+.light .terminal-site .mega-menu { background:rgba(250,253,247,.98); border-color:#d5e5c8; }
+.light .terminal-site .mega-menu-heading h2,.light .terminal-site .mega-menu-link strong,.light .terminal-site .mega-menu-aside>strong { color:#1c2c17; }
+.light .terminal-site .mega-menu-heading p,.light .terminal-site .mega-menu-link small,.light .terminal-site .mega-menu-aside p { color:#65745e; }
+.light .terminal-site .mega-menu-link:hover { background:#eff7e8; border-color:#d3e5c5; }
+.light .terminal-site .mega-menu-aside { background:#f0f7e9; border-color:#d4e5c7; }
+.light .terminal-site .terminal-page :is(.terminal-panel,.panel,.feature-card,.home-tool-card,.home-market-card,.stat-card,.market-stat,.feature-stat,.home-safety-banner,.notice-block,.rules-explainer,.market-disclosures) {
+  border-color:#dce8d4; background:linear-gradient(145deg,#fff,#f6faf2); box-shadow:0 10px 28px rgba(40,70,25,.06);
+}
+.light .terminal-site :is(.home-hero-copy h1,.home-market-card>strong,.home-stat-strip strong,.home-section-heading h2,.home-tool-card h3,.home-candidate>div strong,.page-heading h1,.feature-page h1,.market-page h1,.terminal-panel-heading h2,.feature-stat strong,.market-stats strong,.asset-cell strong,.launchpad-hero h1,.launchpad-empty strong) { color:#1a2a15; }
+.light .terminal-site :is(.home-hero-copy>p,.home-tool-card p,.home-section-copy,.page-heading p,.muted-copy,.market-intro-row p,.home-safety-banner p,.launchpad-empty p) { color:#596a51; }
+.light .terminal-site :is(.home-stat-strip>div,.market-toolbar,.market-board,.launchpad-table-wrap) { background:#fff; border-color:#dce8d4; }
+.light .terminal-site .home-market-snapshot strong { color:#1b2b16; }
+.light .terminal-site .home-market-snapshot span,.light .terminal-site .home-stat-strip span { color:#62745a; }
+.light .terminal-site .market-table th,.light .terminal-site .market-table td { color:#33452c; border-color:#e4ecde; }
+.light .terminal-site .market-table tbody tr:hover { background:#f2f8ec; }
+.light .terminal-site :is(input,select,textarea,.explorer-search,.market-search) { background:#fff; color:#1b2b16; border-color:#d2dfc9; }
+.light .terminal-site :is(input,select,textarea)::placeholder { color:#84917d; }
+.light .terminal-site .site-footer { background:linear-gradient(180deg,#f0f6e9,#eaf2e2); border-color:#d5e3cc; }
+.light .terminal-site .footer-brand strong { color:#1b2b16; }
+.light .terminal-site .footer-brand p,.light .terminal-site .footer-column a { color:#5d6c55; }
+.light .terminal-site .footer-column>strong { color:#4b7e1b; }
+.light .terminal-site .footer-bottom { color:#75846c; border-color:#d7e3ce; }
+.light .terminal-site .home-safety-banner { background:linear-gradient(110deg,#edf7e4,#fff 60%); }
+.light .terminal-site .market-tabs button { background:#f1f7eb; border-color:#d7e4ce; color:#41533a; }
+.light .terminal-site .market-tabs button[aria-pressed="true"],.light .terminal-site .market-tabs button.active { background:linear-gradient(180deg,#e1ffa2,#aeea48); color:#14200a; }
