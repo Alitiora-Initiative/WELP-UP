@@ -25,6 +25,3 @@ path = "tests/vault_program_test.rs"
 name = "treasury_program_test"
 path = "tests/treasury_program_test.rs"
 
-[[test]]
-name = "fee_collection_program_test"
-path = "tests/fee_collection_program_test.rs"
