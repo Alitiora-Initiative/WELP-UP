@@ -129,6 +129,12 @@ jobs:
             programs/vault/Cargo.toml \
             programs/launchpad/Cargo.toml
 
+      - name: Pin Cargo 1.75-compatible transitive dependencies
+        run: |
+          bash scripts/pin-anchor-030-sbf-deps.sh \
+            programs/vault/Cargo.toml \
+            programs/launchpad/Cargo.toml
+
       - name: Build Solana BPF/SBF program and IDL
         run: |
           for lockfile in programs/vault/Cargo.lock programs/launchpad/Cargo.lock; do
