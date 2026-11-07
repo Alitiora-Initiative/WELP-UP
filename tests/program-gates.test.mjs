@@ -149,9 +149,9 @@ test('Anchor SBF workspace excludes host-only vault checks crate', () => {
 test('Anchor SBF build preserves pinned Cargo lockfiles', () => {
   const workflow = readFileSync(new URL('../.github/workflows/anchor-sbf.yml', import.meta.url), 'utf8');
   assert.match(workflow, /anchor build -- -- --locked/);
-  assert.match(workflow, /Prevent Anchor metadata from upgrading the SBF lockfile/);
+  assert.match(workflow, /Refresh Cargo metadata and normalize the SBF lockfile/);
   assert.ok(workflow.includes('if [[ "\\${1:-}" == "metadata" ]]; then'));
-  assert.ok(workflow.includes('exec "$REAL_CARGO" "\\$@" --locked'));
+  assert.ok(workflow.includes('"$REAL_CARGO" "\\$@"'));\n  assert.match(workflow, /sed -i 's\/\^version = 4\$\/version = 3\/' programs\/vault\/Cargo\.lock/);\n  assert.match(workflow, /cargo test --locked --manifest-path programs\/vault\/Cargo\.toml/);
   assert.match(workflow, /CARGO: \$\{\{ runner\.temp \}\}\/cargo-wrapper\/cargo/);
   assert.match(workflow, /grep -qx 'version = 3' programs\/vault\/Cargo\.lock/);
   assert.match(workflow, /for lockfile in programs\/vault\/Cargo\.lock/);
