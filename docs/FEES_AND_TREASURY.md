@@ -1,6 +1,6 @@
 # WELP UP fee and treasury policy
 
-**Status: policy configured in backend source; on-chain collection remains disabled pending implementation, deployment and verification.**
+**Status: fixed policy is configured. The current branch now contains a local-only, SBF-tested-in-progress instruction for the $0.10 USDC supported-transfer fee. It is not deployed; no Mainnet fees are collected. Trade and launch-creation fee handlers are still pending their actual operations.**
 
 ## Fixed policy
 
@@ -50,9 +50,11 @@ Solana transaction fees and rent-exemption deposits are not WELP revenue. Rent i
 
 ## Current enforcement status
 
-The backend policy module contains the fixed amounts and developer destination. The current Jupiter /order + /execute path returns an assembled transaction that WELP cannot safely modify after the fact. A fee must not be described as collected on that path until the trade flow is migrated to a composable transaction path or another reviewed atomic mechanism. Vault deposits/withdrawals and launchpad instructions must enforce their fees inside the same on-chain instruction transaction.
+The current branch implements `supported_transfer_with_fee` inside `programs/launchpad/src/lib.rs`. It performs an actual SPL Token transfer and the fixed $0.10 USDC fee in one Solana transaction: $0.06 to the hardcoded developer USDC ATA and $0.04 to the treasury PDA's USDC ATA. A payer/operation-id receipt PDA rejects a duplicate operation id, and the instruction emits an auditable fee event. If the transfer or either USDC fee leg fails, the entire transaction rolls back.
 
-**Until those changes are deployed and verified, fees are configured as policy but not collected.**
+This instruction applies only when a caller deliberately uses the WELP-supported transfer path. It cannot intercept ordinary token transfers sent directly through another wallet or program. The token-trade and launch-creation fees are not yet wired into actual swap/mint instructions. The current Jupiter /order + /execute path returns an assembled transaction that WELP cannot safely modify after the fact, so those trade fees remain disabled until a composable route exists.
+
+**The supported-transfer fee is implemented in source but remains off Mainnet until the program has a production program ID, is deployed, independently reviewed, and verified. No live fee collection is claimed.**
 
 
 ## Separate creator-configured fee model
