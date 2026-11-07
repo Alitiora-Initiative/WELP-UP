@@ -54,7 +54,9 @@ export function validateLaunchSupply(
     return { ok: false, error: 'Choose 0, 6, or 9 decimals.' };
   }
 
-  const scale = 10n ** BigInt(decimalsInput);
+  // The runtime check above proves membership in the supported literal set.
+  const decimals = decimalsInput as SupportedTokenDecimals;
+  const scale = 10n ** BigInt(decimals);
   const maxSupplyBaseUnits = wholeSupply * scale;
   if (maxSupplyBaseUnits > U64_MAX) {
     return { ok: false, error: 'This supply and decimal combination exceeds the on-chain u64 limit.' };
@@ -67,10 +69,10 @@ export function validateLaunchSupply(
   return {
     ok: true,
     wholeSupply,
-    decimals: decimalsInput,
+    decimals,
     maxSupplyBaseUnits,
     earlyWalletLimitBaseUnits,
-    earlyWalletLimitWholeTokens: formatBaseUnits(earlyWalletLimitBaseUnits, decimalsInput),
+    earlyWalletLimitWholeTokens: formatBaseUnits(earlyWalletLimitBaseUnits, decimals),
     // If 5% is below one indivisible token unit, early-window buys must fail;
     // do not round the limit up and silently exceed 5%.
     earlyWindowPurchasesBlockedByGranularity: earlyWalletLimitBaseUnits === 0n,
