@@ -67,9 +67,13 @@ pub mod welp_launchpad {
             TreasuryError::InvalidDeveloperWallet
         );
 
+        require!(
+            now >= treasury.last_distribution_timestamp,
+            TreasuryError::ClockMovedBackwards
+        );
         let elapsed = now
             .checked_sub(treasury.last_distribution_timestamp)
-            .ok_or(TreasuryError::ClockMovedBackwards)?;
+            .ok_or(TreasuryError::ArithmeticOverflow)?;
         require!(
             elapsed >= DISTRIBUTION_EPOCH_SECONDS,
             TreasuryError::EpochNotElapsed
@@ -290,9 +294,13 @@ pub fn split_epoch_balance(distributable_lamports: u64) -> Result<(u64, u64)> {
 }
 
 pub fn epoch_is_mature(last_distribution_timestamp: i64, now: i64) -> Result<bool> {
+    require!(
+        now >= last_distribution_timestamp,
+        TreasuryError::ClockMovedBackwards
+    );
     let elapsed = now
         .checked_sub(last_distribution_timestamp)
-        .ok_or(TreasuryError::ClockMovedBackwards)?;
+        .ok_or(TreasuryError::ArithmeticOverflow)?;
     Ok(elapsed >= DISTRIBUTION_EPOCH_SECONDS)
 }
 
