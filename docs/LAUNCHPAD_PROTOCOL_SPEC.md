@@ -46,6 +46,8 @@ The UI may display a zero starting point in a visual slider or empty state, but 
 
 ### 2.2 Decimal precision
 
+The creator may select any integer decimal precision from 0 through 9. The initial SPL Token Program release supports this numeric range; Token-2022 extensions remain disabled unless separately reviewed.
+
 The supported launch presets are:
 
 | Decimals | Meaning |
@@ -494,3 +496,68 @@ Discovery search/filter categories may include quote asset, newest, market cap a
 - Raydium CPMM initialization account context: https://github.com/raydium-io/raydium-cp-swap/blob/master/programs/cp-swap/src/instructions/initialize.rs
 - Next.js App Router route handlers: https://nextjs.org/docs/app/getting-started/route-handlers
 - Visual reference: https://stonkfun.xyz/
+
+
+## 14. Treasury epochs and creator-fee routing
+
+The implemented local Treasury PDA and exact interpretation of the fee waterfall are documented in [TREASURY_AND_CREATOR_FEES.md](./TREASURY_AND_CREATOR_FEES.md).
+
+### 14.1 Creator fee
+
+Creator-selected fee is 0–300 basis points (0.00%–3.00%) on eligible WELP-routed trade volume. The 0.5% treasury share is a share of the creator-fee amount, not an additional 0.5 percentage points of swap volume. The remainder of the creator-fee amount is the creator reward. Fractional lamport remainders are carried across trades.
+
+This creator fee is separate from the existing fixed WELP USDC trade/transfer/launch-creation fee policy. The fee helper is implemented and unit-tested, but the helper has not yet been called from a buy/sell handler and no funds are collected by the current program.
+
+### 14.2 Treasury distribution
+
+The global Treasury PDA stores the fixed developer wallet, accumulated fee counters, remainder, rent-protected balance, locked reserve and last distribution timestamp.
+
+- Initialization stores the Solana Clock timestamp.
+- A harvest requires at least 1,209,600 seconds since the last successful harvest.
+- 60% of newly undistributed treasury inflows is sent to the hardcoded developer wallet.
+- 40% of those new inflows is added to a separate \`locked_reserve_lamports\` counter and is excluded from all subsequent distributions.
+- The account's rent floor is never treated as revenue.
+- There is no treasury reserve withdrawal instruction.
+
+This "permanent" reserve is only as immutable as the deployed program. An unrestricted program upgrade authority could replace the logic; Mainnet release must remove upgrade authority or disclose a multisig-governed upgrade process.
+
+The local crate now contains \`initialize_treasury\` and \`disburse_treasury_funds\`. The crate is not deployed, has not been audited and must not receive Mainnet funds. The fee helper is not yet connected to atomic transfers or a launch buy/sell route.
+
+### 14.3 Raydium creator-fee limits
+
+Raydium CPMM treats the trade fee and creator fee as separate buckets. Its creator-fee rate is sourced from the AMM configuration tier; pools can enable/disable the fee and choose a fee side, but the per-pool rate is not an arbitrary custom 0–3% setting when pools share a single tier. Its creator-fee share is applied at collection time and routed to Raydium's protocol-fee bucket, not automatically to the WELP Treasury PDA. See [Raydium CPMM fees](https://github.com/raydium-io/raydium-docs-v1/blob/main/products/cpmm/fees.mdx).
+
+WELP must not claim that its own instructions intercept post-graduation Raydium swaps. A reviewed collection adapter must be designed to route the accrued creator-fee proceeds to a launch-controlled account and split them to WELP treasury/creator. If that is not possible for the selected pool path, the custom fee must be disabled post-graduation.
+
+## 15. Graduation economics — fixed target mismatch
+
+The requested constants are interpreted as **25 to 187.5 lamports per whole token**, not per raw base unit. The average price of a linear curve with these endpoints is 106.25 lamports per whole token.
+
+With 80% of the selected supply allocated to the public sale, maximum curve proceeds at these endpoints are approximately:
+
+| Total supply | Public sale allocation | Maximum proceeds |
+|---:|---:|---:|
+| 1,000,000,000 | 800,000,000 | 85 SOL |
+| 200,000,000 | 160,000,000 | 17 SOL |
+| 100,000,000 | 80,000,000 | 8.5 SOL |
+
+Therefore the fixed 85 SOL graduation milestone cannot be reached by smaller-supply launches at the stated curve endpoints, even if the entire 80% public allocation sells. The 85 SOL target and fixed prices must not be implemented together without a defined policy for smaller supplies.
+
+Choose and freeze one of:
+1. scale initial/terminal prices inversely with chosen supply so the curve reaches 85 SOL;
+2. scale the funding cap proportionally to chosen supply while preserving the fixed price endpoints;
+3. keep 85 SOL and explicitly make smaller launches refundable/non-graduating if the target cannot be reached.
+
+The implementation branch leaves this decision unresolved and the sale action disabled.
+
+## 16. Bundled creator initial purchase
+
+The proposed initial buy is 0.02% of the selected total supply (2 basis points of supply). It must be an ordinary creator-signed purchase instruction placed after create/initialize in the same transaction. It must:
+- calculate the exact token amount in raw units;
+- calculate the quote cost using the same curve and creator-fee logic as any other buyer;
+- count against the creator's 5% early-window per-wallet allocation;
+- be visible with its amount, fees, destinations and expected output before signing;
+- be optional or explicitly confirmed by the creator (never hidden);
+- roll back the entire create if it fails and the creator chose an atomic bundle.
+
+It is not an administrative mint-to-creator shortcut and does not guarantee protection from bots or other wallets.
