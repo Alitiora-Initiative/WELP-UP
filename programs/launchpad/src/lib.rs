@@ -74,7 +74,10 @@ pub mod welp_launchpad {
         amount: u64,
     ) -> Result<()> {
         require!(amount > 0, TreasuryError::ZeroTransferAmount);
-        require!(operation_id != [0_u8; 32], TreasuryError::InvalidOperationId);
+        require!(
+            operation_id != [0_u8; 32],
+            TreasuryError::InvalidOperationId
+        );
         require!(
             ctx.accounts.recipient.key() != ctx.accounts.payer.key(),
             TreasuryError::SelfTransferNotSupported
