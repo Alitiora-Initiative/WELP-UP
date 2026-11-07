@@ -32,15 +32,9 @@ A wallet signature is meaningful authorization. Users should inspect each transa
 
 ## Fees and treasury
 
-The target fee schedule is documented in docs/FEES_AND_TREASURY.md:
+WELP's target protocol fee is **0.50% of gross input** on every swap that executes through a WELP-controlled, fee-enforcing on-chain instruction. The fee is split 60% to the published developer/operator wallet and 40% to the WELP treasury. There is no separate fixed $0.10 trade fee, $0.10 transfer fee, $0.50 launch-creation fee or creator-configurable fee under this policy.
 
-- 0.10 USD-equivalent per supported trade or transfer.
-- 0.50 USD-equivalent launchpad creation fee.
-- 60% of protocol fees to the published developer/operator wallet.
-- 40% to the WELP protocol treasury PDA.
-- Creator rewards are a separately accounted stream and may only be paid from a disclosed, funded creator allocation.
-
-The configured developer fee destination is a public Solana address, not a signing key. Fee collection remains disabled until the treasury PDA, stablecoin accounts, atomic transaction composition, on-chain enforcement and user disclosures are implemented and verified. The website must never silently deduct a fee.
+The policy is documented in docs/FEES_AND_TREASURY.md. The server policy and client/Rust fee arithmetic are not proof of fee collection. The current launchpad program has not been deployed or source-verified on mainnet, generic SPL input-token fee vaults and the launchpad buy/sell instructions are not implemented, and the Jupiter order/execute path cannot append the required fee transfers. Order and execute endpoints therefore remain fail-closed. Do not send assets to the sample program ID or a PDA derived from it.
 
 ## Security rules
 
