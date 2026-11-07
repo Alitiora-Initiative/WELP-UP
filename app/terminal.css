@@ -984,3 +984,49 @@ html, body { background: #080908 !important; color: #f0f3ec !important; }
   }
 }
 
+
+
+/* Visual correction: keep the interface open and editorial, not card-stacked. */
+.terminal-site :is(
+  .terminal-panel, .market-board, .home-market-card, .home-tool-card,
+  .home-stat-strip, .home-safety-banner, .leaderboard-preview-card,
+  .leaderboard-status-card, .signal-card
+) {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.terminal-site :is(.terminal-panel, .market-board, .signal-card) {
+  padding-left: 0;
+  padding-right: 0;
+}
+.terminal-site .home-tool-card:hover {
+  transform: translateY(-2px);
+  border-color: transparent;
+  box-shadow: none;
+}
+.terminal-site :is(.terminal-panel, .signal-card) + :is(.terminal-panel, .signal-card) {
+  border-top: 1px solid var(--terminal-border-soft) !important;
+}
+
+/* Header actions are neutral graphite; green is reserved for status and emphasis. */
+.terminal-site .site-header .connect-button,
+.terminal-site .site-header .desk-link {
+  border: 1px solid #454b48 !important;
+  border-radius: 999px !important;
+  background: linear-gradient(180deg, #454b49 0%, #303633 55%, #252b29 100%) !important;
+  color: #f0f3f1 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.28), inset 0 -1px 0 rgba(0,0,0,.35), 0 4px 12px rgba(0,0,0,.24) !important;
+  text-shadow: none !important;
+}
+.terminal-site .site-header .connect-button:hover:not(:disabled),
+.terminal-site .site-header .desk-link:hover {
+  border-color: #707976 !important;
+  background: linear-gradient(180deg, #555d59 0%, #3b4440 100%) !important;
+  color: #fff !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.34), 0 6px 16px rgba(0,0,0,.28) !important;
+}
+.terminal-site .site-header .connect-button::before { opacity: .55; }
