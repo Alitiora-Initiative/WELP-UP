@@ -203,9 +203,12 @@ export function AiAutomationWatch() {
 
   useEffect(() => {
     if (!enabled || !status?.configured) return;
-    void scan();
+    const initialScan = window.setTimeout(() => void scan(), 0);
     const timer = window.setInterval(() => void scan(), 60_000);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearTimeout(initialScan);
+      window.clearInterval(timer);
+    };
   }, [enabled, status?.configured, scan]);
 
   return (
