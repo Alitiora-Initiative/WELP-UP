@@ -68,6 +68,7 @@ Bot registration rejects a zero strategy hash, zero or greater-than-100% positio
 | Legacy `withdraw` | Returns `LegacyWithdrawDisabled` to prevent bypassing share accounting |
 | Legacy `set_executor` / `revoke_executor` | Return `ExecutorPolicyRequired`; use versioned policy instructions |
 | `initialize_global_config` | Disabled until a deployment-specific bootstrap authority is pinned |
+| Legacy `initialize` | Disabled because its cap arguments were never persisted or enforced |
 
 ## What remains before delegated trading
 
