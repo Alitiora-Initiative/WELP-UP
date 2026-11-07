@@ -28,6 +28,63 @@ export type LaunchSupplyValidation =
     }
   | { ok: false; error: string };
 
+/**
+ * Validate a creator's whole-token supply and derive its exact raw mint amount.
+ * The chain program must repeat these checks; this helper never creates a mint.
+ */
+export function validateLaunchSupply(
+  rawSupply: string,
+  decimals: number | null,
+): LaunchSupplyValidation {
+  const input = rawSupply.trim();
+  if (!/^\\d+$/.test(input)) {
+    return { ok: false, error: 'Enter a whole-token supply using digits only.' };
+  }
+  if (
+    decimals === null ||
+    !Number.isInteger(decimals) ||
+    decimals < 0 ||
+    decimals > 9 ||
+    !SUPPORTED_TOKEN_DECIMALS.includes(decimals as SupportedTokenDecimals)
+  ) {
+    return { ok: false, error: 'Choose mint precision from 0 through 9 decimals.' };
+  }
+
+  // Normalize leading zeroes and reject excessive input before BigInt parsing.
+  const normalizedSupply = input.replace(/^0+(?=\\d)/, '');
+  if (normalizedSupply.length > MAX_TOTAL_SUPPLY_WHOLE.toString().length) {
+    return { ok: false, error: 'Total supply cannot exceed one billion whole tokens.' };
+  }
+
+  const wholeSupply = BigInt(normalizedSupply);
+  if (wholeSupply > MAX_TOTAL_SUPPLY_WHOLE) {
+    return { ok: false, error: 'Total supply cannot exceed one billion whole tokens.' };
+  }
+
+  const scale = 10n ** BigInt(decimals);
+  const maxSupplyBaseUnits = wholeSupply * scale;
+  if (maxSupplyBaseUnits > U64_MAX) {
+    return { ok: false, error: 'Raw mint supply exceeds the on-chain u64 limit.' };
+  }
+
+  // The early-window cap is 5% of supply, rounded down to whole base units.
+  // A cap below one whole token is preserved as-is and blocks early purchases.
+  const earlyWalletLimitBaseUnits = (maxSupplyBaseUnits * 500n) / BASIS_POINTS_DENOMINATOR;
+  const earlyWindowPurchasesBlockedByGranularity =
+    wholeSupply > 0n && earlyWalletLimitBaseUnits < scale;
+
+  return {
+    ok: true,
+    wholeSupply,
+    decimals: decimals as SupportedTokenDecimals,
+    launchable: wholeSupply > MIN_TOTAL_SUPPLY_WHOLE,
+    maxSupplyBaseUnits,
+    earlyWalletLimitBaseUnits,
+    earlyWalletLimitWholeTokens: formatBaseUnits(earlyWalletLimitBaseUnits, decimals),
+    earlyWindowPurchasesBlockedByGranularity,
+  };
+}
+
 export type ProtocolSwapFeeRoute = {
   grossInputBaseUnits: bigint;
   protocolFeeBaseUnits: bigint;
