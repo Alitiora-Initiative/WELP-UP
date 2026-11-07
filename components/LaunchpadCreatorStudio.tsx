@@ -68,11 +68,11 @@ export function LaunchpadCreatorStudio() {
             inputMode="numeric"
             maxLength={10}
             onChange={(event) => setSupply(event.target.value)}
-            placeholder="Enter 1 to 1,000,000,000"
+            placeholder="Enter 0 to 1,000,000,000"
             value={supply}
           />
           <small>
-            Creator-defined maximum: 1 to 1,000,000,000 whole tokens. Zero is invalid.
+            Creator setting: 0 to 1,000,000,000 whole tokens. Zero is preview-only and cannot become a tradable launch.
           </small>
         </label>
 
@@ -140,7 +140,15 @@ export function LaunchpadCreatorStudio() {
           </p>
         )}
 
-        {validation.ok && validation.earlyWindowPurchasesBlockedByGranularity && (
+        {validation.ok && !validation.launchable && (
+          <p className="lp-warning">
+            Zero supply is available as a configuration preview, but it cannot
+            create a tradable launch, accept purchases or graduate to a pool.
+            Set a positive supply to launch.
+          </p>
+        )}
+
+        {validation.ok && validation.launchable && validation.earlyWindowPurchasesBlockedByGranularity && (
           <p className="lp-warning">
             With this zero-decimal supply, 5% is less than one indivisible token.
             The on-chain early-window rule must reject purchases during that
