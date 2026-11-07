@@ -68,6 +68,11 @@ export async function POST(request: Request) {
     }, { status: 503 });
   }
 
+  const contentLength = Number(request.headers.get('content-length') || 0);
+  if (contentLength > 4096) {
+    return NextResponse.json({ error: 'Request body exceeds the 4 KB limit.' }, { status: 413 });
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -102,6 +107,7 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         model,
         store: false,
+        tools: [],
         max_output_tokens: 850,
         instructions: [
           'You are WELP UP Market Analyst, a read-only market research assistant.',
