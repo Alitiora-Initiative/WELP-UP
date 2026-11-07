@@ -1,6 +1,6 @@
 # WELP vault architecture (Gate 2)
 
-**Status:** Design scaffold only. Not deployed to Devnet or Mainnet; not independently audited. The web vault UI is fail-closed and does not accept deposits.
+**Status:** Anchor source implementation in progress; not deployed to Devnet or Mainnet and not independently audited. The program now implements owner-signed SOL deposits and share-based SOL withdrawals. The web vault UI remains fail-closed and does not accept deposits.
 
 **Effective:** 2026-10-21  
 **Operator:** Alitiora Initiative / Joseph Mushelle Nyingeh (Kenya)
