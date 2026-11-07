@@ -122,6 +122,12 @@ jobs:
           grep -qx 'version = 3' programs/launchpad/Cargo.lock
           echo "$RUNNER_TEMP/cargo-wrapper" >> "$GITHUB_PATH"
 
+      - name: Pin Pyth transitive Solana dependencies to 1.18
+        run: |
+          bash scripts/pin-solana-118-locks.sh \
+            programs/vault/Cargo.toml \
+            programs/program-tests/Cargo.toml
+
       - name: Build Solana BPF/SBF program and IDL
         run: |
           for lockfile in programs/vault/Cargo.lock programs/launchpad/Cargo.lock; do
