@@ -190,8 +190,8 @@ test('Anchor SBF build preserves pinned Cargo lockfiles', () => {
   assert.doesNotMatch(launchpadManifest, /solana-program-test|solana-banks-client|\[\[test\]\]/);
   assert.doesNotMatch(vaultManifest, /solana-program-test|solana-banks-client|\[dev-dependencies\]/);
   assert.match(hostTestsManifest, /solana-program-test/);
-  assert.match(hostTestsManifest, /welp-vault = \{ path = "\.\.\/vault" \}/);
-  assert.match(hostTestsManifest, /welp-launchpad = \{ path = "\.\.\/launchpad" \}/);
+  assert.match(hostTestsManifest, /welp-vault = \{ path = "\.\.\/vault", features = \["no-entrypoint"\] \}/);
+  assert.match(hostTestsManifest, /welp-launchpad = \{ path = "\.\.\/launchpad", features = \["no-entrypoint"\] \}/);
   assert.match(workflow, /CARGO: \$\{\{ runner\.temp \}\}\/cargo-wrapper\/cargo/);
   assert.match(workflow, /grep -qx 'version = 3' "\$lockfile"/);
   assert.doesNotMatch(workflow, /for lockfile in programs\/vault\/Cargo\.lock programs\/vault-checks/);
