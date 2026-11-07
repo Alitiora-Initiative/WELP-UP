@@ -84,10 +84,22 @@ pub mod welp_launchpad {
             .checked_add(treasury.locked_reserve_lamports)
             .ok_or(TreasuryError::ArithmeticOverflow)?;
 
-        let distributable = current_balance
-            .checked_sub(protected_balance)
-            .ok_or(TreasuryError::TreasuryAccountingInvariant)?;
+        // Only protocol fees previously recorded by the program can be
+        // harvested. Direct donations or unsolicited lamport transfers to the
+        // PDA remain untouched and cannot be swept to the developer wallet.
+        let distributable = calculate_undistributed_fees(
+            treasury.total_fees_collected,
+            treasury.total_developer_disbursed,
+            treasury.locked_reserve_lamports,
+        )?;
 
+        let minimum_accounted_balance = protected_balance
+            .checked_add(distributable)
+            .ok_or(TreasuryError::ArithmeticOverflow)?;
+        require!(
+            current_balance >= minimum_accounted_balance,
+            TreasuryError::TreasuryAccountingInvariant
+        );
         require!(distributable > 0, TreasuryError::NothingToDisburse);
 
         let developer_amount = mul_div_floor_u64(
@@ -249,6 +261,22 @@ pub fn calculate_creator_fee_route(
     })
 }
 
+/// Return only fee inflows that have not already been disbursed or locked.
+/// This excludes direct donations and any balance not recorded by the fee
+/// collection instruction. All three counters are cumulative lamports.
+pub fn calculate_undistributed_fees(
+    total_fees_collected: u64,
+    total_developer_disbursed: u64,
+    locked_reserve_lamports: u64,
+) -> Result<u64> {
+    let already_accounted = total_developer_disbursed
+        .checked_add(locked_reserve_lamports)
+        .ok_or(TreasuryError::ArithmeticOverflow)?;
+    total_fees_collected
+        .checked_sub(already_accounted)
+        .ok_or(TreasuryError::TreasuryAccountingInvariant.into())
+}
+
 pub fn split_epoch_balance(distributable_lamports: u64) -> Result<(u64, u64)> {
     let developer_amount = mul_div_floor_u64(
         distributable_lamports,
@@ -385,6 +413,16 @@ mod tests {
     #[test]
     fn clock_reversal_is_rejected() {
         assert!(epoch_is_mature(2_000, 1_999).is_err());
+    }
+
+    #[test]
+    fn harvest_uses_only_recorded_fee_inflows() {
+        assert_eq!(calculate_undistributed_fees(1_000, 600, 400).unwrap(), 0);
+        assert_eq!(calculate_undistributed_fees(1_500, 600, 400).unwrap(), 500);
+        assert!(calculate_undistributed_fees(999, 600, 400).is_err());
+        // Any lamports sent directly to the PDA are not in total_fees_collected
+        // and therefore cannot be counted as distributable program revenue.
+        assert_eq!(calculate_undistributed_fees(0, 0, 0).unwrap(), 0);
     }
 
     #[test]
