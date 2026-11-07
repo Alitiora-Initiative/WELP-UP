@@ -4,7 +4,7 @@
 //! audited production launchpad. The program id below is a sample local ID.
 //! Replace it with a deployment keypair-generated ID before any deployment.
 //! The launch buy/curve/refund/Raydium instructions are not enabled in this
-//! crate yet; creator-fee math below is a tested primitive for those flows.
+//! crate yet; the 50-bps gross-input fee arithmetic below is a tested primitive for that route.
 
 use anchor_lang::{prelude::*, system_program};
 
@@ -370,16 +370,12 @@ mod tests {
     }
 
     #[test]
-    fn protocol_fee_is_half_percent_of_gross_input_and_splits_sixty_forty() {
+    fn protocol_fee_is_half_percent_of_gross_input_and_credits_treasury() {
         let route = calculate_protocol_swap_fee(1_000_000_000).unwrap();
         assert_eq!(route.gross_input_base_units, 1_000_000_000);
         assert_eq!(route.protocol_fee_base_units, 5_000_000);
         assert_eq!(route.treasury_credit_base_units, 5_000_000);
         assert_eq!(route.net_swap_input_base_units, 995_000_000);
-        assert_eq!(
-            route.treasury_credit_base_units,
-            route.protocol_fee_base_units
-        );
         assert_eq!(
             route.net_swap_input_base_units + route.protocol_fee_base_units,
             route.gross_input_base_units
