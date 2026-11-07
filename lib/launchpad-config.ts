@@ -33,6 +33,9 @@ export function validateLaunchSupply(
   decimalsInput: number | null,
 ): LaunchSupplyValidation {
   const normalized = wholeSupplyInput.trim();
+  if (normalized.length === 0 || normalized.length > 10) {
+    return { ok: false, error: 'Enter a whole-number supply with at most 10 digits.' };
+  }
   if (!/^[0-9]+$/.test(normalized)) {
     return { ok: false, error: 'Enter a whole-number token supply.' };
   }
