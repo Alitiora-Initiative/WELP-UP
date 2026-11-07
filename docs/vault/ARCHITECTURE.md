@@ -90,9 +90,11 @@ Host-side pure checks:
 cargo test --manifest-path programs/vault-checks/Cargo.toml
 ```
 
-Anchor build and validator tests, once the local toolchain is installed:
+Anchor build and SBF-backed ProgramTest, using the pinned Anchor 0.30.1 / Solana 1.18.17 toolchain:
 
 ```bash
-anchor build -p welp-vault
-anchor test
+anchor build
+BPF_OUT_DIR="$PWD/target/deploy" cargo test --manifest-path programs/vault/Cargo.toml --test anchor_program_test
 ```
+
+The ProgramTest suite loads the built SBF binary; it does not substitute a native mock processor.
