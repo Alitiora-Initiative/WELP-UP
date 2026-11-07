@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { ArrowUpRight, CheckCircle2, CircleDashed, LockKeyhole } from 'lucide-react';
 import { LaunchpadCreatorStudio } from '@/components/LaunchpadCreatorStudio';
-import { TreasuryEpochCountdown } from '@/components/TreasuryEpochCountdown';
 import './launchpad.css';
 
 export const dynamic = 'force-dynamic';
@@ -67,8 +66,6 @@ export default function LaunchpadPage() {
       </section>
 
       <LaunchpadCreatorStudio />
-
-      <TreasuryEpochCountdown lastDistributionTimestamp={null} />
 
       <section className="lp-discovery-v2 glass-panel" aria-labelledby="lp-stages-title">
         <div className="lp-section-head-v2">
