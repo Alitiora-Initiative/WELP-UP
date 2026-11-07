@@ -83,6 +83,8 @@ export function scoreToken(value: unknown): ScoredMarketToken {
   if (liquidity < 100_000) blockers.push('Liquidity is below $100,000');
   if (volume < 100_000) blockers.push('24-hour volume is below $100,000');
   if (topHolders !== null && topHolders > 60) blockers.push('Top holders own ' + topHolders.toFixed(1) + '%');
+  const suspicious = audit.isSus === true;
+  if (suspicious) blockers.push('Jupiter audit flags this token as suspicious');
 
   if (freezeDisabled === null) warnings.push('Freeze-authority status is not reported');
   if (mintDisabled === false) warnings.push('Mint authority is active');
@@ -97,8 +99,6 @@ export function scoreToken(value: unknown): ScoredMarketToken {
   const change24h = number(s24.priceChange);
   if (change24h <= -25) warnings.push('24-hour drawdown is ' + change24h.toFixed(1) + '%');
   if (row.isVerified !== true) warnings.push('Token is not marked verified by the feed');
-  const suspicious = audit.isSus === true;
-  if (suspicious) warnings.push('Jupiter audit flags this token as suspicious');
 
   return {
     mint: String(row.id ?? ''),
