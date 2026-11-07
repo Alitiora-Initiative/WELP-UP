@@ -58,11 +58,13 @@ The configured developer fee destination is a public Solana address, not a signi
 - app/ — Next.js App Router pages and API routes.
 - components/ — application UI and wallet components.
 - lib/ — market, wallet, risk and protocol client logic.
-- programs/vault/ — Anchor/Rust on-chain program scaffold.
+- programs/vault/ — Anchor/Rust vault program scaffold.
+- programs/launchpad/ — Anchor treasury epoch core; not deployed, and launch/trade fee transfers are not yet wired.
 - programs/vault-checks/ — host-side pure Rust invariants.
 - docs/ — protocol design, threat models, release gates, fee policy and runbooks.
 - [Launchpad protocol specification](docs/LAUNCHPAD_PROTOCOL_SPEC.md) — custom supply/decimals, curve, escrow, anti-snipe, CPMM, fees, indexing and release design; not a live deployment.
 - [Launchpad and platform hardening backlog](docs/LAUNCHPAD_AND_SECURITY_BACKLOG.md) — implementation checklist and release gates; not a live launch contract.
+- [Treasury and creator-fee design](docs/TREASURY_AND_CREATOR_FEES.md) — two-week epoch, retained 40% reserve, 0–3% creator fee and Raydium integration limits.
 
 ## Local development
 

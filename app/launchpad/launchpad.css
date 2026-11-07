@@ -370,3 +370,123 @@
   font-size: 11px;
   line-height: 1.7;
 }
+
+
+/* Expanded creator controls: 0–9 decimal presets and integer-bps fee slider. */
+.lp-decimals-options {
+  grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
+}
+.lp-decimal-option {
+  min-height: 58px;
+  padding: 9px 10px;
+}
+.lp-decimal-option small { font-size: 8px; }
+
+.lp-fee-field {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+}
+.lp-fee-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.lp-fee-heading label {
+  color: #d4d4d8;
+  font-size: 12px;
+  font-weight: 600;
+}
+.lp-fee-heading strong {
+  color: #86efac;
+  font: 700 18px Manrope, sans-serif;
+}
+.lp-range-input {
+  width: 100%;
+  accent-color: #22c55e;
+  cursor: pointer;
+}
+.lp-range-labels {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #71717a;
+  font: 9px ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.lp-fee-breakdown {
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: 15px;
+  background: rgba(24, 24, 27, .44);
+}
+.lp-fee-breakdown > .lp-kicker { margin-bottom: 12px; }
+.lp-fee-breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.lp-fee-breakdown-grid > div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px;
+  border-radius: 11px;
+  background: rgba(9, 9, 11, .46);
+}
+.lp-fee-breakdown-grid span {
+  color: #a1a1aa;
+  font-size: 9px;
+  line-height: 1.4;
+}
+.lp-fee-breakdown-grid strong {
+  overflow-wrap: anywhere;
+  color: #f4f4f5;
+  font: 650 14px Manrope, sans-serif;
+}
+.lp-treasury-epoch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 24px;
+  padding: clamp(18px, 3vw, 28px);
+}
+.lp-treasury-epoch-copy { min-width: 0; }
+.lp-treasury-epoch-copy h2 {
+  margin: 0;
+  color: #fafafa;
+  font: 700 clamp(21px, 3vw, 28px)/1.15 Manrope, Inter, sans-serif;
+  letter-spacing: -.04em;
+}
+.lp-treasury-epoch-copy p:not(.lp-kicker) {
+  max-width: 590px;
+  margin: 8px 0 0;
+  color: #a1a1aa;
+  font-size: 11px;
+  line-height: 1.65;
+}
+.lp-treasury-epoch-value {
+  display: grid;
+  gap: 6px;
+  justify-items: end;
+  min-width: 225px;
+  text-align: right;
+}
+.lp-treasury-epoch-value strong {
+  color: #86efac;
+  font: 750 clamp(20px, 3vw, 29px) Manrope, sans-serif;
+  letter-spacing: -.04em;
+}
+.lp-treasury-epoch-value small {
+  max-width: 250px;
+  color: #71717a;
+  font-size: 9px;
+  line-height: 1.5;
+}
+@media (max-width: 760px) {
+  .lp-fee-breakdown-grid { grid-template-columns: 1fr; }
+  .lp-treasury-epoch { align-items: flex-start; flex-direction: column; }
+  .lp-treasury-epoch-value { justify-items: start; min-width: 0; text-align: left; }
+}

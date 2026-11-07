@@ -20,7 +20,7 @@ This is **not** the on-chain launch implementation. The creator UI is a configur
 
 - [ ] The creator configuration range is **0 through 1,000,000,000** whole tokens inclusive. Zero may be previewed but cannot become a tradable sale; the on-chain sale initializer rejects zero supply.
 - [ ] Treat 200,000,000 as one valid example only. Never use it as the UI default, global maximum, hardcoded program constant or shared anti-snipe quantity.
-- [ ] Support decimals 0, 6 and 9. Decimals are written into the mint during creation and immutable thereafter.
+- [ ] Support every decimals value from 0 through 9. Decimals are written into the mint during creation and immutable thereafter.
 - [ ] Parse the whole supply as an integer string; do not use JavaScript number/floating-point conversions.
 - [ ] Calculate \`raw_supply = whole_supply * 10^decimals\` with checked on-chain arithmetic and ensure it fits the SPL mint's u64 supply.
 - [ ] Calculate the early-window wallet cap dynamically as floor(raw supply × 500 / 10,000). It is 5% of each launch's configured supply.
@@ -40,12 +40,12 @@ Detailed reference: [LAUNCHPAD_PROTOCOL_SPEC.md](./LAUNCHPAD_PROTOCOL_SPEC.md).
 - [ ] Permanently revoke mint authority after full supply is minted; ensure no freeze authority remains.
 - [ ] Store name, symbol and metadata URI using the chosen token metadata standard; validate lengths/URI and disclose metadata mutability.
 - [ ] State must record creator, mint, quote asset, whole supply, raw supply, decimals, allocated units, raised quote units, funding cap, curve version/parameters, start slot, early-window end slot, expiry, status, pool references and bumps.
-- [ ] Reject zero supply, supply above 1,000,000,000 whole tokens, decimals outside 0/6/9, raw-supply overflow, incorrect mint owner and token-program substitution.
+- [ ] Reject zero supply at tradable-sale initialization, supply above 1,000,000,000 whole tokens, decimals outside 0–9, raw-supply overflow, incorrect mint owner and token-program substitution.
 - [ ] All balance/state-modifying instructions require the correct signer and owner-checked PDA accounts.
 
 ## 3. Bonding curve and purchases
 
-- [ ] Freeze an exact, versioned curve formula before enabling buys. The current manifesto says "linear" but does not specify initial/terminal price, sale inventory or complete cost conversion. Do not invent curve defaults or ship an unreviewed economic formula.
+- [ ] Freeze an exact, versioned curve formula before enabling buys. The specified curve now proposes 25 to 187.5 lamports per whole token and an 80/20 supply allocation, but these values do not permit every supply to reach a fixed 85 SOL milestone. Resolve this mismatch in `docs/TREASURY_AND_CREATOR_FEES.md` before coding the funding rule. Do not invent curve defaults.
 - [ ] Store all curve parameters on-chain and expose them in the UI; they cannot be overridden by the backend or an AI model.
 - [ ] Use deterministic integer math and checked arithmetic. Use a reviewed wide-integer helper or a proven bounded decomposition for products beyond u128.
 - [ ] Implement a bounded quote-in / token-out calculation with caller-provided maximum quote in and minimum token output.
@@ -182,3 +182,37 @@ Official references:
 - The fee policy is documented but not collected on-chain.
 - Helius configuration has not been proven by the tracked source; the client currently uses \`NEXT_PUBLIC_SOLANA_RPC_URL\` or the public Solana Mainnet RPC default. Hosting environment variables must be checked separately.
 - No production launchpad, bonding curve, quote escrow, refund program, CPMM CPI, LP burn or launch execution is claimed by this backlog.
+
+
+## 13. Treasury epochs and creator-fee routing
+
+Design and current implementation detail: [TREASURY_AND_CREATOR_FEES.md](./TREASURY_AND_CREATOR_FEES.md).
+
+### Implemented local treasury core
+
+- [x] Add \`programs/launchpad/Cargo.toml\` and \`programs/launchpad/src/lib.rs\` to the local Anchor workspace.
+- [x] Define the single \`treasury-v1\` PDA and hardcode developer destination \`ETuGxX6Znxr9q59THJtcYDJKt6RvCfN7wp79tRnbG1xG\`.
+- [x] Initialize \`last_distribution_timestamp\` from \`Clock::get()?.unix_timestamp\`.
+- [x] Enforce the 1,209,600-second minimum epoch before any disbursal.
+- [x] Pay 60% of new, previously undistributed fee inflows to the fixed developer account.
+- [x] Add the remaining 40% to \`locked_reserve_lamports\` and exclude it from every future harvest, preventing repeated 60/40 calls from slowly draining the reserve.
+- [x] Test fee math, remainder carry, exact epoch boundary, backwards clock, 60/40 split and treasury account sizing.
+- [ ] Connect the tested creator-fee helper to a verified buy/sell instruction and atomically transfer the treasury/creator amounts.
+- [ ] Add operation receipt/nonces, replay tests and event reconciliation for each fee-bearing swap.
+- [ ] Add Anchor ProgramTest for rent preservation, unauthorized destination substitution, premature withdrawal rollback and multiple epoch cycles.
+- [ ] Complete an immutable-program or explicit multisig-upgrade policy before marketing the retained reserve as permanently locked.
+
+### Creator fee design
+
+- [ ] Support creator fee from 0 to 300 basis points (0.00% to 3.00%) on eligible, explicitly supported WELP-routed trades.
+- [ ] Route 0.5% of the **creator-fee amount** to the treasury, not 0.5% of gross volume; route the rest of the creator-fee amount as creator reward.
+- [ ] Carry fractional basis-point remainders so cumulative tiny trades do not lose the treasury share to per-trade integer rounding.
+- [ ] Keep this creator fee separate from the existing fixed WELP USDC trade/transfer/creation fee policy. Disclose any combined charge before wallet signing.
+- [ ] Do not claim this fee applies to arbitrary SPL transfers or direct external DEX swaps.
+- [ ] Pin Raydium CPMM version, creator-fee configuration and creator-fee collection path before enabling a post-graduation fee. CPMM creator-fee rate is shared by pools using a fee tier; it is not an arbitrary per-pool 0–3% rate. Its built-in creator-fee share is paid to Raydium's protocol bucket, not the WELP Treasury PDA.
+- [ ] Implement a reviewed adapter to collect Raydium creator fees to a launch-controlled account and split them between the WELP treasury and creator. If that cannot be enforced, disable the custom fee for post-graduation routing.
+
+### Economic blockers
+
+- [ ] Resolve 85 SOL graduation target versus fixed 25/187.5 lamports-per-whole-token curve endpoints and 80% sale allocation. At the stated curve, maximum proceeds are approximately 85 SOL for 1B supply, 17 SOL for 200M supply and 8.5 SOL for 100M supply. Choose a supply-scaled funding target or supply-scaled price anchors, or explicitly restrict which launches can graduate.
+- [ ] Implement the 0.02% initial creator purchase as a normal creator-signed buy instruction in the same transaction as creation; show amount, price, fee, early-wallet-cap impact and all recipients before signing. Never allocate tokens through an undisclosed privileged shortcut.

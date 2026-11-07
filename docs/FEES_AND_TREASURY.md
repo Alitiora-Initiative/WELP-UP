@@ -53,3 +53,10 @@ Solana transaction fees and rent-exemption deposits are not WELP revenue. Rent i
 The backend policy module contains the fixed amounts and developer destination. The current Jupiter /order + /execute path returns an assembled transaction that WELP cannot safely modify after the fact. A fee must not be described as collected on that path until the trade flow is migrated to a composable transaction path or another reviewed atomic mechanism. Vault deposits/withdrawals and launchpad instructions must enforce their fees inside the same on-chain instruction transaction.
 
 **Until those changes are deployed and verified, fees are configured as policy but not collected.**
+
+
+## Separate creator-configured fee model
+
+A separate planned launchpad creator fee is specified in [TREASURY_AND_CREATOR_FEES.md](./TREASURY_AND_CREATOR_FEES.md). It is selectable per launch from 0% to 3% and applies only to eligible trades that pass through a supported WELP route. The proposed 0.5% treasury share is 0.5% **of the creator-fee amount**, not 0.5% of gross swap volume; the remaining creator-fee amount is the creator reward.
+
+This creator-fee model is separate from the fixed USDC policy above. The fixed USDC charges must not be duplicated or silently replaced by the creator-fee slider. Neither creator-fee transfers nor the existing fixed fee collection are currently active on-chain. The current Anchor treasury crate has only the treasury state/disbursal instructions and a tested fee calculation helper; no live swap instruction calls it yet.
