@@ -10,6 +10,7 @@ import { WalletConnectionControl } from '@/components/WalletConnectionControl';
 import { TransactionHistory } from '@/components/TransactionHistory';
 import { getWalletHistory, type WalletHistory } from '@/lib/activity';
 import { MarketAnalyst } from '@/components/MarketAnalyst';
+import { AiAutomationWatch } from '@/components/AiAutomationWatch';
 
 export type FeatureKind = 'automation' | 'agent' | 'autonomous' | 'vault' | 'portfolio' | 'history' | 'activity' | 'marketplace' | 'support' | 'status' | 'governance' | 'risk' | 'apiKeys' | 'referral' | 'explorer';
 
@@ -35,7 +36,7 @@ const emptyHistory: WalletHistory = { events: [], points: [] };
 
 function AutomationPage() {
   const [policies, setPolicies] = useState<Policy[]>([]);
-  const [name, setName] = useState('Momentum watch');
+  const [name, setName] = useState('');
   const [preset, setPreset] = useState('Momentum');
   const [liquidity, setLiquidity] = useState('250000');
   const [organic, setOrganic] = useState('65');
@@ -114,17 +115,25 @@ function AutomationPage() {
     if (value === 'Organic only') { setLiquidity('100000'); setOrganic('85'); setDrawdown('25'); setVerified(true); }
   }
   function savePolicy() {
-    const policy: Policy = { id: Date.now().toString(), name: name.trim() || 'Untitled policy', liquidity: Number(liquidity), organic: Number(organic), drawdown: Number(drawdown), verified, preset };
+    const policyName = name.trim();
+    if (!policyName || policyName.length > 48) {
+      setMessage('Enter a policy name of 1–48 characters.');
+      return;
+    }
+    const policy: Policy = { id: crypto.randomUUID(), name: policyName, liquidity: Number(liquidity), organic: Number(organic), drawdown: Number(drawdown), verified, preset };
     const next = [policy, ...policies].slice(0, 30);
     setPolicies(next);
     setResults(null);
-    setMessage('Saved to this browser only. This policy never trades.');
+    setName('');
+    setMessage('Saved to this browser only. This policy never signs or submits trades.');
     try { localStorage.setItem('welp-watch-policies', JSON.stringify(next)); } catch {}
+    window.dispatchEvent(new Event('welp-watch-policies-updated'));
   }
   function removePolicy(id: string) {
     const next = policies.filter((policy) => policy.id !== id);
     setPolicies(next);
     try { localStorage.setItem('welp-watch-policies', JSON.stringify(next)); } catch {}
+    window.dispatchEvent(new Event('welp-watch-policies-updated'));
   }
   async function evaluate(policy: Policy) {
     setWorking(true); setMessage(''); setResults(null);
@@ -153,15 +162,16 @@ function AutomationPage() {
         {policies.length ? <div className="policy-list">{policies.map((policy) => <article key={policy.id}><div><strong>{policy.name}</strong><small>{policy.preset} · Liquidity {policy.liquidity.toLocaleString()} · Organic {policy.organic}+ · Drawdown {policy.drawdown}%</small></div><div className="inline-actions"><button className="outline-button small" onClick={() => void evaluate(policy)} disabled={working}>{working ? <LoaderCircle className="spin" size={13} /> : 'Evaluate'}</button><button className="text-action" onClick={() => removePolicy(policy.id)}>Remove</button></div></article>)}</div> : <div className="empty-panel">No policies yet. Build one on the right.</div>}
       </Panel>
       <Panel title="New policy" eyebrow="POLICY COMPOSER">
-        <label className="field-label">NAME<input value={name} onChange={(event) => setName(event.target.value)} maxLength={48} /></label>
+        <label className="field-label">NAME<input value={name} onChange={(event) => setName(event.target.value)} maxLength={48} required /></label>
         <label className="field-label">PRESET<select value={preset} onChange={(event) => choosePreset(event.target.value)}><option>Momentum</option><option>Depth first</option><option>Organic only</option><option>Custom</option></select></label>
         <div className="form-grid"><label className="field-label">MIN LIQUIDITY ($)<input type="number" min="0" value={liquidity} onChange={(event) => setLiquidity(event.target.value)} /></label><label className="field-label">MIN ORGANIC SCORE<input type="number" min="0" max="100" value={organic} onChange={(event) => setOrganic(event.target.value)} /></label></div>
         <label className="field-label">MAXIMUM 24H DRAWDOWN (%)<input type="number" min="0" max="100" value={drawdown} onChange={(event) => setDrawdown(event.target.value)} /></label>
         <label className="checkbox-field"><input type="checkbox" checked={verified} onChange={(event) => setVerified(event.target.checked)} /> Verified assets only</label>
-        <button className="primary-action" onClick={savePolicy}>Save policy</button>
+        <button className="primary-action" onClick={savePolicy} disabled={!name.trim()}>Save policy</button>
         {message ? <p className="inline-message">{message}</p> : null}
       </Panel>
     </div>
+    <AiAutomationWatch />
     {results ? <Panel title="Evaluation results" eyebrow="LIVE FEED · NO ORDERS"><div className="compact-asset-list">{results.map((asset) => <div key={asset.mint}><strong>{asset.symbol}</strong><span>{asset.name}</span><b>{asset.score}</b><Link href={'/swap?mint=' + encodeURIComponent(asset.mint)}>Route →</Link></div>)}</div>{!results.length ? <p className="muted-copy">No assets currently satisfy all of this policy’s filters.</p> : null}</Panel> : null}
     <section style={{ marginTop: 28 }}>
       <div className="page-heading"><div><div className="eyebrow"><i className="eyebrow-dot" /> AI ANALYST · READ ONLY</div><h2>Ask the desk about this market.</h2><p>The model reviews a fresh public snapshot. It cannot execute a policy or submit a trade.</p></div></div>
