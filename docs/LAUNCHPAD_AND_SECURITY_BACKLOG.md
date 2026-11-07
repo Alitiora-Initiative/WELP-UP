@@ -165,7 +165,7 @@ Official references:
 - [ ] Anchor/SBF ProgramTest for creation, mint authority revocation, SOL/WSOL and USDC escrow, purchase, fee settlement, refund, CPMM CPI, LP burn and rollback.
 - [ ] Adversarial tests for spoofed creator, wrong PDA/bump, wrong mint, wrong Token Program, fake ATA, changed AMM program, substituted pool vault, duplicate nonce, unauthorized writable accounts and split-order attacks.
 - [ ] TypeScript tests for supply validation, decimal conversion, PDA derivation, instruction order, ATA idempotency, fee/curve display, priority-fee bounds and RPC errors.
-- [ ] Run controlled Mainnet integration checks only after production program deployment, source verification and independent audit; each transaction requires an explicit wallet signature and uses a separately identified test asset.
+- [ ] Run controlled Mainnet integration checks only after production program deployment, source verification and independent audit; each transaction requires an explicit wallet signature and a separately identified, user-authorized test amount.
 - [ ] Verify program ID, deployed binary/source hash, IDL, mint/freeze authority state, treasury ATA, developer recipient, Raydium CPMM program/config, pool and LP burn.
 - [ ] Independent Solana security audit; remediate all critical/high issues.
 - [ ] Confirm upgrade-authority / multisig controls, monitoring, outage runbooks, incident response and recovery.
@@ -204,16 +204,15 @@ Design and current implementation detail: [TREASURY_AND_CREATOR_FEES.md](./TREAS
 - [ ] Confirm both SBF artifacts build and both ProgramTest suites pass against the built binaries in the dedicated Anchor SBF workflow.
 - [ ] Complete an immutable-program or explicit multisig-upgrade policy before marketing the retained reserve as permanently locked.
 
-### Creator fee design
+### Protocol swap fee design
 
-- [ ] Support creator fee from 0 to 300 basis points (0.00% to 3.00%) on eligible, explicitly supported WELP-routed trades.
-- [ ] Route 0.5% of the **creator-fee amount** to the treasury, not 0.5% of gross volume; route the rest of the creator-fee amount as creator reward.
-- [ ] Carry fractional basis-point remainders so cumulative tiny trades do not lose the treasury share to per-trade integer rounding.
-- [ ] Keep this creator fee separate from the existing fixed WELP USDC trade/transfer/creation fee policy. Disclose any combined charge before wallet signing.
-- [ ] Do not claim this fee applies to arbitrary SPL transfers or direct external DEX swaps.
-- [ ] Pin Raydium CPMM version, `AmmConfig`, `PoolState`, `CreatorFeeShare` and creator-fee collection path before enabling a post-graduation fee. A pool can opt into the creator fee and set its side, but `AmmConfig.creator_fee_rate` is shared by pools on that tier; it is not an arbitrary per-pool 0–3% rate.
-- [ ] Account for the Raydium `CreatorFeeShare` PDA override. Its shared amount is transferred to Raydium's `protocol_fees` bucket at collection; the WELP Treasury PDA is not the recipient.
-- [ ] Implement and review a permitted integration to route WELP's fee share to WELP's own treasury. Do not assume a CPMM CPI can redirect Raydium-owned protocol fees. If the selected route cannot enforce the configured fee and destination, disable the WELP creator fee after graduation.
+- [ ] Enforce 50 basis points (0.50%) of gross input on each WELP-controlled swap using checked integer arithmetic.
+- [ ] Credit 100% of the protocol fee to a treasury vault for the exact input mint in the same atomic transaction as the swap.
+- [ ] After at least 14 days, release 60% of eligible new SOL inflows and protect the remaining 40% as reserve. Apply this split once, at epoch maturity.
+- [ ] Implement per-mint treasury token vaults and token CPI settlement before accepting SPL-token input routes; the current treasury vault is SOL-only.
+- [ ] Add operation receipts/nonces and event reconciliation to prevent duplicate fee collection.
+- [ ] Do not claim a fee on arbitrary SPL transfers or direct external DEX swaps that bypass WELP.
+- [ ] Treat Raydium post-graduation trades as out-of-scope until a supported, reviewed collection path can actually route the fee to WELP treasury.
 
 ### Economic blockers
 
