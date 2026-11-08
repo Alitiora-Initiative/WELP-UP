@@ -215,6 +215,8 @@ test('Anchor SBF build preserves Cargo 1.75-compatible lockfiles', () => {
   assert.match(workflow, /cargo test --manifest-path programs\/program-tests\/Cargo\.toml --test vault_program_test/);
   assert.match(workflow, /cargo test --manifest-path programs\/program-tests\/Cargo\.toml --test treasury_program_test/);
   assert.match(workflow, /uses: dtolnay\/rust-toolchain@stable/);
+  assert.match(workflow, /rustup toolchain install nightly-2025-04-15 --profile minimal/);
+  assert.match(workflow, /RUSTUP_TOOLCHAIN: nightly-2025-04-15/);
 
   const launchpadManifest = readFileSync(new URL('../programs/launchpad/Cargo.toml', import.meta.url), 'utf8');
   const vaultManifest = readFileSync(new URL('../programs/vault/Cargo.toml', import.meta.url), 'utf8');
