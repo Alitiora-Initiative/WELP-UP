@@ -61,6 +61,21 @@ for manifest in "$@"; do
   pin_if_present "$manifest" blake3 1.8.7 1.8.2
   pin_if_present "$manifest" constant_time_eq 0.4.2 0.3.1
 
+  # zeroize_derive 1.5.0 uses Cargo's unstable edition-2024 manifest feature.
+  # Keep the Solana 1.18 bundled Cargo 1.75-compatible derive release.
+  pin_if_present "$manifest" zeroize_derive 1.5.0 1.4.2
+
+  # unicode-segmentation 1.13.2+ requires Rust 1.85; Solana 1.18.26 SBF uses 1.75.
+  pin_if_present "$manifest" unicode-segmentation 1.13.3 1.12.0
+
+  # jobserver 0.1.35 requires Rust 1.85; 0.1.34 supports Rust 1.63 and
+  # remains compatible with Solana 1.18.26's bundled Rust 1.75 toolchain.
+  pin_if_present "$manifest" jobserver 0.1.35 0.1.34
+
+  # Anchor 0.30.1 IDL generation requires Span::source_file(), removed in
+  # proc-macro2 1.0.95. Keep the IDL builder on the last compatible release.
+  pin_if_present "$manifest" proc-macro2 1.0.107 1.0.94
+
   # Newer crypto/TOML transitive releases also exceed the bundled Cargo.
   pin_if_present "$manifest" base64ct 1.8.3 1.7.3
   # Keep only the incompatible indexmap 2.x release constrained; indexmap 1.x
@@ -74,6 +89,10 @@ for manifest in "$@"; do
     "blake3:1.8.7" \
     "constant_time_eq:0.4.2" \
     "base64ct:1.8.3" \
+    "zeroize_derive:1.5.0" \
+    "unicode-segmentation:1.13.3" \
+    "jobserver:0.1.35" \
+    "proc-macro2:1.0.107" \
     "indexmap:2.14.2" \
     "proc-macro-crate:3.5.0" \
     "borsh:1.8.1" \

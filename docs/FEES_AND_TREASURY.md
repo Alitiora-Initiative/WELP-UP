@@ -1,64 +1,63 @@
-# WELP UP fee and treasury policy
+# WELP UP protocol swap-fee policy
 
-**Status: fixed policy is configured. The current branch now contains a local-only, SBF-tested-in-progress instruction for the $0.10 USDC supported-transfer fee. It is not deployed; no Mainnet fees are collected. Trade and launch-creation fee handlers are still pending their actual operations.**
+**Policy:** WELP charges **0.50% (50 basis points) of gross input** on each swap that executes through a WELP-controlled, fee-enforcing swap instruction.
 
-## Fixed policy
+The fee is calculated before the swap from the input asset's raw base-unit amount:
 
-All amounts are denominated in mainnet USDC (mint EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v, six decimals):
+\[
+\text{protocol fee}=\left\lfloor\frac{\text{gross input}\times 50}{10,000}\right\rfloor
+\]
 
-| Operation | Total | 60% developer/operator | 40% protocol treasury |
-|---|---:|---:|---:|
-| Each supported trade | $0.10 USDC | $0.06 | $0.04 |
-| Each supported transfer | $0.10 USDC | $0.06 | $0.04 |
-| Token launch creation | $0.50 USDC | $0.30 | $0.20 |
+There is no separate fixed $0.10 trade fee, $0.10 transfer fee, or $0.50 token-launch creation fee under this policy. The old creator-configurable 0–3% fee is also removed. This fee is not 0.5% of a creator fee; it is 0.5% of gross swap input.
 
-The developer/operator fee destination is the newly supplied public Solana wallet:
+## Allocation
+
+At collection, 100% of the 0.50% fee is credited to the protocol treasury. After at least one 14-day epoch, the program releases 60% of eligible new fee inflows to the developer/operator and adds the remaining 40% to the protected treasury reserve. The same fee is split once, at epoch distribution—not once at collection and again at distribution.
+
+The published developer receiving address is:
 
 ETuGxX6Znxr9q59THJtcYDJKt6RvCfN7wp79tRnbG1xG
 
-No old or compromised destination is authorized by this policy. The address is a public receiving address; it is not a private key and must never be treated as a signing credential.
+It is a public receiving address, not a private key or signing credential. This address is the sole developer recipient for the epoch's 60% release. The 40% reserve remains in treasury and must not be included in later distribution calculations.
 
-## Treasury PDA
+## Scope and limitations
 
-The protocol treasury is intended to be a program-derived address (PDA) under the WELP Anchor program using the seed treasury-v1. A PDA is not a separate program ID. The program ID must be generated from a securely held deployment keypair, then the treasury PDA can be derived deterministically from that verified program ID.
+The fee applies only to swaps that actually pass through a WELP-controlled on-chain instruction. WELP cannot intercept or tax arbitrary wallet transfers or swaps routed directly through another DEX program without invoking WELP.
 
-The current Anchor program ID is an undeployed placeholder. Therefore the treasury PDA does not yet have a valid production address. Do not accept payments to a guessed address and do not put a fabricated address in the interface.
+The fee is assessed on the gross input asset. For a SOL-in swap it is denominated in lamports; for an SPL-token-in swap it is denominated in that token's raw base units. Integer math must use checked arithmetic and an explicitly defined rounding direction. A route whose fee rounds to zero base units must be rejected or governed by a separately reviewed minimum-fee rule; it must not silently charge a different percentage.
 
-## On-chain enforcement requirements
+## Atomic enforcement requirements
 
-The Rust program, not browser JavaScript or a mutable web server setting, must enforce the fixed fee amounts and split. The $0.10 USDC trade fee, $0.10 USDC supported-transfer fee, $0.50 USDC launch-creation fee, and 60/40 split are fixed protocol constants—not operator-adjustable runtime settings. Charge each qualifying operation exactly once and atomically with that operation. The backend may build a transaction for a connected wallet to review and sign, but it must not custody a user's signing key.
+A successful swap and its fee transfers must be one Solana transaction. If either fee leg, the swap CPI, or any account validation fails, the entire transaction must roll back. The on-chain program must:
 
-Before fees are enabled:
-1. Create the treasury PDA and its USDC associated token account.
-2. Verify the developer USDC associated token account is owned by the exact developer recipient above.
-3. Validate the canonical USDC mint and Token Program owner.
-4. Transfer 60% and 40% atomically in the same transaction as the operation being charged.
-5. Bind a unique operation/receipt nonce to prevent replay and duplicate charging.
-6. Reject a charged operation if the fee transfer cannot complete; reject a fee-only payment that is not tied to a supported operation.
-7. Emit an on-chain event containing payer, operation kind, amount, both fee destinations, and timestamp/slot context.
-8. Display the exact fee and recipient split before wallet signing.
-9. Test under SBF ProgramTest, adversarial account substitution, replay, missing ATA, wrong mint, wrong token program, insufficient balance and transaction rollback.
-10. Verify the deployed program binary and upgrade authority before enabling the frontend.
+1. Validate the exact mainnet program IDs, source mint, source token account, token program, signer and destination accounts.
+2. Derive the developer and treasury token accounts for the actual input mint; do not accept arbitrary fee destinations from the caller.
+3. Calculate exactly 50 basis points from gross input using checked integer arithmetic.
+4. Credit 100% of the fee to the treasury at collection. After the epoch matures, release 60% of new, not-yet-distributed inflows to the developer and lock the remaining 40% in the protected reserve.
+5. Bind an operation receipt/nonce to the payer and swap so an operation cannot be charged twice.
+6. Emit an event recording the payer, input mint, gross input, fee amount, both recipient amounts and slot.
+7. Display the 0.50% fee, amount and recipient split before the wallet is asked to sign.
 
-## Creator rewards
+No browser setting or server-side flag is sufficient to enforce the fee. The program must verify and execute it on-chain.
 
-Creator rewards are a separate accounting stream. No reward percentage is enabled by this policy. A creator reward may only be paid from an explicitly configured share of the relevant launch's trading or protocol revenue, with on-chain attribution, claim accounting and replay protection. It must never be taken from user safe balances or silently reduce the fixed 60/40 split.
+## Current implementation status
 
-## Network costs
+The TypeScript policy and integer fee calculation are defined in source. This is not proof of fee collection.
 
-Solana transaction fees and rent-exemption deposits are not WELP revenue. Rent is paid to create accounts and remains governed by Solana account lifecycle rules. Third-party DEX, routing or priority fees are separate and must be disclosed.
+The current Anchor welp_launchpad crate is **not deployed on Solana mainnet** and has no production deployment keypair. Its sample program ID must not be used to derive a payment address. The current source does not yet have a production bonding-curve swap instruction or a composable Jupiter swap CPI with both fee transfers. The application order and execute endpoints therefore remain fail-closed; they do not submit mainnet swaps that omit the protocol fee.
 
-## Current enforcement status
+The previous fixed-amount USDC supported-transfer instruction and its integration test have been removed from the program source. No direct SPL transfer fee is charged. The current treasury vault is a SOL System Program PDA, not a generic SPL-token vault. Asset-specific token vaults and token transfer CPIs are not implemented, so non-SOL input-asset fees remain unsupported.
 
-The current branch implements `supported_transfer_with_fee` inside `programs/launchpad/src/lib.rs`. It performs an actual SPL Token transfer and the fixed $0.10 USDC fee in one Solana transaction: $0.06 to the hardcoded developer USDC ATA and $0.04 to the treasury PDA's USDC ATA. A payer/operation-id receipt PDA rejects a duplicate operation id, and the instruction emits an auditable fee event. If the transfer or either USDC fee leg fails, the entire transaction rolls back.
+## Treasury release and upgrade authority
 
-This instruction applies only when a caller deliberately uses the WELP-supported transfer path. It cannot intercept ordinary token transfers sent directly through another wallet or program. The token-trade and launch-creation fees are not yet wired into actual swap/mint instructions. The current Jupiter /order + /execute path returns an assembled transaction that WELP cannot safely modify after the fact, so those trade fees remain disabled until a composable route exists.
+The existing treasury design uses a 14-day epoch and a 60/40 allocation model. The final deployed program must specify whether the 60% operator allocation is transferred at fee collection or at epoch maturity; this must be implemented exactly once, not duplicated. The 40% treasury reserve must remain separately accounted and protected.
 
-**The supported-transfer fee is implemented in source but remains off Mainnet until the program has a production program ID, is deployed, independently reviewed, and verified. No live fee collection is claimed.**
+A program-controlled reserve is not permanently inaccessible while the program remains upgradeable by a privileged upgrade authority. Before public launch, either revoke upgrade authority after independent review or publish the exact multisig governance and its powers.
 
+## Network and third-party costs
 
-## Separate creator-configured fee model
+Solana network fees, priority fees, account rent, DEX routing fees and pool-creation costs are separate from the WELP protocol fee. They must be shown separately when applicable and must never be presented as WELP revenue.
 
-A separate planned launchpad creator fee is specified in [TREASURY_AND_CREATOR_FEES.md](./TREASURY_AND_CREATOR_FEES.md). It is selectable per launch from 0% to 3% and applies only to eligible trades that pass through a supported WELP route. The proposed 0.5% treasury share is 0.5% **of the creator-fee amount**, not 0.5% of gross swap volume; the remaining creator-fee amount is the creator reward.
+## Release gates
 
-This creator-fee model is separate from the fixed USDC policy above. The fixed USDC charges must not be duplicated or silently replaced by the creator-fee slider. Neither creator-fee transfers nor the existing fixed fee collection are currently active on-chain. The current Anchor treasury crate has only the treasury state/disbursal instructions and a tested fee calculation helper; no live swap instruction calls it yet.
+Mainnet fee collection stays disabled until all of these are complete: production program ID and deployed binary are verified; SBF and ProgramTest checks pass; the actual swap instruction composes both fee transfers atomically; wrong mint/account/authority, insufficient funds, replay and rollback tests pass; the deployed IDL and upgrade authority are verified; and an independent Solana/Anchor security review is complete.

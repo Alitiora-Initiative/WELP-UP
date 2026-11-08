@@ -50,6 +50,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      - run: npm run test:git-hooks
       - run: npm run typecheck
       - run: npm run test:notifications
       - run: npm run test:vault-client

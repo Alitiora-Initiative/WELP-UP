@@ -94,23 +94,21 @@ Official sources:
 - https://github.com/raydium-io/raydium-cp-swap/blob/master/programs/cp-swap/src/instructions/initialize.rs
 - https://solana.com/docs/tokens/basics/burn-tokens
 
-## 7. Fixed WELP fee settlement
+## 7. WELP protocol swap-fee settlement
 
-Source of truth: [FEES_AND_TREASURY.md](./FEES_AND_TREASURY.md). Fixed Mainnet-Beta USDC values:
+Source of truth: docs/FEES_AND_TREASURY.md. Target fee is **0.50% of gross input** on each WELP-controlled swap.
 
-| Operation | Fee | Developer/operator (60%) | Protocol treasury (40%) |
-|---|---:|---:|---:|
-| Launch creation | $0.50 USDC | $0.30 | $0.20 |
-| Each supported trade | $0.10 USDC | $0.06 | $0.04 |
-| Each WELP-supported transfer operation | $0.10 USDC | $0.06 | $0.04 |
+At collection, 100% of the protocol fee is credited to treasury. After at least 14 days, 60% of eligible new SOL inflows is released to the developer/operator receiving wallet and 40% is added to the protected reserve. The split must occur once at epoch maturity, never twice.
 
-- [ ] Hardcode fee amounts, split and destination public keys in reviewed program constants/config; browser and backend may not override them.
-- [ ] Validate the exact canonical USDC mint, Token Program ownership, developer recipient ATA and treasury PDA/ATA.
-- [ ] Atomically transfer both shares with the launch/trade/supported-transfer instruction being charged.
-- [ ] Use unique operation-specific receipt/nonce PDAs to make charges idempotent and prevent replay.
-- [ ] A direct wallet-to-wallet SPL transfer that does not invoke WELP cannot be intercepted. WELP transfer fees apply only to an explicitly supported WELP instruction path.
-- [ ] Show the USDC fee, split, recipients, SOL/USDC contribution and separate network/rent/pool costs before wallet signing.
-- [ ] Keep fees disabled until SBF tests, independent review, source verification and release approval.
+- [ ] Enforce 50 basis points of gross input in the on-chain buy/sell/swap instruction, with checked integer math and explicit rounding.
+- [ ] Credit 100% of the fee into the correct input-asset treasury vault in the same atomic transaction as the swap.
+- [ ] Implement per-mint treasury token accounts and token CPI settlement before accepting SPL-token input routes; the current treasury vault holds SOL only.
+- [ ] Prevent duplicate fee collection with a unique operation receipt, and emit an event containing payer, mint, gross input, fee amount and slot.
+- [ ] Show the exact 0.50% fee and the 14-day 60/40 treasury waterfall before wallet signing.
+- [ ] Do not imply that WELP taxes arbitrary SPL transfers or swaps that bypass WELP.
+- [ ] Keep swap endpoints fail-closed until composable transaction building, deployed program verification and SBF-backed adversarial tests pass.
+
+The prior fixed $0.10/$0.50 USDC charge schedule and creator-configurable 0–3% fee design are superseded and must not remain in frontend or on-chain code.
 
 ## 8. TypeScript service and transaction assembly
 
@@ -119,7 +117,7 @@ Source of truth: [FEES_AND_TREASURY.md](./FEES_AND_TREASURY.md). Fixed Mainnet-B
 - [ ] Implement \`lib/launchpad-service.ts\` using the existing Kit wallet stack; do not import \`@solana/wallet-adapter-react\`.
 - [ ] Keep transaction messages, addresses, raw amount types and signatures type-safe; use bigint for supply, token amounts and fee math.
 - [ ] Derive launch, escrow, position, inventory, quote and fee receipt PDAs using the program ID and documented seeds.
-- [ ] Compose ATA creation, launch instruction, fixed fees and bounded Compute Budget instructions in the correct order.
+- [ ] Compose ATA creation, launch instruction, protocol fee and bounded Compute Budget instructions in the correct order.
 - [ ] Clamp server-provided priority fees and compute-unit limits.
 - [ ] Verify program ID, all accounts, token mints, quote amount, min output, fee destinations and blockhash before prompting the user to sign.
 - [ ] Distinguish prepared, rejected, submitted, confirmed, finalized and failed transaction statuses.
@@ -167,7 +165,7 @@ Official references:
 - [ ] Anchor/SBF ProgramTest for creation, mint authority revocation, SOL/WSOL and USDC escrow, purchase, fee settlement, refund, CPMM CPI, LP burn and rollback.
 - [ ] Adversarial tests for spoofed creator, wrong PDA/bump, wrong mint, wrong Token Program, fake ATA, changed AMM program, substituted pool vault, duplicate nonce, unauthorized writable accounts and split-order attacks.
 - [ ] TypeScript tests for supply validation, decimal conversion, PDA derivation, instruction order, ATA idempotency, fee/curve display, priority-fee bounds and RPC errors.
-- [ ] Devnet end-to-end test with dedicated test wallet/authority and no production secrets.
+- [ ] Run controlled Mainnet integration checks only after production program deployment, source verification and independent audit; each transaction requires an explicit wallet signature and a separately identified, user-authorized test amount.
 - [ ] Verify program ID, deployed binary/source hash, IDL, mint/freeze authority state, treasury ATA, developer recipient, Raydium CPMM program/config, pool and LP burn.
 - [ ] Independent Solana security audit; remediate all critical/high issues.
 - [ ] Confirm upgrade-authority / multisig controls, monitoring, outage runbooks, incident response and recovery.
@@ -176,7 +174,7 @@ Official references:
 ## Current facts and boundaries
 
 - \`app/launchpad/page.tsx\` is the existing route; the prior version was a locked discovery/status page.
-- The current Anchor workspace contains \`programs/vault\`; no deployable launchpad crate or verified launchpad program ID exists yet.
+- The current Anchor workspace contains \`programs/vault\` and a local \`programs/launchpad\` treasury-only crate. The launchpad crate has no production program ID or deployment keypair and does not implement token minting or buy/sell instructions.
 - The current client uses Solana Kit. \`@solana/web3.js\` and wallet-adapter hooks are not current project dependencies.
 - Tailwind is not currently configured.
 - The fee policy is documented but not collected on-chain.
@@ -184,7 +182,7 @@ Official references:
 - No production launchpad, bonding curve, quote escrow, refund program, CPMM CPI, LP burn or launch execution is claimed by this backlog.
 
 
-## 13. Treasury epochs and creator-fee routing
+## 13. Treasury epochs and protocol-fee routing
 
 Design and current implementation detail: [TREASURY_AND_CREATOR_FEES.md](./TREASURY_AND_CREATOR_FEES.md).
 
@@ -196,26 +194,25 @@ Design and current implementation detail: [TREASURY_AND_CREATOR_FEES.md](./TREAS
 - [x] Enforce the 1,209,600-second minimum epoch before any disbursal.
 - [x] Pay 60% of new, previously undistributed fee inflows to the fixed developer account.
 - [x] Add the remaining 40% to \`locked_reserve_lamports\` and exclude it from every future harvest, preventing repeated 60/40 calls from slowly draining the reserve.
-- [x] Test fee math, remainder carry, exact epoch boundary, backwards clock, 60/40 split and treasury account sizing.
+- [x] Test 50-bps gross-input fee math, exact epoch boundary, backwards clock, one-time 60/40 epoch release and treasury account sizing.
 - [x] Keep host-only ProgramTest dependencies outside the Anchor SBF workspace in `programs/program-tests`.
 - [x] Add `scripts/pin-sbf-compatible-locks.sh` to constrain edition2024-sensitive transitive crates for the Solana 1.18/Cargo 1.75 SBF toolchain.
 - [x] Keep host-only ProgramTest dependencies outside the Anchor SBF workspace in `programs/program-tests`.
-- [ ] Connect the tested creator-fee helper to a verified buy/sell instruction and atomically transfer the treasury/creator amounts.
+- [ ] Connect the 50-bps gross-input fee helper to a verified buy/sell instruction and atomically credit 100% of the fee to the matching treasury vault.
 - [ ] Add operation receipt/nonces, replay tests and event reconciliation for each fee-bearing swap.
 - [x] Add treasury ProgramTest integration coverage for rent preservation, unauthorized destination substitution, unsolicited donations, fee-ledger reconciliation, premature withdrawal rollback and repeated epochs in `programs/program-tests/tests/treasury_program_test.rs`.
 - [ ] Confirm both SBF artifacts build and both ProgramTest suites pass against the built binaries in the dedicated Anchor SBF workflow.
 - [ ] Complete an immutable-program or explicit multisig-upgrade policy before marketing the retained reserve as permanently locked.
 
-### Creator fee design
+### Protocol swap fee design
 
-- [ ] Support creator fee from 0 to 300 basis points (0.00% to 3.00%) on eligible, explicitly supported WELP-routed trades.
-- [ ] Route 0.5% of the **creator-fee amount** to the treasury, not 0.5% of gross volume; route the rest of the creator-fee amount as creator reward.
-- [ ] Carry fractional basis-point remainders so cumulative tiny trades do not lose the treasury share to per-trade integer rounding.
-- [ ] Keep this creator fee separate from the existing fixed WELP USDC trade/transfer/creation fee policy. Disclose any combined charge before wallet signing.
-- [ ] Do not claim this fee applies to arbitrary SPL transfers or direct external DEX swaps.
-- [ ] Pin Raydium CPMM version, `AmmConfig`, `PoolState`, `CreatorFeeShare` and creator-fee collection path before enabling a post-graduation fee. A pool can opt into the creator fee and set its side, but `AmmConfig.creator_fee_rate` is shared by pools on that tier; it is not an arbitrary per-pool 0–3% rate.
-- [ ] Account for the Raydium `CreatorFeeShare` PDA override. Its shared amount is transferred to Raydium's `protocol_fees` bucket at collection; the WELP Treasury PDA is not the recipient.
-- [ ] Implement and review a permitted integration to route WELP's fee share to WELP's own treasury. Do not assume a CPMM CPI can redirect Raydium-owned protocol fees. If the selected route cannot enforce the configured fee and destination, disable the WELP creator fee after graduation.
+- [ ] Enforce 50 basis points (0.50%) of gross input on each WELP-controlled swap using checked integer arithmetic.
+- [ ] Credit 100% of the protocol fee to a treasury vault for the exact input mint in the same atomic transaction as the swap.
+- [ ] After at least 14 days, release 60% of eligible new SOL inflows and protect the remaining 40% as reserve. Apply this split once, at epoch maturity.
+- [ ] Implement per-mint treasury token vaults and token CPI settlement before accepting SPL-token input routes; the current treasury vault is SOL-only.
+- [ ] Add operation receipts/nonces and event reconciliation to prevent duplicate fee collection.
+- [ ] Do not claim a fee on arbitrary SPL transfers or direct external DEX swaps that bypass WELP.
+- [ ] Treat Raydium post-graduation trades as out-of-scope until a supported, reviewed collection path can actually route the fee to WELP treasury.
 
 ### Economic blockers
 

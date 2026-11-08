@@ -140,35 +140,18 @@ test('legacy initializer cannot imply that non-persisted caps are enforced', () 
 });
 
 
-test('supported WELP transfers collect fixed USDC fees atomically with replay protection', () => {
-  const source = readFileSync(new URL('../programs/launchpad/src/lib.rs', import.meta.url), 'utf8');
-  const handler = source.slice(
-    source.indexOf('pub fn supported_transfer_with_fee('),
-    source.indexOf('/// Permissionless epoch harvest'),
-  );
-  const context = source.slice(
-    source.indexOf('pub struct SupportedTransferWithFee'),
-    source.indexOf('pub struct DisburseTreasuryFunds'),
-  );
-  assert.match(source, /PLATFORM_USDC_MINT: Pubkey = pubkey!/);
-  assert.match(source, /PLATFORM_TRANSFER_FEE_USDC: u64 = 100_000/);
-  assert.match(source, /PLATFORM_DEVELOPER_SHARE_BPS: u128 = 6_000/);
-  assert.match(source, /PLATFORM_TREASURY_SHARE_BPS: u128 = 4_000/);
-  assert.match(handler, /token::transfer_checked/);
-  assert.match(handler, /PLATFORM_TRANSFER_FEE_USDC/);
-  assert.match(handler, /PlatformFeeCollected/);
-  assert.match(context, /FEE_RECEIPT_SEED/);
-  assert.match(context, /associated_token::authority = developer_wallet/);
-  assert.match(context, /associated_token::authority = treasury/);
-  assert.match(context, /address = PLATFORM_USDC_MINT/);
-  assert.match(source, /pub struct FeeReceipt/);
-  assert.match(source, /total_platform_usdc_fees_collected/);
-  const hostTests = readFileSync(new URL('../programs/program-tests/Cargo.toml', import.meta.url), 'utf8');
-  const testSource = readFileSync(new URL('../programs/program-tests/tests/fee_collection_program_test.rs', import.meta.url), 'utf8');
-  assert.match(hostTests, /name = "fee_collection_program_test"/);
-  assert.match(testSource, /duplicate operation receipt must fail/);
-  assert.match(testSource, /developer_after - developer_before, 60_000/);
-  assert.match(testSource, /treasury_after, 40_000/);
+test('launchpad fee calculation is 0.50% of gross swap input with a 60/40 allocation', () => {
+  const launchpad = readFileSync(new URL('../programs/launchpad/src/lib.rs', import.meta.url), 'utf8');
+  assert.match(launchpad, /PROTOCOL_SWAP_FEE_BPS: u128 = 50/);
+  assert.match(launchpad, /DEVELOPER_DISTRIBUTION_BPS: u128 = 6_000/);
+  assert.match(launchpad, /PERMANENT_RESERVE_BPS: u128 = 4_000/);
+  assert.match(launchpad, /pub fn calculate_protocol_swap_fee/);
+  assert.match(launchpad, /gross_input_base_units/);
+  assert.match(launchpad, /net_swap_input_base_units/);
+  assert.match(launchpad, /FeeBelowMinimumUnit/);
+  assert.doesNotMatch(launchpad, /PLATFORM_TRANSFER_FEE_USDC|PLATFORM_LAUNCH_FEE_USDC|PLATFORM_USDC_MINT/);
+  assert.doesNotMatch(launchpad, /supported_transfer_with_fee|FeeReceipt|PlatformFeeCollected|CreatorFeeRoute/);
+  assert.match(launchpad, /pub fn disburse_treasury_funds/);
 });
 
 test('Anchor SBF workspace includes both deployable programs and excludes host-only checks', () => {
@@ -202,6 +185,12 @@ test('Anchor SBF build preserves Cargo 1.75-compatible lockfiles', () => {
   assert.match(compatibilityScript, /pin_if_present "\$manifest" blake3 1\.8\.7 1\.8\.2/);
   assert.match(compatibilityScript, /pin_if_present "\$manifest" constant_time_eq 0\.4\.2 0\.3\.1/);
   assert.match(compatibilityScript, /pin_if_present "\$manifest" base64ct 1\.8\.3 1\.7\.3/);
+  assert.match(compatibilityScript, /pin_if_present "\$manifest" zeroize_derive 1\.5\.0 1\.4\.2/);
+  assert.ok(compatibilityScript.includes('pin_if_present "$manifest" unicode-segmentation 1.13.3 1.12.0'));
+  assert.ok(compatibilityScript.includes('pin_if_present "$manifest" jobserver 0.1.35 0.1.34'));
+  assert.ok(compatibilityScript.includes('"jobserver:0.1.35"'));
+  assert.ok(compatibilityScript.includes('pin_if_present "$manifest" proc-macro2 1.0.107 1.0.94'));
+  assert.ok(compatibilityScript.includes('"proc-macro2:1.0.107"'));
   assert.match(compatibilityScript, /pin_if_present "\$manifest" indexmap 2\.14\.2 2\.11\.4/);
   assert.match(compatibilityScript, /package_version_exists/);
   assert.ok(workflow.includes('bash scripts/pin-sbf-compatible-locks.sh'));
@@ -225,7 +214,6 @@ test('Anchor SBF build preserves Cargo 1.75-compatible lockfiles', () => {
   assert.match(workflow, /test -s target\/idl\/welp_launchpad\.json/);
   assert.match(workflow, /cargo test --manifest-path programs\/program-tests\/Cargo\.toml --test vault_program_test/);
   assert.match(workflow, /cargo test --manifest-path programs\/program-tests\/Cargo\.toml --test treasury_program_test/);
-  assert.match(workflow, /cargo test --manifest-path programs\/program-tests\/Cargo\.toml --test fee_collection_program_test/);
   assert.match(workflow, /uses: dtolnay\/rust-toolchain@stable/);
 
   const launchpadManifest = readFileSync(new URL('../programs/launchpad/Cargo.toml', import.meta.url), 'utf8');

@@ -32,15 +32,9 @@ A wallet signature is meaningful authorization. Users should inspect each transa
 
 ## Fees and treasury
 
-The target fee schedule is documented in docs/FEES_AND_TREASURY.md:
+WELP's target protocol fee is **0.50% of gross input** on every swap that executes through a WELP-controlled, fee-enforcing on-chain instruction. 100% of the fee is credited to treasury at collection; after a minimum 14-day epoch, 60% of eligible new fees is released to the published developer/operator wallet and 40% remains as protected treasury reserve. The split is applied once. There is no separate fixed $0.10 trade fee, $0.10 transfer fee, $0.50 launch-creation fee or creator-configurable fee under this policy.
 
-- 0.10 USD-equivalent per supported trade or transfer.
-- 0.50 USD-equivalent launchpad creation fee.
-- 60% of protocol fees to the published developer/operator wallet.
-- 40% to the WELP protocol treasury PDA.
-- Creator rewards are a separately accounted stream and may only be paid from a disclosed, funded creator allocation.
-
-The configured developer fee destination is a public Solana address, not a signing key. Fee collection remains disabled until the treasury PDA, stablecoin accounts, atomic transaction composition, on-chain enforcement and user disclosures are implemented and verified. The website must never silently deduct a fee.
+The policy is documented in docs/FEES_AND_TREASURY.md. The server policy and client/Rust fee arithmetic are not proof of fee collection. The current launchpad program has not been deployed or source-verified on mainnet, generic SPL input-token fee vaults and the launchpad buy/sell instructions are not implemented, and the Jupiter order/execute path cannot append the required fee transfers. Order and execute endpoints therefore remain fail-closed. Do not send assets to the sample program ID or a PDA derived from it.
 
 ## Security rules
 
@@ -64,7 +58,7 @@ The configured developer fee destination is a public Solana address, not a signi
 - docs/ — protocol design, threat models, release gates, fee policy and runbooks.
 - [Launchpad protocol specification](docs/LAUNCHPAD_PROTOCOL_SPEC.md) — custom supply/decimals, curve, escrow, anti-snipe, CPMM, fees, indexing and release design; not a live deployment.
 - [Launchpad and platform hardening backlog](docs/LAUNCHPAD_AND_SECURITY_BACKLOG.md) — implementation checklist and release gates; not a live launch contract.
-- [Treasury and creator-fee design](docs/TREASURY_AND_CREATOR_FEES.md) — two-week epoch, retained 40% reserve, 0–3% creator fee and Raydium integration limits.
+- [Treasury and protocol-fee design](docs/TREASURY_AND_CREATOR_FEES.md) — two-week treasury epoch, retained reserve, 50-bps protocol fee and Raydium integration limits.
 
 ## Local development
 
@@ -82,7 +76,7 @@ Before enabling any new fund-moving instruction:
 2. Run unit, SBF-backed ProgramTest, adversarial account-composition and invariant tests.
 3. Run dependency and static-analysis tools and remediate findings.
 4. Generate and verify a deployment keypair securely outside chat; never expose its secret key.
-5. Deploy to Devnet first, then verify the program ID, binary, upgrade authority and configuration.
+5. Deploy only to Solana Mainnet after independent review, using a production keypair controlled outside the app. Verify the program ID, binary, upgrade authority and configuration before enabling any transaction path.
 6. Verify fee recipient, treasury PDA, token accounts, fee splits and atomic settlement.
 7. Complete independent Solana/Anchor review before public deposits or automated execution.
 8. Publish transaction-level evidence and accurate status before enabling the UI.
