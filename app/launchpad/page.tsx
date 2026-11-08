@@ -18,8 +18,8 @@ const launchStages = [
   },
   {
     label: 'WELP custom program rail',
-    detail: 'Creator-defined supply (0–1B) and decimals (0–9) with a fixed on-chain service fee paid straight to the treasury vault PDA. The rail gates on the live mainnet deployment check.',
-    state: 'On-chain deploy',
+    detail: 'Creator-defined supply and decimals remain unavailable until the executable mainnet program and explicit operator gate are confirmed. Deployment status is not an independent audit.',
+    state: 'Disabled pending verified deployment',
   },
 ];
 
@@ -31,14 +31,12 @@ export default function LaunchpadPage() {
           <p className="lp-kicker">WELP UP / SOLANA LAUNCHPAD</p>
           <h1>Launch on your terms<span>.</span></h1>
           <p>
-            Launch a pump.fun bonding-curve coin, or create your own token with the
-            WELP custom program: your supply, your precision, one on-chain service
-            fee. Your wallet signs; the website only broadcasts.
+            Launch a token on the public pump.fun bonding curve through PumpPortal. The custom WELP rail remains disabled until its executable program is verified and the operator explicitly enables it. Your wallet signs every supported transaction.
           </p>
         </div>
         <div className="lp-hero-state">
           <strong>DUAL LAUNCH RAIL</strong>
-          <small>Pump.fun curve live now. Custom program rail gates on the mainnet deployment check.</small>
+          <small>Pump.fun rail: wallet-signed via PumpPortal. Custom rail: disabled pending reviewed deployment.</small>
         </div>
       </section>
 

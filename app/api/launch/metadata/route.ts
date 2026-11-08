@@ -11,6 +11,14 @@ export async function GET(request: NextRequest) {
   const name = brandLaunchName(params.get('name') ?? '');
   const symbol = brandLaunchSymbol(params.get('symbol') ?? '');
   const description = (params.get('description') ?? 'Launched through WELP UP on Solana mainnet.').trim().slice(0, 500);
+  const social = Object.fromEntries(['website', 'twitter', 'telegram'].flatMap((key) => {
+    const value = params.get(key)?.trim() ?? '';
+    if (!value) return [];
+    try {
+      const url = new URL(value);
+      return url.protocol === 'https:' ? [[key, url.toString()]] : [];
+    } catch { return []; }
+  }));
   if (!BASE58.test(mint) || !name || !symbol) {
     return NextResponse.json({ error: 'Launch metadata parameters are invalid.' }, { status: 400 });
   }
@@ -21,6 +29,7 @@ export async function GET(request: NextRequest) {
     image: 'https://welpup.fun/token-icon.png',
     website: 'https://welpup.fun',
     createdOn: 'https://welpup.fun',
+    ...social,
     mint,
   }, { headers: { 'Cache-Control': 'public, max-age=300' } });
 }

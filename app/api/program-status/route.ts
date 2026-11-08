@@ -5,6 +5,10 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+const ACCEPTED_PROGRAM_LOADERS = new Set([
+  'BPFLoaderUpgradeab1e11111111111111111111111',
+  'BPFLoader2111111111111111111111111111111111',
+]);
 
 /**
  * Live mainnet deployment check for the WELP launchpad program. The custom
@@ -26,16 +30,27 @@ export async function GET() {
       cache: 'no-store',
       signal: AbortSignal.timeout(15_000),
     });
-    const payload = (await response.json()) as { result?: { value?: { owner: string } | null } };
-    const owner = payload.result?.value?.owner ?? null;
-    // The BPF loader 21111111111111111111111111111111 owner confirms a real
-    // deployed program, not a dormant or wallet-owned account.
-    const deployed =
-      BASE58.test(owner ?? '') && owner === '21111111111111111111111111111111';
+    if (!response.ok) throw new Error('Solana RPC returned an error.');
+    const payload = (await response.json()) as { result?: { value?: { owner?: string; executable?: boolean } | null }; error?: { message?: string } };
+    if (payload.error) throw new Error(payload.error.message ?? 'Solana RPC returned an error.');
+    const value = payload.result?.value ?? null;
+    const owner = value?.owner ?? null;
+    const executable = value?.executable === true;
+    // Presence is insufficient: require an executable account owned by a known
+    // Solana BPF loader and an explicit operator enable flag before unlocking.
+    const programPresent = executable && BASE58.test(owner ?? '') && ACCEPTED_PROGRAM_LOADERS.has(owner ?? '');
+    const deployed = programPresent && process.env.WELP_LAUNCHPAD_ENABLED === 'true';
     return NextResponse.json(
       {
         programId: WELP_LAUNCHPAD_PROGRAM_ID,
         deployed,
+        executable,
+        launchEnabled: deployed,
+        detail: deployed
+          ? 'Executable program detected and operator launch gate enabled; this is not an independent security audit.'
+          : programPresent
+            ? 'Executable program detected, but the launch rail remains disabled until reviewed deployment configuration enables it.'
+            : 'No executable program is verified at the configured ID; custom launch is disabled.',
         owner,
         checkedAt: new Date().toISOString(),
       },
@@ -46,6 +61,8 @@ export async function GET() {
       {
         programId: WELP_LAUNCHPAD_PROGRAM_ID,
         deployed: false,
+        executable: false,
+        launchEnabled: false,
         owner: null,
         checkedAt: new Date().toISOString(),
         error: 'Solana RPC was unreachable for the deployment check.',

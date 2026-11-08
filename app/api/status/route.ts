@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { WELP_FEE_POLICY } from '@/lib/server/fee-policy';
+import { WELP_LAUNCHPAD_PROGRAM_ID } from '@/lib/launch-program';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -52,7 +53,7 @@ async function checkVault() {
 
 /** Live mainnet deployment status of the WELP custom launchpad program. */
 async function checkCustomLaunchProgram() {
-  const programId = 'BrcdB9sV7z9DvF9rDHG263HUxXgJM3iCQdF36TcxbFEn';
+  const programId = WELP_LAUNCHPAD_PROGRAM_ID;
   try {
     const response = await fetch(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com', {
       method: 'POST',
@@ -62,13 +63,16 @@ async function checkCustomLaunchProgram() {
       signal: AbortSignal.timeout(10_000),
     });
     const data = await response.json();
-    const executable = data?.result?.value?.executable === true;
+    const value = data?.result?.value;
+    const executable = value?.executable === true;
+    const allowedLoader = ['BPFLoaderUpgradeab1e11111111111111111111111', 'BPFLoader2111111111111111111111111111111111'].includes(value?.owner ?? '');
+    const enabled = executable && allowedLoader && process.env.WELP_LAUNCHPAD_ENABLED === 'true';
     return {
       name: 'Custom launch program',
-      state: executable ? 'Deployed' : 'Undeployed',
-      detail: executable
-        ? 'The WELP custom supply/precision rail is live on mainnet; the launchpad gates on this check.'
-        : 'The custom supply/decimals rail is code-complete but not deployed yet; the launchpad keeps it disabled until deployment.',
+      state: enabled ? 'Enabled by operator gate' : executable ? 'Executable; disabled' : 'Undeployed',
+      detail: enabled
+        ? 'Executable program and explicit operator gate detected. This is not an independent audit.'
+        : 'Custom launch is disabled until an executable program and explicit operator gate are verified.',
     };
   } catch {
     return { name: 'Custom launch program', state: 'Unable to verify', detail: 'Custom launch program status could not be confirmed.' };
@@ -84,16 +88,14 @@ export async function GET() {
     Promise.resolve({ name: 'Autonomous agents', state: 'Not enabled', detail: 'No production executor or unattended trading runtime is configured.' }),
     Promise.resolve({
       name: 'Fee routing',
-      state: WELP_FEE_POLICY.collectionEnabled ? 'Operational' : 'Disabled',
-      detail: WELP_FEE_POLICY.collectionEnabled
-        ? `Disclosed ${(WELP_FEE_POLICY.swapFeeBps / 100).toFixed(2)}% gross swap fee collection enabled.`
-        : WELP_FEE_POLICY.collectionDisabledReason,
+      state: process.env.WELP_REFERRAL_ACCOUNT ? 'Jupiter referral configured' : 'Not configured',
+      detail: process.env.WELP_REFERRAL_ACCOUNT
+        ? `Jupiter referral fee is configured at ${(WELP_FEE_POLICY.swapFeeBps / 100).toFixed(2)}%; this is not atomic WELP on-chain fee enforcement.`
+        : 'No Jupiter referral account is configured; no WELP swap fee is collected.',
     }),
   ]);
   const overall = checks.some((item) => item.state === 'Unavailable')
-    ? 'Degraded'
-    : WELP_FEE_POLICY.collectionEnabled
-      ? 'Operational'
-      : 'Operational · limited features';
+    ? 'Degraded · some checks unavailable'
+    : 'Operational · limited features';
   return NextResponse.json({ updatedAt: new Date().toISOString(), overall, checks }, { headers: { 'Cache-Control': 'no-store' } });
 }

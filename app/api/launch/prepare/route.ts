@@ -14,6 +14,12 @@ export async function POST(request: NextRequest) {
   const name = brandLaunchName(typeof body.name === 'string' ? body.name : '');
   const symbol = brandLaunchSymbol(typeof body.symbol === 'string' ? body.symbol : '');
   const description = typeof body.description === 'string' ? body.description.trim().slice(0, 500) : '';
+  const social = Object.fromEntries(['website', 'twitter', 'telegram'].flatMap((key) => {
+    const value = typeof body[key] === 'string' ? body[key].trim() : '';
+    if (!value) return [];
+    try { const url = new URL(value); return url.protocol === 'https:' ? [[key, url.toString()]] : []; }
+    catch { return []; }
+  })) as { website?: string; twitter?: string; telegram?: string };
   const initialBuySol = Number(body.initialBuySol ?? 0.01);
   if (!BASE58.test(owner) || !name || !symbol) return NextResponse.json({ error: 'Connect a wallet and enter a valid token name and ticker.' }, { status: 400 });
   if (!Number.isFinite(initialBuySol) || initialBuySol < 0.001 || initialBuySol > 1) return NextResponse.json({ error: 'Initial buy must be between 0.001 and 1 SOL.' }, { status: 400 });
@@ -21,7 +27,7 @@ export async function POST(request: NextRequest) {
   try {
     const mintSigner = await generateKeyPairSigner();
     const origin = new URL(request.url).origin;
-    const uri = launchMetadataUri(origin, { mint: mintSigner.address, name, symbol, description });
+    const uri = launchMetadataUri(origin, { mint: mintSigner.address, name, symbol, description, ...social });
     const upstream = await fetch('https://pumpportal.fun/api/trade-local', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

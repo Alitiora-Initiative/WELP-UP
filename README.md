@@ -1,86 +1,49 @@
 # WELP UP
 
-**WELP UP is an independent Solana application for market discovery, wallet-approved trading, user-created on-chain safes, token launches and portfolio intelligence.**
+WELP UP is a Solana market research and wallet-signed trading interface at [welpup.fun](https://welpup.fun). It provides live market reads, rule-based signals, wallet-derived portfolio data, market analysis and a token launch interface.
 
-- Website: https://welpup.fun/
-- Repository: https://github.com/Alitiora-Initiative/WELP-UP
-- Network: Solana Mainnet-Beta for supported live data and wallet-approved operations
+## Current feature boundaries
 
-## Product
+- **Markets and signals:** read live upstream Solana market data. Feed or RPC outages are reported as unavailable; the app does not fabricate prices, balances, listings or volume.
+- **Trading:** user reviews and signs each supported transaction in their wallet. Automated trading and custody are not enabled. The fee-enforced swap flow must remain disabled unless an actual on-chain instruction atomically includes the disclosed fee.
+- **Pump launch:** the launch route prepares a PumpPortal `create` transaction targeting the Pump bonding-curve pool; the connected wallet must sign it, and the site submits the signed transaction to Solana. A successful transaction's mint is its Solana contract address (CA). This does not guarantee listing or indexing by third-party platforms.
+- **Custom supply and decimals:** UI or program source is not proof of mainnet support. Keep this feature disabled until the program is built, reviewed, deployed, initialized and independently verified on mainnet.
+- **Development fund:** the homepage shows the confirmed SOL balance of the public development wallet against a 4 SOL goal. It links to the account explorer and reports unavailable when RPC verification fails. Donations are voluntary, go directly to that address and are not controlled by WELP software. The goal does not trigger an unattended transaction or guarantee deployment.
+- **Graduation and DEX listing:** platform support, graduation, indexing and CoinGecko inclusion are controlled by third parties and are not promised by mint creation alone.
 
-1. **Markets** — live Solana token and pool discovery.
-2. **Signals** — deterministic scoring with visible rules and blockers.
-3. **Trade desk** — swap preparation, fee disclosure and explicit wallet approval.
-4. **Personal safes** — each user creates and controls their own on-chain safe, chooses what to fund and signs its setup, permissions, deposits and withdrawals. The application operator has no user seed phrase or unilateral signing key.
-5. **Launchpad** — planned creator-configured token supply and decimals, on-chain launch records, bonding-curve purchases and verifiable liquidity-pool graduation. The current creator form is a configuration preview only; launch transactions are not enabled.
-6. **Portfolio** — wallet-derived balances, transaction history, allocation and P&L only where the underlying data supports a defensible calculation.
-7. **Security Lab** — reproducible static analysis, dependency scanning, adversarial tests and AI-assisted review with evidence-linked findings.
+## Security and operations
 
-## Important implementation status
+WELP does not ask for seed phrases. Every supported asset transfer requires the user's wallet signature. Never place private keys in source, issues, chat, browser storage or deployment logs. A deployment key must be protected outside the application, funded only for a reviewed deployment, and used only after reproducible builds, tests, security review and verification of program ID, binary, upgrade authority, treasury and fee destinations.
 
-The existing app has live public market reads, wallet connection and RPC-derived wallet history. Swap order and execution endpoints are now deliberately fail-closed until the disclosed fee can be included atomically in the wallet-approved transaction.
-
-The Anchor vault program remains an unlaunched scaffold. Its current program ID is a placeholder; it has not been deployed or independently audited. Automated swaps, fee settlement and production launchpad operations are not enabled. Do not deposit funds into a purported WELP safe until the exact mainnet program, source, upgrade authority, instructions, fees and security review are independently verified.
-
-No fake token listings, simulated volume, placeholder transactions, fabricated balances, TVL, performance, audit scores or P&L are permitted. Empty or unavailable data must be shown as empty or unavailable.
-
-## User-controlled safe model
-
-WELP is software and protocol infrastructure, not a bank. Users create their own personal safe and sign every setup, permission, funding, withdrawal and other supported operation with their connected wallet. Assets deposited into a safe reside in a program-derived on-chain account and are governed by the deployed program's code; they are not held in a WELP operator wallet. Users must inspect the program, its permissions, upgrade authority and terms before funding. No server or AI agent may receive a user's seed phrase or private key.
-
-A wallet signature is meaningful authorization. Users should inspect each transaction's program IDs, account addresses, amounts, fee recipients and permissions before signing.
-
-## Fees and treasury
-
-WELP's target protocol fee is **0.50% of gross input** on every swap that executes through a WELP-controlled, fee-enforcing on-chain instruction. 100% of the fee is credited to treasury at collection; after a minimum 14-day epoch, 60% of eligible new fees is released to the published developer/operator wallet and 40% remains as protected treasury reserve. The split is applied once. There is no separate fixed $0.10 trade fee, $0.10 transfer fee, $0.50 launch-creation fee or creator-configurable fee under this policy.
-
-The policy is documented in docs/FEES_AND_TREASURY.md. The server policy and client/Rust fee arithmetic are not proof of fee collection. The current launchpad program has not been deployed or source-verified on mainnet, generic SPL input-token fee vaults and the launchpad buy/sell instructions are not implemented, and the Jupiter order/execute path cannot append the required fee transfers. Order and execute endpoints therefore remain fail-closed. Do not send assets to the sample program ID or a PDA derived from it.
-
-## Security rules
-
-- Never request, accept, store, transmit or log seed phrases, private keys or wallet exports.
-- All money-moving actions require explicit wallet authorization.
-- Server-side configuration and provider credentials must not use browser-exposed environment variables.
-- Program IDs, mint addresses, token-program IDs and account ownership must be validated on-chain.
-- Fee transfers must be atomic with the operation they charge for and visible in the wallet prompt.
-- The on-chain program is the source of truth for fees and treasury accounting; the backend may prepare transactions but cannot override protocol rules.
-- Missing program IDs, stale quotes, unavailable data, failed checks or unverified accounts must fail closed.
-- An AI-generated security finding is a hypothesis until independently reproduced. AI review is not an independent audit.
-
-## Architecture
-
-- app/ — Next.js App Router pages and API routes.
-- components/ — application UI and wallet components.
-- lib/ — market, wallet, risk and protocol client logic.
-- programs/vault/ — Anchor/Rust vault program scaffold.
-- programs/launchpad/ — Anchor treasury epoch core; not deployed, and launch/trade fee transfers are not yet wired.
-- programs/vault-checks/ — host-side pure Rust invariants.
-- docs/ — protocol design, threat models, release gates, fee policy and runbooks.
-- [Launchpad protocol specification](docs/LAUNCHPAD_PROTOCOL_SPEC.md) — custom supply/decimals, curve, escrow, anti-snipe, CPMM, fees, indexing and release design; not a live deployment.
-- [Launchpad and platform hardening backlog](docs/LAUNCHPAD_AND_SECURITY_BACKLOG.md) — implementation checklist and release gates; not a live launch contract.
-- [Treasury and protocol-fee design](docs/TREASURY_AND_CREATOR_FEES.md) — two-week treasury epoch, retained reserve, 50-bps protocol fee and Raydium integration limits.
+The current Anchor source and sample program ID are not evidence of a deployed or audited mainnet program. No user funds should be sent to a program/PDA until its deployed code and permissions have been independently verified. The 0.50% fee policy only applies to swaps that actually execute through a WELP-controlled on-chain instruction; it cannot tax direct trades on Pump, Jupiter or other DEXs. A 14-day 60/40 allocation is a policy design until implemented and verified on-chain.
 
 ## Local development
 
-Requirements: Node.js and npm. Install dependencies with npm ci, start the development server with npm run dev, and run npm run lint, npm run typecheck and npm run build before submitting changes.
+Requirements: Node.js, npm, Rust and Anchor. From the repository root:
 
-Run the relevant test suite for every changed subsystem. Anchor/SBF builds, ProgramTest, static analysis, independent audits and deployment verification must be reported separately. A green frontend build is not proof that an on-chain program is safe.
+```sh
+npm ci
+npm run lint
+npm run typecheck
+npm run build
+```
 
-Keep provider credentials server-side. Never commit wallet secrets, private keys, seed phrases, RPC credentials or API tokens.
+For program work, run the pinned Cargo/Anchor build and program tests in the Linux filesystem under WSL. Report frontend compilation, Rust host tests, SBF builds, integration tests, security review and mainnet verification as separate evidence; one does not imply the others.
 
-## Mainnet release gates
+## Third-party token compatibility
 
-Before enabling any new fund-moving instruction:
+A Solana CA is a mint address. Wallets and platforms may recognize it, but market pages and trading routes depend on each platform's supported pools, liquidity, metadata, indexing delays and policies. Pump bonding-curve trading, Jupiter routing, DexScreener discovery, FOMO support and CoinGecko listing are separate capabilities. Verify each platform directly; do not claim universal compatibility.
 
-1. Build the reviewed Anchor source and generate the IDL.
-2. Run unit, SBF-backed ProgramTest, adversarial account-composition and invariant tests.
-3. Run dependency and static-analysis tools and remediate findings.
-4. Generate and verify a deployment keypair securely outside chat; never expose its secret key.
-5. Deploy only to Solana Mainnet after independent review, using a production keypair controlled outside the app. Verify the program ID, binary, upgrade authority and configuration before enabling any transaction path.
-6. Verify fee recipient, treasury PDA, token accounts, fee splits and atomic settlement.
-7. Complete independent Solana/Anchor review before public deposits or automated execution.
-8. Publish transaction-level evidence and accurate status before enabling the UI.
+## Launchpad requirements and actual support
 
-## Risk disclosure
-
-Digital assets are volatile and can lose all value. Transactions may be irreversible. Quotes, liquidity and token metadata may be incomplete or manipulated. WELP does not promise profit, capital protection, liquidity or uninterrupted operation. Nothing in the interface is investment, legal, tax or accounting advice.
+- **Bonding curve:** the Pump launch route delegates creation to PumpPortal's public Pump pool. WELP does not operate its own curve or control Pump's lifecycle.
+- **Graduation, DEX liquidity and LP locking:** WELP does not create or burn a Raydium LP position for Pump-launched tokens. No WELP-controlled migration or permanent LP lock is implemented.
+- **Supply and decimals:** the custom Anchor code is local source only. It is gated off until the executable mainnet program, operator enablement and release review are verified; a host Rust build is not an SBF artifact or audit.
+- **Fixed supply controls:** the custom program source is being hardened to create a fixed mint and revoke mint authority, but it is not enabled or deployed. Pump tokens follow Pump's own program rules.
+- **Anti-bot and per-wallet limits:** WELP does not currently enforce custom launch-time wallet caps or anti-sniping controls.
+- **Social metadata:** optional HTTPS website, X and Telegram links are included in Pump launch metadata. The WELP token image remains the default image; creator image upload is not provided.
+- **Comments and community chat:** not provided.
+- **Holder concentration charts:** no WELP holder-distribution chart is provided; do not interpret an aggregate holder count as a distribution.
+- **Candles:** charts use live provider OHLCV when available and surface provider/freshness failures.
+- **Transaction history:** the portfolio view reads transactions for a connected public wallet; it is not a token-specific live buy/sell/migration ledger.
+- **Discovery filters:** the market board filters and sorts only on fields returned by its live provider. Creation time, bonding progress and social engagement are not shown without verified feeds.

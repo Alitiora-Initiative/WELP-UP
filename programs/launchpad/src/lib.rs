@@ -20,11 +20,41 @@ pub const DEVELOPER_DISTRIBUTION_BPS: u128 = 6_000; // 60%
 pub const PERMANENT_RESERVE_BPS: u128 = 4_000; // 40%
 
 pub mod token_launch;
+use token_launch::TokenLaunchParams;
+
+#[derive(Accounts)]
+pub struct LaunchToken<'info> {
+    #[account(mut)]
+    pub creator: Signer<'info>,
+    #[account(mut)]
+    pub mint: Signer<'info>,
+    /// CHECK: constrained to the creator's canonical ATA and created after mint initialization.
+    #[account(mut, seeds = [creator.key().as_ref(), token_program.key().as_ref(), mint.key().as_ref()], bump, seeds::program = anchor_spl::associated_token::ID)]
+    pub creator_token_account: UncheckedAccount<'info>,
+    #[account(mut, seeds = [TREASURY_SEED], bump = treasury.bump)]
+    pub treasury: Account<'info, TreasuryAccount>,
+    #[account(mut, seeds = [TREASURY_VAULT_SEED], bump = treasury.vault_bump, address = treasury.treasury_vault)]
+    pub treasury_vault: SystemAccount<'info>,
+    /// CHECK: canonical Metaplex metadata PDA, created by the metadata CPI.
+    #[account(mut, seeds = [b"metadata", anchor_spl::metadata::ID.as_ref(), mint.key().as_ref()], bump, seeds::program = anchor_spl::metadata::ID)]
+    pub metadata: UncheckedAccount<'info>,
+    /// CHECK: constrained to the canonical executable Metaplex program.
+    #[account(address = anchor_spl::metadata::ID)]
+    pub metadata_program: UncheckedAccount<'info>,
+    pub token_program: Program<'info, anchor_spl::token::Token>,
+    pub associated_token_program: Program<'info, anchor_spl::associated_token::AssociatedToken>,
+    pub system_program: Program<'info, System>,
+}
 
 #[program]
 pub mod welp_launchpad {
     use super::*;
-    use token_launch::{LaunchToken, TokenLaunchParams};
+
+    /// Launch a creator-defined token: same behavior as the rail's inner
+    /// processor, exposed through the single Anchor program interface.
+    pub fn launch_token(ctx: Context<LaunchToken>, params: TokenLaunchParams) -> Result<()> {
+        token_launch::launch_token_impl(ctx, params)
+    }
 
     /// Initialize the one global Treasury PDA. The destination is compiled
     /// into the program and cannot be supplied or changed by the caller.
@@ -452,5 +482,12 @@ mod tests {
     #[test]
     fn treasury_account_space_includes_anchor_discriminator_and_fields() {
         assert_eq!(TreasuryAccount::SPACE, 106);
+    }
+
+    #[test]
+    fn creator_supply_scaling_is_exact_at_zero_and_nine_decimals() {
+        assert_eq!(token_launch::whole_mint_amount_u64(1, 0).unwrap(), 1);
+        assert_eq!(token_launch::whole_mint_amount_u64(1_000_000_000, 9).unwrap(), 1_000_000_000_000_000_000);
+        assert!(token_launch::whole_mint_amount_u64(1, 10).is_err());
     }
 }

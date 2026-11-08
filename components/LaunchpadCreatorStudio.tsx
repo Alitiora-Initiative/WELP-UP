@@ -22,9 +22,10 @@ import { brandLaunchName, brandLaunchSymbol, launchMetadataUri } from '@/lib/lau
 import {
   buildLaunchTokenInstruction,
   deriveTreasuryAddresses,
+  METADATA_PROGRAM_ID,
   LAUNCH_SERVICE_FEE_LAMPORTS,
   MAX_TOKEN_DECIMALS,
-  TOKEN_2022_PROGRAM_ID,
+  SPL_TOKEN_PROGRAM_ID,
   validateLaunchInputs,
 } from '@/lib/launch-program';
 
@@ -79,7 +80,7 @@ type PreparedLaunch = {
   metadataUri: string;
 };
 type LaunchResult = { mint: string; name: string; symbol: string; signature: string; rail: 'pump' | 'welp' };
-type ProgramStatus = { deployed: boolean; owner: string | null; checkedAt: string };
+type ProgramStatus = { deployed: boolean; executable?: boolean; launchEnabled?: boolean; detail?: string; owner: string | null; checkedAt: string };
 
 export function LaunchpadCreatorStudio() {
   const connected = useConnectedWallet(client);
@@ -87,6 +88,9 @@ export function LaunchpadCreatorStudio() {
   const [name, setName] = useState('');
   const [symbol, setSymbol] = useState('');
   const [description, setDescription] = useState('');
+  const [website, setWebsite] = useState('');
+  const [twitter, setTwitter] = useState('');
+  const [telegram, setTelegram] = useState('');
   const [initialBuy, setInitialBuy] = useState('0.01');
   const [supply, setSupply] = useState('');
   const [decimals, setDecimals] = useState(6);
@@ -157,7 +161,7 @@ export function LaunchpadCreatorStudio() {
     const prepareResponse = await fetch('/api/launch/prepare', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ owner: buyer, name, symbol, description, initialBuySol: buy }),
+      body: JSON.stringify({ owner: buyer, name, symbol, description, website, twitter, telegram, initialBuySol: buy }),
     });
     const prepared = await prepareResponse.json() as PreparedLaunch & { error?: string };
     if (!prepareResponse.ok || !prepared.transaction || !prepared.mint) {
@@ -178,13 +182,17 @@ export function LaunchpadCreatorStudio() {
     const mintSigner = await generateKeyPairSigner();
     const addressEncoder = getAddressEncoder();
     const ownerBytes = addressEncoder.encode(creator);
-    const tokenProgramBytes = addressEncoder.encode(TOKEN_2022_PROGRAM_ID);
+    const tokenProgramBytes = addressEncoder.encode(SPL_TOKEN_PROGRAM_ID);
     const mintBytes = addressEncoder.encode(mintSigner.address);
-    const [{ treasury, treasuryVault }, [creatorTokenAccount]] = await Promise.all([
+    const [{ treasury, treasuryVault }, [creatorTokenAccount], [metadata]] = await Promise.all([
       deriveTreasuryAddresses(),
       getProgramDerivedAddress({
         programAddress: ASSOCIATED_TOKEN_PROGRAM_ID,
         seeds: [ownerBytes, tokenProgramBytes, mintBytes],
+      }),
+      getProgramDerivedAddress({
+        programAddress: METADATA_PROGRAM_ID,
+        seeds: ['metadata', addressEncoder.encode(METADATA_PROGRAM_ID), mintBytes],
       }),
     ]);
     const uri = launchMetadataUri(window.location.origin, {
@@ -192,12 +200,13 @@ export function LaunchpadCreatorStudio() {
       name: brandedName,
       symbol: brandedSymbol,
       description,
+      website, twitter, telegram,
     });
     const params = { wholeTokenSupply: supply.trim(), decimals, name: brandedName, symbol: brandedSymbol, uri };
     const checked = validateLaunchInputs(params);
     if (!checked.ok) throw new Error(checked.error);
     const launchInstruction = buildLaunchTokenInstruction(
-      { creator, mint: mintSigner.address, creatorTokenAccount, treasury, treasuryVault },
+      { creator, mint: mintSigner.address, creatorTokenAccount, metadata, treasury, treasuryVault },
       params,
     );
     const { value: blockhash } = await client.rpc.getLatestBlockhash({ commitment: 'confirmed' }).send();
@@ -288,7 +297,7 @@ export function LaunchpadCreatorStudio() {
             {programStatus === null
               ? 'Checking mainnet deployment…'
               : welpRailReady
-                ? 'Mainnet program detected and verified.'
+                ? 'Executable program detected; operator launch gate enabled. This is not an independent audit.'
                 : 'On-chain deployment pending.'}
           </em>
           <span className={'lp-rail-badge' + (welpRailReady ? ' ready' : '')}>
@@ -313,6 +322,9 @@ export function LaunchpadCreatorStudio() {
           </>
         )}
         <label className="lp-field"><span>Description</span><input value={description} onChange={(event) => setDescription(event.target.value)} maxLength={500} placeholder="Optional public description" autoComplete="off" /></label>
+        <label className="lp-field"><span>Project website (HTTPS)</span><input value={website} onChange={(event) => setWebsite(event.target.value)} maxLength={200} placeholder="https://example.com" autoComplete="url" /></label>
+        <label className="lp-field"><span>X profile (HTTPS)</span><input value={twitter} onChange={(event) => setTwitter(event.target.value)} maxLength={200} placeholder="https://x.com/project" autoComplete="url" /></label>
+        <label className="lp-field"><span>Telegram (HTTPS)</span><input value={telegram} onChange={(event) => setTelegram(event.target.value)} maxLength={200} placeholder="https://t.me/project" autoComplete="url" /></label>
       </div>
       {rail === 'welp' ? (
         <p className="lp-fee-note">
@@ -349,7 +361,7 @@ export function LaunchpadCreatorStudio() {
         {rail === 'pump' ? (
           <p className="lp-raw-note">This launch uses the public pump.fun bonding curve through PumpPortal. No WELP service fee is added by this transaction.</p>
         ) : (
-          <p className="lp-raw-note">The WELP custom rail creates a Token-2022 mint with your exact supply and precision, pays the fixed service fee into the canonical treasury vault PDA and never grants the website a key.</p>
+          <p className="lp-raw-note">The WELP custom rail creates a classic SPL mint with your exact supply and precision plus Metaplex metadata for instant wallet rendering, pays the fixed service fee into the canonical treasury vault PDA and never grants the website a key.</p>
         )}
       </div>
     </section>

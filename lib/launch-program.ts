@@ -16,10 +16,12 @@ import {
 
 /** Anchor program id of the WELP launchpad (matches declare_id!). */
 export const WELP_LAUNCHPAD_PROGRAM_ID = address('BrcdB9sV7z9DvF9rDHG263HUxXgJM3iCQdF36TcxbFEn');
-/** Token-2022 on mainnet. */
-export const TOKEN_2022_PROGRAM_ID = address('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
+/** Classic SPL Token on mainnet (the program the WELP custom rail creates mints on). */
+export const SPL_TOKEN_PROGRAM_ID = address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 /** System program. */
 export const SYSTEM_PROGRAM_ID = address('11111111111111111111111111111111');
+export const ASSOCIATED_TOKEN_PROGRAM_ID = address('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+export const METADATA_PROGRAM_ID = address('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s');
 
 /** Anchor selector for `launch_token` = keccak256("global:launch_token")[0..8]. */
 export const LAUNCH_TOKEN_DISCRIMINANT = Uint8Array.of(
@@ -47,6 +49,7 @@ export type LaunchAccounts = {
   creator: Address;
   mint: Address;
   creatorTokenAccount: Address;
+  metadata: Address;
   treasury: Address;
   treasuryVault: Address;
 };
@@ -56,6 +59,7 @@ export function validateLaunchInputs(inputs: LaunchTokenInputs): { ok: true; sup
   const raw = inputs.wholeTokenSupply.trim();
   if (!/^\d+$/.test(raw)) return { ok: false, error: 'Enter a whole-token supply using digits only.' };
   const normalized = raw.replace(/^0+(?=\d)/, '');
+  if (normalized === '0') return { ok: false, error: 'Total supply must be at least one whole token.' };
   if (normalized.length > 10 || BigInt(normalized) > BigInt(MAX_WHOLE_TOKEN_SUPPLY)) {
     return { ok: false, error: 'Total supply cannot exceed one billion whole tokens.' };
   }
@@ -129,7 +133,10 @@ export function buildLaunchTokenInstruction(accounts: LaunchAccounts, params: La
       { address: accounts.creatorTokenAccount, role: ACCOUNT_ROLES.WRITABLE },
       { address: accounts.treasury, role: ACCOUNT_ROLES.WRITABLE },
       { address: accounts.treasuryVault, role: ACCOUNT_ROLES.WRITABLE },
-      { address: TOKEN_2022_PROGRAM_ID, role: ACCOUNT_ROLES.READONLY },
+      { address: accounts.metadata, role: ACCOUNT_ROLES.WRITABLE },
+      { address: METADATA_PROGRAM_ID, role: ACCOUNT_ROLES.READONLY },
+      { address: SPL_TOKEN_PROGRAM_ID, role: ACCOUNT_ROLES.READONLY },
+      { address: ASSOCIATED_TOKEN_PROGRAM_ID, role: ACCOUNT_ROLES.READONLY },
       { address: SYSTEM_PROGRAM_ID, role: ACCOUNT_ROLES.READONLY },
     ],
     data: encodeLaunchTokenData(params),
