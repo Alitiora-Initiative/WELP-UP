@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AlertTriangle, ExternalLink, RefreshCw } from 'lucide-react';
 
 type Candle = {
   time: number;
@@ -12,167 +12,223 @@ type Candle = {
   volume: number;
 };
 
+type Interval = '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
+
 type ChartData = {
   source: string;
   fetchedAt: number;
+  poolAddress: string;
+  poolLiquidityUsd: number;
+  interval: Interval;
   candles: Candle[];
   stale: boolean;
-  error: string | null;
 };
 
-type Props = {
-  mint: string;
-  providerNames: string[];
-};
+type Props = { mint: string; name: string; symbol: string };
 
-function formatTime(ts: number): string {
-  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+const INTERVALS: Array<{ key: Interval; label: string }> = [
+  { key: '1m', label: '1m' },
+  { key: '5m', label: '5m' },
+  { key: '15m', label: '15m' },
+  { key: '1h', label: '1h' },
+  { key: '4h', label: '4h' },
+  { key: '1d', label: '1D' },
+];
+
+const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumSignificantDigits: 7 });
+const volumeFormat = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 2 });
+
+function timeLabel(timestamp: number) {
+  return new Date(timestamp * 1000).toLocaleString();
 }
 
-export function ChartPanel({ mint, providerNames }: Props) {
-  const [selectedProvider, setSelectedProvider] = useState<string>(providerNames[0] ?? 'jupiter');
+function candleLabel(candle: Candle) {
+  return `${new Date(candle.time * 1000).toLocaleString()} · O ${currency.format(candle.open)} · H ${currency.format(candle.high)} · L ${currency.format(candle.low)} · C ${currency.format(candle.close)} · Vol ${volumeFormat.format(candle.volume)}`;
+}
+
+export function ChartPanel({ mint, name, symbol }: Props) {
+  const [interval, setIntervalValue] = useState<Interval>('5m');
   const [chartData, setChartData] = useState<ChartData | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState('');
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const requestRef = useRef<AbortController | null>(null);
+  const inFlightRef = useRef(false);
 
-  const fetchChart = useCallback(async (provider: string) => {
-    if (!mint) return;
-    setLoading(true);
+  const fetchChart = useCallback(async (quiet = false) => {
+    if (!mint || inFlightRef.current) return;
+    inFlightRef.current = true;
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    if (!quiet) setLoading(true);
     setFetchError('');
+
     try {
-      const url = `/api/chart?mint=${encodeURIComponent(mint)}&provider=${encodeURIComponent(provider)}`;
-      const response = await fetch(url, { cache: 'no-store' });
+      const url = `/api/chart?mint=${encodeURIComponent(mint)}&provider=geckoterminal&interval=${interval}`;
+      const response = await fetch(url, { cache: 'no-store', signal: controller.signal });
       const data = await response.json() as ChartData & { error?: string };
-      if (!response.ok) {
-        setFetchError(data.error ?? 'Failed to load chart data.');
-        setChartData(null);
-      } else {
-        setChartData(data);
-        setFetchError('');
+      if (!response.ok) throw new Error(data.error || 'Could not load genuine pool OHLCV data.');
+      if (!Array.isArray(data.candles) || data.candles.length === 0) {
+        throw new Error('The data provider returned no OHLCV candles for this pool.');
       }
-    } catch {
-      setFetchError('Network error loading chart data.');
+      setChartData(data);
+      setActiveIndex(data.candles.length - 1);
+    } catch (caught) {
+      if (controller.signal.aborted) return;
       setChartData(null);
+      setFetchError(caught instanceof Error ? caught.message : 'Chart data unavailable.');
     } finally {
-      setLoading(false);
+      if (requestRef.current === controller) {
+        inFlightRef.current = false;
+        setLoading(false);
+      }
     }
-  }, [mint]);
+  }, [mint, interval]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void fetchChart(selectedProvider);
-  }, [selectedProvider, fetchChart]);
+    const initial = window.setTimeout(() => void fetchChart(), 0);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void fetchChart(true);
+    }, 60_000);
+    const visible = () => {
+      if (document.visibilityState === 'visible') void fetchChart(true);
+    };
+    document.addEventListener('visibilitychange', visible);
+    return () => {
+      window.clearTimeout(initial);
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', visible);
+      requestRef.current?.abort();
+      requestRef.current = null;
+      inFlightRef.current = false;
+    };
+  }, [fetchChart]);
 
-  function handleProviderChange(event: React.ChangeEvent<HTMLSelectElement>) {
-    setSelectedProvider(event.target.value);
-  }
+  const visibleCandles = useMemo(() => chartData?.candles.slice(-120) ?? [], [chartData]);
+  const geometry = useMemo(() => {
+    if (visibleCandles.length === 0) return [];
+    const min = Math.min(...visibleCandles.map((candle) => candle.low));
+    const max = Math.max(...visibleCandles.map((candle) => candle.high));
+    const range = max - min || Math.max(max * 0.001, Number.EPSILON);
+    const top = 20;
+    const bottom = 270;
+    const plotHeight = bottom - top;
+    const left = 62;
+    const plotWidth = 900;
+    const step = plotWidth / visibleCandles.length;
+    const bodyWidth = Math.max(2, Math.min(12, step * 0.62));
+    const y = (value: number) => top + ((max - value) / range) * plotHeight;
+    return visibleCandles.map((candle, index) => {
+      const center = left + step * (index + 0.5);
+      const openY = y(candle.open);
+      const closeY = y(candle.close);
+      return {
+        candle,
+        index,
+        x: center,
+        highY: y(candle.high),
+        lowY: y(candle.low),
+        bodyY: Math.min(openY, closeY),
+        bodyHeight: Math.max(1.4, Math.abs(closeY - openY)),
+        bodyWidth,
+        up: candle.close >= candle.open,
+      };
+    });
+  }, [visibleCandles]);
 
-  const lastUpdateTime = chartData ? formatTime(chartData.fetchedAt) : null;
-  const hasCandles = chartData && chartData.candles.length > 0;
-  const latestCandle = hasCandles ? chartData!.candles[chartData!.candles.length - 1] : null;
+  const selectedIndex = activeIndex === null ? visibleCandles.length - 1 : Math.max(0, Math.min(activeIndex, visibleCandles.length - 1));
+  const selectedCandle = visibleCandles[selectedIndex] ?? null;
+  const lastCandle = visibleCandles[visibleCandles.length - 1] ?? null;
+  const changePositive = lastCandle ? lastCandle.close >= lastCandle.open : true;
 
   return (
-    <section className="chart-panel" aria-label="Price chart panel">
-      <div className="chart-panel-header">
-        <h3 className="chart-panel-title">Price Chart</h3>
-        <div className="chart-panel-controls">
-          <label htmlFor="chart-provider-select" className="visually-hidden">
-            Chart data source
+    <section className="chart-panel-live" aria-label={`Live candlestick chart for ${name} (${symbol})`}>
+      <header className="chart-live-header">
+        <div>
+          <p className="chart-live-kicker">LIVE ON-CHAIN POOL OHLCV</p>
+          <h2>{name} <span>{symbol}</span></h2>
+          <p className="chart-live-mint">{mint}</p>
+        </div>
+        <div className="chart-live-controls">
+          <label>
+            Interval
+            <select value={interval} onChange={(event) => setIntervalValue(event.target.value as Interval)} disabled={loading}>
+              {INTERVALS.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
+            </select>
           </label>
-          <select
-            id="chart-provider-select"
-            value={selectedProvider}
-            onChange={handleProviderChange}
-            aria-label="Select chart data source"
-            className="chart-provider-select"
-            disabled={loading}
-          >
-            {providerNames.map((name) => (
-              <option key={name} value={name}>
-                {name.charAt(0).toUpperCase() + name.slice(1)}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={() => void fetchChart(selectedProvider)}
-            disabled={loading}
-            aria-label="Refresh chart data"
-            className="chart-refresh-button"
-          >
-            <RefreshCw size={14} className={loading ? 'spin' : ''} aria-hidden="true" />
-            <span>Refresh</span>
+          <button type="button" onClick={() => void fetchChart()} disabled={loading}>
+            <RefreshCw size={15} className={loading ? 'spin' : ''} /> Refresh
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* Source and timestamp provenance */}
-      {chartData && (
-        <div className="chart-provenance" aria-live="polite">
-          <span className="chart-source-label">
-            Source: <strong>{chartData.source}</strong>
-          </span>
-          {lastUpdateTime && (
-            <span className="chart-updated-label">
-              Last update: <time dateTime={new Date(chartData.fetchedAt).toISOString()}>{lastUpdateTime}</time>
-            </span>
-          )}
+      {chartData ? (
+        <div className="chart-live-provenance">
+          <span>Source: <strong>GeckoTerminal pool OHLCV</strong></span>
+          <span>Pool liquidity: <strong>{volumeFormat.format(chartData.poolLiquidityUsd)}</strong></span>
+          <span>Updated: <time dateTime={new Date(chartData.fetchedAt).toISOString()}>{timeLabel(Math.floor(chartData.fetchedAt / 1000))}</time></span>
+          <a href={`https://www.geckoterminal.com/solana/pools/${chartData.poolAddress}`} target="_blank" rel="noreferrer">
+            Open pool <ExternalLink size={13} />
+          </a>
         </div>
-      )}
+      ) : null}
 
-      {/* Stale data banner */}
-      {chartData?.stale && (
-        <div className="chart-stale-banner" role="alert" aria-live="assertive">
-          <AlertTriangle size={15} aria-hidden="true" />
-          <span>Chart data may be stale (older than 5 minutes). Refresh for the latest prices.</span>
-        </div>
-      )}
+      {chartData?.stale ? (
+        <div className="chart-live-warning" role="status"><AlertTriangle size={15} /> Latest pool candle is older than five minutes.</div>
+      ) : null}
 
-      {/* Missing / error banner */}
-      {(!hasCandles && !loading && !fetchError) && (
-        <div className="chart-missing-banner" role="status">
-          <AlertTriangle size={15} aria-hidden="true" />
-          <span>No chart data available for this token from {selectedProvider}.</span>
-        </div>
-      )}
+      {fetchError ? (
+        <div className="chart-live-error" role="alert"><AlertTriangle size={16} /><span>{fetchError}</span></div>
+      ) : null}
 
-      {/* Fetch error */}
-      {fetchError && (
-        <div className="chart-error-banner" role="alert">
-          <AlertTriangle size={15} aria-hidden="true" />
-          <span>{fetchError}</span>
-        </div>
-      )}
-
-      {/* Candle summary — lightweight display without a charting library */}
-      {hasCandles && latestCandle && (
-        <div className="chart-data-summary" aria-label="Latest candle data">
-          <div className="chart-candle-row">
-            <span className="chart-label">Close</span>
-            <strong className="chart-value">${latestCandle.close.toPrecision(6)}</strong>
+      {geometry.length > 0 ? (
+        <>
+          <div className="chart-live-reading" aria-live="polite">
+            {selectedCandle ? <span>{candleLabel(selectedCandle)}</span> : null}
+            {lastCandle ? <strong className={changePositive ? 'is-up' : 'is-down'}>{currency.format(lastCandle.close)}</strong> : null}
           </div>
-          <div className="chart-candle-row">
-            <span className="chart-label">High</span>
-            <strong className="chart-value">${latestCandle.high.toPrecision(6)}</strong>
+          <div className="chart-svg-wrap">
+            <svg className="chart-candles-svg" viewBox="0 0 1000 320" role="group" aria-label="Interactive candlestick plot. Focus a candle to read its OHLCV values.">
+              {[0, 1, 2, 3, 4].map((step) => {
+                const y = 20 + step * 62.5;
+                return <g key={step}>
+                  <line className="chart-grid-line" x1="62" x2="962" y1={y} y2={y} />
+                  <text className="chart-axis-text" x="54" y={y + 4} textAnchor="end">{currency.format(Math.max(...visibleCandles.map((c) => c.high)) - step * (Math.max(...visibleCandles.map((c) => c.high)) - Math.min(...visibleCandles.map((c) => c.low))) / 4)}</text>
+                </g>;
+              })}
+              {geometry.map((item) => (
+                <g
+                  key={item.candle.time}
+                  className={item.up ? 'chart-candle-group is-up' : 'chart-candle-group is-down'}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={candleLabel(item.candle)}
+                  onMouseEnter={() => setActiveIndex(item.index)}
+                  onFocus={() => setActiveIndex(item.index)}
+                >
+                  <line className="chart-candle-wick" x1={item.x} x2={item.x} y1={item.highY} y2={item.lowY} />
+                  <rect className="chart-candle-body" x={item.x - item.bodyWidth / 2} y={item.bodyY} width={item.bodyWidth} height={item.bodyHeight} rx="1" />
+                </g>
+              ))}
+              {selectedCandle ? <line
+                className="chart-crosshair"
+                x1={geometry[selectedIndex]?.x ?? 0}
+                x2={geometry[selectedIndex]?.x ?? 0}
+                y1="18"
+                y2="274"
+              /> : null}
+              <text className="chart-axis-text" x="62" y="300">{visibleCandles[0] ? new Date(visibleCandles[0].time * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</text>
+              <text className="chart-axis-text" x="962" y="300" textAnchor="end">{lastCandle ? new Date(lastCandle.time * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</text>
+            </svg>
           </div>
-          <div className="chart-candle-row">
-            <span className="chart-label">Low</span>
-            <strong className="chart-value">${latestCandle.low.toPrecision(6)}</strong>
-          </div>
-          <div className="chart-candle-row">
-            <span className="chart-label">Volume</span>
-            <strong className="chart-value">{latestCandle.volume.toLocaleString('en-US', { maximumFractionDigits: 2 })}</strong>
-          </div>
-          <div className="chart-candle-row">
-            <span className="chart-label">Candles</span>
-            <strong className="chart-value">{chartData!.candles.length}</strong>
-          </div>
-        </div>
-      )}
-
-      {/* Mandatory disclaimer — charts never authorize trades */}
-      <p className="chart-disclaimer" role="note">
-        Chart data is read-only and does not authorize trades.
-      </p>
+          <p className="chart-live-footnote">{visibleCandles.length} real OHLCV candles shown · refreshes every 60 seconds while this tab is visible · price display in USD</p>
+        </>
+      ) : loading ? (
+        <div className="chart-live-empty">Loading verified pool candles…</div>
+      ) : !fetchError ? (
+        <div className="chart-live-empty">No pool candles are available for the selected mint and interval.</div>
+      ) : null}
     </section>
   );
 }

@@ -1,9 +1,9 @@
 /**
- * chart-providers.ts
- * Typed provider adapters for multi-source candle data.
- * All external data is treated as untrusted.
+ * Live OHLCV provider.
+ *
+ * Candles are sourced from GeckoTerminal's pool OHLCV endpoint. Price-only
+ * token endpoints are deliberately not converted into synthetic candles.
  */
-
 export type Candle = {
   time: number;
   open: number;
@@ -13,6 +13,9 @@ export type Candle = {
   volume: number;
 };
 
+export type ChartTimeframe = 'minute' | 'hour' | 'day';
+export type ChartAggregate = 1 | 4 | 5 | 12 | 15;
+
 export type ProviderResult<T> = {
   status: 'ok' | 'stale' | 'error';
   data?: T;
@@ -20,232 +23,193 @@ export type ProviderResult<T> = {
   fetchedAt: number;
   error?: string;
   ageMs?: number;
+  poolAddress?: string;
+  poolLiquidityUsd?: number;
 };
 
 export interface ChartProvider {
   name: string;
-  fetchCandles(mint: string, from: number, to: number): Promise<ProviderResult<Candle[]>>;
+  fetchCandles(
+    mint: string,
+    from: number,
+    to: number,
+    timeframe: ChartTimeframe,
+    aggregate: ChartAggregate,
+  ): Promise<ProviderResult<Candle[]>>;
 }
 
-// Mint address must match base-58 Solana format (32–44 chars, no 0/O/I/l)
 const MINT_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+export const STALE_MS = 5 * 60 * 1000;
+export const OUTAGE_BACKOFF_MS = 30 * 1000;
+export const MAX_CANDLES = 1000;
+const GECKO_BASE = 'https://api.geckoterminal.com/api/v2';
+const GECKO_ACCEPT = 'application/json;version=20230203';
 
-// Data older than 5 minutes is considered stale
-const STALE_MS = 5 * 60 * 1000;
+type UnknownRecord = Record<string, unknown>;
 
-// How long to mark a provider unavailable after a failure (ms)
-const OUTAGE_BACKOFF_MS = 30 * 1000;
+function asRecord(value: unknown): UnknownRecord {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? value as UnknownRecord
+    : {};
+}
 
-// Max candles to accept per response
-const MAX_CANDLES = 1000;
+function asFiniteNumber(value: unknown): number | null {
+  const parsed = typeof value === 'number' || typeof value === 'string' ? Number(value) : NaN;
+  return Number.isFinite(parsed) ? parsed : null;
+}
 
-/**
- * Validate a mint address. Returns true if valid.
- */
 export function isValidMint(mint: string): boolean {
   return MINT_RE.test(mint);
 }
 
-/**
- * Validate and clean a single candle. Returns null if invalid.
- */
-function validateCandle(raw: unknown): Candle | null {
-  if (typeof raw !== 'object' || raw === null) return null;
-  const c = raw as Record<string, unknown>;
-  const time = Number(c.time);
-  const open = Number(c.open);
-  const high = Number(c.high);
-  const low = Number(c.low);
-  const close = Number(c.close);
-  const volume = Number(c.volume);
-  // All numeric fields must be finite
-  if (!Number.isFinite(time) || !Number.isFinite(open) || !Number.isFinite(high) ||
-      !Number.isFinite(low) || !Number.isFinite(close) || !Number.isFinite(volume)) return null;
-  // Timestamps must be > 0 and not more than 60s in the future
-  if (time <= 0 || time > (Date.now() / 1000) + 60) return null;
-  // OHLC must be positive; volume non-negative
+export function validateCandle(raw: unknown): Candle | null {
+  if (!Array.isArray(raw) || raw.length < 6) return null;
+  const time = asFiniteNumber(raw[0]);
+  const open = asFiniteNumber(raw[1]);
+  const high = asFiniteNumber(raw[2]);
+  const low = asFiniteNumber(raw[3]);
+  const close = asFiniteNumber(raw[4]);
+  const volume = asFiniteNumber(raw[5]);
+
+  if (time === null || open === null || high === null || low === null || close === null || volume === null) return null;
+  if (!Number.isInteger(time) || time <= 0 || time > Math.floor(Date.now() / 1000) + 60) return null;
   if (open <= 0 || high <= 0 || low <= 0 || close <= 0 || volume < 0) return null;
-  // high must be >= low
-  if (high < low) return null;
+  if (high < Math.max(open, close) || low > Math.min(open, close) || high < low) return null;
+
   return { time, open, high, low, close, volume };
 }
 
-/**
- * Deduplicate candles by timestamp, keeping the last occurrence.
- * Then cap at MAX_CANDLES.
- */
-function deduplicateCandles(candles: Candle[]): Candle[] {
-  const seen = new Map<number, Candle>();
-  for (const c of candles) seen.set(c.time, c);
-  const result = [...seen.values()].sort((a, b) => a.time - b.time);
-  return result.slice(0, MAX_CANDLES);
+export function deduplicateCandles(candles: Candle[]): Candle[] {
+  const byTime = new Map<number, Candle>();
+  for (const candle of candles) byTime.set(candle.time, candle);
+  return [...byTime.values()].sort((a, b) => a.time - b.time).slice(-MAX_CANDLES);
 }
 
-/**
- * Determine staleness: if the most recent candle time is > 5min ago, mark stale.
- */
-function checkStale(candles: Candle[], fetchedAt: number): { stale: boolean; ageMs: number } {
-  if (candles.length === 0) return { stale: false, ageMs: 0 };
-  const latestSec = Math.max(...candles.map((c) => c.time));
-  const ageMs = fetchedAt - latestSec * 1000;
+export function checkStale(candles: Candle[], fetchedAt: number): { stale: boolean; ageMs: number } {
+  if (candles.length === 0) return { stale: true, ageMs: Number.POSITIVE_INFINITY };
+  const latest = candles[candles.length - 1];
+  const ageMs = Math.max(0, fetchedAt - latest.time * 1000);
   return { stale: ageMs > STALE_MS, ageMs };
 }
 
-// ---------------------------------------------------------------------------
-// JupiterProvider
-// Uses https://price.jup.ag/v6/price?ids={mint} for current price.
-// Returns a single synthetic candle (OHLC = close = current price).
-// Outage backoff is tracked per-instance so tests with fresh instances start clean,
-// while the module-level singleton (PROVIDERS) correctly persists backoff across requests.
-// ---------------------------------------------------------------------------
+function failure(source: string, fetchedAt: number, error: string): ProviderResult<Candle[]> {
+  return { status: 'error', source, fetchedAt, error };
+}
 
-export class JupiterProvider implements ChartProvider {
-  readonly name = 'jupiter';
-  private outageUntil = 0;
+function validInterval(timeframe: ChartTimeframe, aggregate: ChartAggregate): boolean {
+  if (timeframe === 'minute') return aggregate === 1 || aggregate === 5 || aggregate === 15;
+  if (timeframe === 'hour') return aggregate === 1 || aggregate === 4 || aggregate === 12;
+  return timeframe === 'day' && aggregate === 1;
+}
 
-  private isInOutage(): boolean {
-    return Date.now() < this.outageUntil;
-  }
-
-  private markOutage(): void {
-    this.outageUntil = Date.now() + OUTAGE_BACKOFF_MS;
-  }
-
-  async fetchCandles(mint: string, _from: number, _to: number): Promise<ProviderResult<Candle[]>> {
-    if (!isValidMint(mint)) {
-      return { status: 'error', source: this.name, fetchedAt: Date.now(), error: 'Invalid mint address.' };
-    }
-    if (this.isInOutage()) {
-      return { status: 'error', source: this.name, fetchedAt: Date.now(), error: 'Provider temporarily unavailable. Retry in 30s.' };
-    }
-    const fetchedAt = Date.now();
-    try {
-      const url = `https://price.jup.ag/v6/price?ids=${encodeURIComponent(mint)}`;
-      const response = await fetch(url, { signal: AbortSignal.timeout(10_000), cache: 'no-store' });
-      if (!response.ok) {
-        this.markOutage();
-        return { status: 'error', source: this.name, fetchedAt, error: `Jupiter price API returned ${response.status}.` };
-      }
-      let json: unknown;
-      try {
-        json = await response.json();
-      } catch {
-        this.markOutage();
-        return { status: 'error', source: this.name, fetchedAt, error: 'Malformed JSON from Jupiter price API.' };
-      }
-      // Parse: { data: { [mint]: { price: number, ... } } }
-      const data = (json as Record<string, unknown>)?.data;
-      if (typeof data !== 'object' || data === null) {
-        return { status: 'error', source: this.name, fetchedAt, error: 'Unexpected Jupiter price response shape.' };
-      }
-      const entry = (data as Record<string, unknown>)[mint];
-      if (typeof entry !== 'object' || entry === null) {
-        return { status: 'error', source: this.name, fetchedAt, error: 'Mint not found in Jupiter price response.' };
-      }
-      const price = Number((entry as Record<string, unknown>).price);
-      if (!Number.isFinite(price) || price <= 0) {
-        return { status: 'error', source: this.name, fetchedAt, error: 'Jupiter returned invalid price.' };
-      }
-      const timeSec = Math.floor(fetchedAt / 1000);
-      // Future-timestamp check: must not be more than 60s in the future
-      if (timeSec > Math.floor(Date.now() / 1000) + 60) {
-        return { status: 'error', source: this.name, fetchedAt, error: 'Candle timestamp is in the future.' };
-      }
-      const candle: Candle = { time: timeSec, open: price, high: price, low: price, close: price, volume: 0 };
-      const ageMs = 0; // current price, not stale
-      return { status: 'ok', data: [candle], source: this.name, fetchedAt, ageMs };
-    } catch (err) {
-      this.markOutage();
-      const message = err instanceof Error ? err.message : 'Network error.';
-      return { status: 'error', source: this.name, fetchedAt, error: message };
-    }
+async function readJson(response: Response): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch {
+    throw new Error('GeckoTerminal returned malformed JSON.');
   }
 }
 
-// ---------------------------------------------------------------------------
-// DexScreenerProvider
-// Uses https://api.dexscreener.com/latest/dex/tokens/{mint}
-// Returns candles synthesized from pair price data if available.
-// ---------------------------------------------------------------------------
-
-export class DexScreenerProvider implements ChartProvider {
-  readonly name = 'dexscreener';
+export class GeckoTerminalProvider implements ChartProvider {
+  readonly name = 'geckoterminal';
   private outageUntil = 0;
 
-  private isInOutage(): boolean {
-    return Date.now() < this.outageUntil;
-  }
-
-  private markOutage(): void {
-    this.outageUntil = Date.now() + OUTAGE_BACKOFF_MS;
-  }
-
-  async fetchCandles(mint: string, _from: number, _to: number): Promise<ProviderResult<Candle[]>> {
-    if (!isValidMint(mint)) {
-      return { status: 'error', source: this.name, fetchedAt: Date.now(), error: 'Invalid mint address.' };
-    }
-    if (this.isInOutage()) {
-      return { status: 'error', source: this.name, fetchedAt: Date.now(), error: 'Provider temporarily unavailable. Retry in 30s.' };
-    }
+  async fetchCandles(
+    mint: string,
+    _from: number,
+    to: number,
+    timeframe: ChartTimeframe = 'minute',
+    aggregate: ChartAggregate = 5,
+  ): Promise<ProviderResult<Candle[]>> {
     const fetchedAt = Date.now();
+    if (!isValidMint(mint)) return failure(this.name, fetchedAt, 'Invalid Solana mint address.');
+    if (!validInterval(timeframe, aggregate)) return failure(this.name, fetchedAt, 'Unsupported GeckoTerminal candle interval.');
+    if (!Number.isSafeInteger(to) || to <= 0) return failure(this.name, fetchedAt, 'Invalid chart end timestamp.');
+    if (Date.now() < this.outageUntil) {
+      return failure(this.name, fetchedAt, 'GeckoTerminal is temporarily rate-limited or unavailable. Retry shortly.');
+    }
+
     try {
-      const url = `https://api.dexscreener.com/latest/dex/tokens/${encodeURIComponent(mint)}`;
-      const response = await fetch(url, { signal: AbortSignal.timeout(10_000), cache: 'no-store' });
-      if (!response.ok) {
-        this.markOutage();
-        return { status: 'error', source: this.name, fetchedAt, error: `DexScreener API returned ${response.status}.` };
+      const poolUrl = new URL(`${GECKO_BASE}/networks/solana/tokens/${encodeURIComponent(mint)}/pools`);
+      poolUrl.searchParams.set('page', '1');
+      poolUrl.searchParams.set('include', 'dex');
+
+      const poolResponse = await fetch(poolUrl, {
+        headers: { accept: GECKO_ACCEPT },
+        cache: 'force-cache',
+        next: { revalidate: 60 },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!poolResponse.ok) {
+        if (poolResponse.status === 429 || poolResponse.status >= 500) this.outageUntil = Date.now() + OUTAGE_BACKOFF_MS;
+        return failure(this.name, fetchedAt, `GeckoTerminal pool lookup returned HTTP ${poolResponse.status}.`);
       }
-      let json: unknown;
-      try {
-        json = await response.json();
-      } catch {
-        this.markOutage();
-        return { status: 'error', source: this.name, fetchedAt, error: 'Malformed JSON from DexScreener API.' };
+
+      const poolPayload = asRecord(await readJson(poolResponse));
+      const poolRows = Array.isArray(poolPayload.data) ? poolPayload.data : [];
+      const candidates = poolRows.map((row) => {
+        const entry = asRecord(row);
+        const attrs = asRecord(entry.attributes);
+        const id = typeof entry.id === 'string' ? entry.id : '';
+        const addressFromId = id.startsWith('solana_') ? id.slice('solana_'.length) : '';
+        const address = typeof attrs.address === 'string' ? attrs.address : addressFromId;
+        const liquidity = asFiniteNumber(attrs.reserve_in_usd);
+        return { address, liquidity };
+      }).filter((pool) => isValidMint(pool.address) && pool.liquidity !== null && pool.liquidity > 0)
+        .sort((a, b) => (b.liquidity ?? 0) - (a.liquidity ?? 0));
+
+      const selectedPool = candidates[0];
+      if (!selectedPool) {
+        return failure(this.name, fetchedAt, 'GeckoTerminal has no pool with a verifiable positive USD liquidity value for this mint.');
       }
-      const payload = json as Record<string, unknown>;
-      const pairs = Array.isArray(payload?.pairs) ? (payload.pairs as unknown[]) : [];
-      if (pairs.length === 0) {
-        return { status: 'error', source: this.name, fetchedAt, error: 'No pairs found for this mint on DexScreener.' };
+
+      const ohlcvUrl = new URL(`${GECKO_BASE}/networks/solana/pools/${encodeURIComponent(selectedPool.address)}/ohlcv/${timeframe}`);
+      ohlcvUrl.searchParams.set('aggregate', String(aggregate));
+      ohlcvUrl.searchParams.set('limit', '500');
+      ohlcvUrl.searchParams.set('currency', 'usd');
+      ohlcvUrl.searchParams.set('token', mint);
+      ohlcvUrl.searchParams.set('before_timestamp', String(to));
+
+      const candleResponse = await fetch(ohlcvUrl, {
+        headers: { accept: GECKO_ACCEPT },
+        cache: 'force-cache',
+        next: { revalidate: 60 },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!candleResponse.ok) {
+        if (candleResponse.status === 429 || candleResponse.status >= 500) this.outageUntil = Date.now() + OUTAGE_BACKOFF_MS;
+        return failure(this.name, fetchedAt, `GeckoTerminal OHLCV request returned HTTP ${candleResponse.status}.`);
       }
-      const rawCandles: Candle[] = [];
-      for (const pair of pairs.slice(0, 20)) {
-        if (typeof pair !== 'object' || pair === null) continue;
-        const p = pair as Record<string, unknown>;
-        const priceUsd = Number(p.priceUsd);
-        if (!Number.isFinite(priceUsd) || priceUsd <= 0) continue;
-        const txns = typeof p.txns === 'object' && p.txns !== null ? (p.txns as Record<string, unknown>) : {};
-        // Use h1 or h24 volume if available
-        const vol =
-          Number((typeof txns.h1 === 'object' && txns.h1 !== null ? (txns.h1 as Record<string, unknown>).buys : 0) ?? 0) +
-          Number((typeof txns.h1 === 'object' && txns.h1 !== null ? (txns.h1 as Record<string, unknown>).sells : 0) ?? 0);
-        const volumeUsd = Number.isFinite(vol) && vol >= 0 ? vol : 0;
-        const timeSec = Math.floor(fetchedAt / 1000);
-        // Clamp: not in the future
-        if (timeSec > Math.floor(Date.now() / 1000) + 60) continue;
-        const candle: Candle = { time: timeSec, open: priceUsd, high: priceUsd, low: priceUsd, close: priceUsd, volume: volumeUsd };
-        rawCandles.push(candle);
+
+      const candlePayload = asRecord(await readJson(candleResponse));
+      const data = asRecord(candlePayload.data);
+      const attributes = asRecord(data.attributes);
+      const rawRows = Array.isArray(attributes.ohlcv_list) ? attributes.ohlcv_list : [];
+      const candles = deduplicateCandles(rawRows.map(validateCandle).filter((candle): candle is Candle => candle !== null));
+      if (candles.length === 0) {
+        return failure(this.name, fetchedAt, 'GeckoTerminal returned no valid OHLCV candles for the selected pool and interval.');
       }
-      if (rawCandles.length === 0) {
-        return { status: 'error', source: this.name, fetchedAt, error: 'No valid price data in DexScreener response.' };
-      }
-      const candles = deduplicateCandles(rawCandles);
-      const { stale, ageMs } = checkStale(candles, fetchedAt);
-      return { status: stale ? 'stale' : 'ok', data: candles, source: this.name, fetchedAt, ageMs };
-    } catch (err) {
-      this.markOutage();
-      const message = err instanceof Error ? err.message : 'Network error.';
-      return { status: 'error', source: this.name, fetchedAt, error: message };
+
+      const freshness = checkStale(candles, fetchedAt);
+      return {
+        status: freshness.stale ? 'stale' : 'ok',
+        data: candles,
+        source: this.name,
+        fetchedAt,
+        ageMs: freshness.ageMs,
+        poolAddress: selectedPool.address,
+        poolLiquidityUsd: selectedPool.liquidity,
+      };
+    } catch (error) {
+      this.outageUntil = Date.now() + OUTAGE_BACKOFF_MS;
+      const message = error instanceof Error ? error.message : 'GeckoTerminal request failed.';
+      return failure(this.name, fetchedAt, message);
     }
   }
 }
-
-// ---------------------------------------------------------------------------
-// Registry
-// ---------------------------------------------------------------------------
 
 const PROVIDERS: Record<string, ChartProvider> = {
-  jupiter: new JupiterProvider(),
-  dexscreener: new DexScreenerProvider(),
+  geckoterminal: new GeckoTerminalProvider(),
 };
 
 export function getProvider(name: string): ChartProvider | null {
@@ -256,37 +220,13 @@ export function listProviders(): string[] {
   return Object.keys(PROVIDERS);
 }
 
-// ---------------------------------------------------------------------------
-// fetchWithFallback
-// Tries providers in order (Jupiter first, then DexScreener).
-// Returns the first 'ok' result, or the best available result (stale > error).
-// ---------------------------------------------------------------------------
-
+/** A single verified OHLCV source is used; price-only APIs are never fallback candles. */
 export async function fetchWithFallback(
   mint: string,
   from: number,
   to: number,
+  timeframe: ChartTimeframe = 'minute',
+  aggregate: ChartAggregate = 5,
 ): Promise<ProviderResult<Candle[]>> {
-  const order: ChartProvider[] = [PROVIDERS.jupiter, PROVIDERS.dexscreener];
-  let bestResult: ProviderResult<Candle[]> | null = null;
-
-  for (const provider of order) {
-    const result = await provider.fetchCandles(mint, from, to);
-    if (result.status === 'ok') {
-      return result;
-    }
-    // Keep a stale result in preference to an error result
-    if (
-      bestResult === null ||
-      (result.status === 'stale' && bestResult.status === 'error')
-    ) {
-      bestResult = result;
-    }
-  }
-
-  // Return the best we have (stale or error); guaranteed non-null since order.length >= 1
-  return bestResult!;
+  return PROVIDERS.geckoterminal.fetchCandles(mint, from, to, timeframe, aggregate);
 }
-
-// Export validation and dedup helpers for testing
-export { validateCandle, deduplicateCandles, checkStale, STALE_MS, OUTAGE_BACKOFF_MS };

@@ -6,325 +6,174 @@ import {
   deduplicateCandles,
   checkStale,
   STALE_MS,
-  JupiterProvider,
-  DexScreenerProvider,
+  GeckoTerminalProvider,
   fetchWithFallback,
 } from '../lib/chart-providers.ts';
 
-// ---------------------------------------------------------------------------
-// isValidMint
-// ---------------------------------------------------------------------------
+const MINT = 'So11111111111111111111111111111111111111112';
+const LIQUID_POOL = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+const SECOND_POOL = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB';
 
-test('isValidMint accepts valid base-58 Solana addresses and rejects invalid ones', () => {
-  // Valid — 44 char base58
-  assert.ok(isValidMint('So11111111111111111111111111111111111111112'));
-  // Valid — 32 char base58
-  assert.ok(isValidMint('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'));
-  // Too short
+function response(body, status = 200) {
+  return { ok: status >= 200 && status < 300, status, json: async () => body };
+}
+
+function geckoPools() {
+  return {
+    data: [
+      { id: 'solana_low-liquidity', attributes: { address: SECOND_POOL, reserve_in_usd: '2500' } },
+      { id: 'solana_high-liquidity', attributes: { address: LIQUID_POOL, reserve_in_usd: '90000' } },
+    ],
+  };
+}
+
+function geckoCandles(now = Math.floor(Date.now() / 1000)) {
+  return {
+    data: {
+      attributes: {
+        ohlcv_list: [
+          [now - 600, 10, 12, 9, 11, 1000],
+          [now - 300, 11, 13, 10, 12, 1500],
+          [now, 12, 14, 11, 13, 2000],
+        ],
+      },
+    },
+  };
+}
+
+test('isValidMint accepts base58 Solana addresses and rejects malformed values', () => {
+  assert.equal(isValidMint(MINT), true);
   assert.equal(isValidMint('short'), false);
-  // Contains forbidden chars (0, O, I, l)
-  assert.equal(isValidMint('So11111111111111111111111111111111111111110'), false); // ends in 0
+  assert.equal(isValidMint('So11111111111111111111111111111111111111110'), false);
   assert.equal(isValidMint(''), false);
   assert.equal(isValidMint('!!!'), false);
 });
 
-// ---------------------------------------------------------------------------
-// validateCandle
-// ---------------------------------------------------------------------------
-
-test('validateCandle rejects non-objects and missing fields', () => {
+test('validateCandle rejects malformed rows and OHLC violations', () => {
   assert.equal(validateCandle(null), null);
-  assert.equal(validateCandle('string'), null);
-  assert.equal(validateCandle(42), null);
-  assert.equal(validateCandle({}), null);
+  assert.equal(validateCandle('candle'), null);
+  assert.equal(validateCandle([1, 1, 0.5, 1, 1, 0]), null);
+  assert.equal(validateCandle([1, 1, 2, 1, 3, 0]), null);
+  assert.equal(validateCandle([1, 0, 2, 0, 1, 0]), null);
+  assert.equal(validateCandle([1, 1, 2, 1, 1, -1]), null);
+  assert.equal(validateCandle([Math.floor(Date.now() / 1000) + 120, 1, 2, 1, 1, 1]), null);
 });
 
-test('validateCandle rejects candles where high < low', () => {
+test('validateCandle accepts a structurally valid OHLCV row', () => {
   const now = Math.floor(Date.now() / 1000);
-  assert.equal(validateCandle({ time: now, open: 1, high: 0.5, low: 1, close: 1, volume: 0 }), null);
+  assert.deepEqual(validateCandle([now, 10, 13, 9, 11, 200]), {
+    time: now, open: 10, high: 13, low: 9, close: 11, volume: 200,
+  });
 });
 
-test('validateCandle rejects future timestamps more than 60s ahead', () => {
-  const future = Math.floor(Date.now() / 1000) + 120;
-  assert.equal(validateCandle({ time: future, open: 1, high: 1, low: 1, close: 1, volume: 0 }), null);
-});
-
-test('validateCandle rejects non-positive OHLC values', () => {
-  const now = Math.floor(Date.now() / 1000);
-  assert.equal(validateCandle({ time: now, open: 0, high: 1, low: 1, close: 1, volume: 0 }), null);
-  assert.equal(validateCandle({ time: now, open: -1, high: 1, low: 1, close: 1, volume: 0 }), null);
-  assert.equal(validateCandle({ time: now, open: 1, high: 1, low: 1, close: 0, volume: 0 }), null);
-});
-
-test('validateCandle rejects negative volume', () => {
-  const now = Math.floor(Date.now() / 1000);
-  assert.equal(validateCandle({ time: now, open: 1, high: 1, low: 1, close: 1, volume: -1 }), null);
-});
-
-test('validateCandle accepts a valid candle', () => {
-  const now = Math.floor(Date.now() / 1000);
-  const result = validateCandle({ time: now, open: 1.5, high: 2, low: 1, close: 1.8, volume: 1000 });
-  assert.ok(result !== null);
-  assert.equal(result.time, now);
-  assert.equal(result.close, 1.8);
-});
-
-// ---------------------------------------------------------------------------
-// deduplicateCandles
-// ---------------------------------------------------------------------------
-
-test('deduplicateCandles removes duplicate timestamps, keeping last occurrence', () => {
-  const now = Math.floor(Date.now() / 1000);
+test('deduplicateCandles keeps the last row for each timestamp and sorts ascending', () => {
   const candles = [
-    { time: now, open: 1, high: 1, low: 1, close: 1, volume: 0 },
-    { time: now, open: 2, high: 2, low: 2, close: 2, volume: 0 }, // same timestamp, should win
-    { time: now + 60, open: 3, high: 3, low: 3, close: 3, volume: 0 },
+    { time: 3, open: 2, high: 3, low: 1, close: 2, volume: 1 },
+    { time: 1, open: 1, high: 2, low: 1, close: 2, volume: 2 },
+    { time: 3, open: 2, high: 4, low: 2, close: 4, volume: 3 },
   ];
-  const result = deduplicateCandles(candles);
-  assert.equal(result.length, 2);
-  assert.equal(result[0].close, 2); // last occurrence at `now`
-  assert.equal(result[1].close, 3);
+  assert.deepEqual(deduplicateCandles(candles), [
+    { time: 1, open: 1, high: 2, low: 1, close: 2, volume: 2 },
+    { time: 3, open: 2, high: 4, low: 2, close: 4, volume: 3 },
+  ]);
 });
 
-test('deduplicateCandles caps output at 1000 candles', () => {
-  const now = Math.floor(Date.now() / 1000);
-  const candles = Array.from({ length: 1200 }, (_, i) => ({
-    time: now + i, open: 1, high: 1, low: 1, close: 1, volume: 0,
+test('deduplicateCandles enforces the documented maximum candle count', () => {
+  const candles = Array.from({ length: 1200 }, (_, index) => ({
+    time: index + 1, open: 1, high: 2, low: 1, close: 1, volume: 1,
   }));
-  const result = deduplicateCandles(candles);
-  assert.equal(result.length, 1000);
+  assert.equal(deduplicateCandles(candles).length, 1000);
 });
 
-// ---------------------------------------------------------------------------
-// checkStale
-// ---------------------------------------------------------------------------
-
-test('checkStale marks data older than 5 minutes as stale', () => {
+test('checkStale marks OHLCV data older than five minutes', () => {
   const now = Date.now();
-  const staleTimeSec = Math.floor((now - STALE_MS - 1000) / 1000);
-  const candles = [{ time: staleTimeSec, open: 1, high: 1, low: 1, close: 1, volume: 0 }];
-  const { stale } = checkStale(candles, now);
-  assert.ok(stale, 'Expected stale=true for old data');
+  const stale = [{ time: Math.floor((now - STALE_MS - 1000) / 1000), open: 1, high: 2, low: 1, close: 1, volume: 1 }];
+  assert.equal(checkStale(stale, now).stale, true);
 });
 
-test('checkStale does not mark recent data as stale', () => {
-  const now = Date.now();
-  const recentTimeSec = Math.floor(now / 1000) - 60; // 60s old
-  const candles = [{ time: recentTimeSec, open: 1, high: 1, low: 1, close: 1, volume: 0 }];
-  const { stale } = checkStale(candles, now);
-  assert.equal(stale, false);
-});
-
-// ---------------------------------------------------------------------------
-// JupiterProvider — unit tests with mocked fetch
-// ---------------------------------------------------------------------------
-
-test('JupiterProvider returns error result for invalid mint (no network call)', async () => {
-  const provider = new JupiterProvider();
-  const result = await provider.fetchCandles('INVALID_MINT!!!', 0, 0);
-  assert.equal(result.status, 'error');
-  assert.ok(result.error?.includes('Invalid mint'));
-  assert.equal(result.source, 'jupiter');
-});
-
-test('JupiterProvider returns error result when fetch throws (network error)', async () => {
-  const provider = new JupiterProvider();
-  // Override global fetch temporarily
+test('GeckoTerminalProvider rejects invalid mint without a network request', async () => {
+  const provider = new GeckoTerminalProvider();
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = async () => { throw new Error('Network failure'); };
+  globalThis.fetch = async () => { throw new Error('unexpected network call'); };
   try {
-    const result = await provider.fetchCandles('So11111111111111111111111111111111111111112', 0, 0);
+    const result = await provider.fetchCandles('not-a-mint', 0, Math.floor(Date.now() / 1000), 'minute', 5);
     assert.equal(result.status, 'error');
-    assert.ok(result.error?.includes('Network failure') || result.error?.includes('unavailable'));
+    assert.match(result.error ?? '', /invalid/i);
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
 
-test('JupiterProvider returns error result when response is malformed JSON', async () => {
-  const provider = new JupiterProvider();
+test('GeckoTerminalProvider selects the most liquid pool and returns real OHLCV rows', async () => {
+  const provider = new GeckoTerminalProvider();
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = async () => ({
-    ok: true,
-    status: 200,
-    json: async () => { throw new SyntaxError('Unexpected token'); },
-  });
-  try {
-    const result = await provider.fetchCandles('So11111111111111111111111111111111111111112', 0, 0);
-    assert.equal(result.status, 'error');
-    assert.ok(result.error !== undefined);
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-});
-
-test('JupiterProvider returns error result when price is non-positive', async () => {
-  const provider = new JupiterProvider();
-  const originalFetch = globalThis.fetch;
-  const mint = 'So11111111111111111111111111111111111111112';
-  globalThis.fetch = async () => ({
-    ok: true,
-    status: 200,
-    json: async () => ({ data: { [mint]: { price: 0 } } }),
-  });
-  try {
-    const result = await provider.fetchCandles(mint, 0, 0);
-    assert.equal(result.status, 'error');
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-});
-
-test('JupiterProvider returns ok result with a single candle for valid price', async () => {
-  const provider = new JupiterProvider();
-  const originalFetch = globalThis.fetch;
-  const mint = 'So11111111111111111111111111111111111111112';
-  globalThis.fetch = async () => ({
-    ok: true,
-    status: 200,
-    json: async () => ({ data: { [mint]: { price: 150.5 } } }),
-  });
-  try {
-    const result = await provider.fetchCandles(mint, 0, 0);
-    assert.equal(result.status, 'ok');
-    assert.ok(Array.isArray(result.data));
-    assert.equal(result.data?.length, 1);
-    assert.equal(result.data?.[0].close, 150.5);
-    assert.equal(result.data?.[0].high, result.data?.[0].low); // OHLC = close
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-});
-
-// ---------------------------------------------------------------------------
-// DexScreenerProvider — unit tests with mocked fetch
-// ---------------------------------------------------------------------------
-
-test('DexScreenerProvider returns error result for invalid mint (no network call)', async () => {
-  const provider = new DexScreenerProvider();
-  const result = await provider.fetchCandles('bad!mint', 0, 0);
-  assert.equal(result.status, 'error');
-  assert.ok(result.error?.includes('Invalid mint'));
-  assert.equal(result.source, 'dexscreener');
-});
-
-test('DexScreenerProvider returns error result when fetch throws (network error)', async () => {
-  const provider = new DexScreenerProvider();
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = async () => { throw new Error('Connection refused'); };
-  try {
-    const result = await provider.fetchCandles('So11111111111111111111111111111111111111112', 0, 0);
-    assert.equal(result.status, 'error');
-    assert.ok(result.error?.includes('Connection refused') || result.error?.includes('unavailable'));
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-});
-
-test('DexScreenerProvider returns error result for malformed JSON', async () => {
-  const provider = new DexScreenerProvider();
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = async () => ({
-    ok: true,
-    status: 200,
-    json: async () => { throw new SyntaxError('Bad JSON'); },
-  });
-  try {
-    const result = await provider.fetchCandles('So11111111111111111111111111111111111111112', 0, 0);
-    assert.equal(result.status, 'error');
-    assert.ok(result.error !== undefined);
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-});
-
-test('DexScreenerProvider returns stale result when data is older than 5 minutes', async () => {
-  const _provider = new DexScreenerProvider();
-  const originalFetch = globalThis.fetch;
-  const _mint = 'So11111111111111111111111111111111111111112';
-  // Mock DexScreener to return a valid pair with priceUsd
-  globalThis.fetch = async () => ({
-    ok: true,
-    status: 200,
-    json: async () => ({
-      pairs: [{ priceUsd: '42.0', txns: { h1: { buys: 10, sells: 5 } } }],
-    }),
-  });
-  try {
-    // The provider builds candle timestamps from fetchedAt (now).
-    // To simulate stale, we test checkStale directly with an old time.
-    const staleTimeSec = Math.floor((Date.now() - STALE_MS - 5000) / 1000);
-    const { stale } = checkStale(
-      [{ time: staleTimeSec, open: 1, high: 1, low: 1, close: 1, volume: 0 }],
-      Date.now(),
-    );
-    assert.ok(stale, 'Expected stale=true for data older than 5 minutes');
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-});
-
-test('DexScreenerProvider returns ok result with valid pairs data', async () => {
-  const provider = new DexScreenerProvider();
-  const originalFetch = globalThis.fetch;
-  const mint = 'So11111111111111111111111111111111111111112';
-  globalThis.fetch = async () => ({
-    ok: true,
-    status: 200,
-    json: async () => ({
-      pairs: [
-        { priceUsd: '99.5', txns: { h1: { buys: 100, sells: 80 } } },
-        { priceUsd: '99.3', txns: { h1: { buys: 50, sells: 30 } } },
-      ],
-    }),
-  });
-  try {
-    const result = await provider.fetchCandles(mint, 0, 0);
-    // Should be ok or stale (candle time = now, so not stale)
-    assert.ok(result.status === 'ok' || result.status === 'stale');
-    assert.ok(Array.isArray(result.data));
-    // Both candles have the same timestamp (now), so dedup keeps 1
-    assert.ok((result.data ?? []).length >= 1);
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-});
-
-// ---------------------------------------------------------------------------
-// fetchWithFallback
-// ---------------------------------------------------------------------------
-
-test('fetchWithFallback falls back to DexScreener when Jupiter is in outage', async () => {
-  const mint = 'So11111111111111111111111111111111111111112';
-  const originalFetch = globalThis.fetch;
-
-  // Jupiter will fail, DexScreener will succeed
-  let callCount = 0;
+  const urls = [];
   globalThis.fetch = async (url) => {
-    callCount++;
-    const urlStr = String(url);
-    if (urlStr.includes('jup.ag')) {
-      throw new Error('Jupiter network failure');
-    }
-    // DexScreener success
-    return {
-      ok: true,
-      status: 200,
-      json: async () => ({
-        pairs: [{ priceUsd: '75.0', txns: { h1: { buys: 20, sells: 10 } } }],
-      }),
-    };
+    urls.push(String(url));
+    if (String(url).includes('/tokens/')) return response(geckoPools());
+    return response(geckoCandles());
   };
-
   try {
-    const result = await fetchWithFallback(mint, 0, 0);
-    // Jupiter errors → falls back to DexScreener
-    assert.ok(result.status === 'ok' || result.status === 'stale', `Expected ok or stale, got ${result.status}`);
-    assert.equal(result.source, 'dexscreener');
-    assert.ok(Array.isArray(result.data));
-    assert.ok((result.data ?? []).length >= 1);
-    // Both providers were attempted (Jupiter first, then DexScreener)
-    assert.ok(callCount >= 2, `Expected at least 2 fetch calls, got ${callCount}`);
+    const now = Math.floor(Date.now() / 1000);
+    const result = await provider.fetchCandles(MINT, now - 3600, now, 'minute', 5);
+    assert.equal(result.status, 'ok');
+    assert.equal(result.source, 'geckoterminal');
+    assert.equal(result.poolAddress, LIQUID_POOL);
+    assert.equal(result.poolLiquidityUsd, 90000);
+    assert.equal(result.data?.length, 3);
+    assert.deepEqual(result.data?.[1], { time: now - 300, open: 11, high: 13, low: 10, close: 12, volume: 1500 });
+    assert.equal(urls.length, 2);
+    assert.match(urls[1], new RegExp(`/pools/${LIQUID_POOL}/ohlcv/minute\\?`));
+    assert.match(urls[1], /aggregate=5/);
+    assert.match(urls[1], /currency=usd/);
+    assert.match(urls[1], new RegExp(`token=${MINT}`));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('GeckoTerminalProvider refuses to guess a pool when liquidity is missing', async () => {
+  const provider = new GeckoTerminalProvider();
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => response({
+    data: [{ id: 'solana_pool', attributes: { address: LIQUID_POOL, reserve_in_usd: null } }],
+  });
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const result = await provider.fetchCandles(MINT, 0, now, 'minute', 5);
+    assert.equal(result.status, 'error');
+    assert.match(result.error ?? '', /positive USD liquidity/i);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('GeckoTerminalProvider does not convert a current price response into a fake candle', async () => {
+  const provider = new GeckoTerminalProvider();
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => response({ data: { [MINT]: { price: 123.45 } } });
+  try {
+    const result = await provider.fetchCandles(MINT, 0, Math.floor(Date.now() / 1000), 'minute', 5);
+    assert.equal(result.status, 'error');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('fetchWithFallback uses the one configured real OHLCV source only', async () => {
+  const provider = new GeckoTerminalProvider();
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls += 1;
+    return calls === 1 ? response(geckoPools()) : response(geckoCandles());
+  };
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const result = await fetchWithFallback(MINT, 0, now, 'minute', 1);
+    assert.equal(result.status, 'ok');
+    assert.equal(result.source, 'geckoterminal');
+    assert.equal(calls, 2);
   } finally {
     globalThis.fetch = originalFetch;
   }
