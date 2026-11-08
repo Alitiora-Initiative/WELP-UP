@@ -7,19 +7,19 @@ export const dynamic = 'force-dynamic';
 
 const launchStages = [
   {
-    label: 'Custom token mint',
-    detail: 'Creator-selected whole supply and 0–9 decimals are fixed when the mint is initialized.',
-    state: 'Program pending',
+    label: 'Branded token metadata',
+    detail: 'Every launch is named with the WELP UP suffix and served from welpup.fun metadata with the WELP logo.',
+    state: 'Live',
   },
   {
-    label: 'Bonding-curve sale',
-    detail: 'Purchases, allocations, quote accounting and the early-window wallet cap must be enforced on-chain.',
-    state: 'Not enabled',
+    label: 'Pump.fun bonding curve',
+    detail: 'The wallet signs a real pump.fun create transaction through PumpPortal; the mint address is the public CA.',
+    state: 'Live',
   },
   {
-    label: 'Raydium CPMM pool',
-    detail: 'Graduation is permissionless; pool creation and LP-token destruction must complete atomically.',
-    state: 'Integration pending',
+    label: 'WELP custom Anchor program',
+    detail: 'The separate WELP treasury/launch program remains undeployed and is not used by this launch rail.',
+    state: 'Separate track',
   },
 ];
 
@@ -31,14 +31,13 @@ export default function LaunchpadPage() {
           <p className="lp-kicker">WELP UP / SOLANA LAUNCHPAD</p>
           <h1>Launch on your terms<span>.</span></h1>
           <p>
-            Review token parameters and protocol release gates. Live discovery,
-            launch creation, purchases and graduation require a deployed,
-            verified mainnet launch program and on-chain indexer.
+            Launch a pump.fun bonding-curve coin with WELP UP branding. Your
+            wallet signs creation; the mint address is the public CA.
           </p>
         </div>
         <div className="lp-hero-state">
-          <strong>MAINNET PROGRAM STATUS</strong>
-          <small>Creator transactions are locked pending program deployment and review.</small>
+          <strong>PUMP.FUN LAUNCH RAIL</strong>
+          <small>Live through PumpPortal. The separate WELP Anchor program remains undeployed.</small>
         </div>
       </section>
 
