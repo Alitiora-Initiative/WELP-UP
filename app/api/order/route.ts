@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   if (referralAccount && !BASE58.test(referralAccount)) {
     return NextResponse.json({ error: 'Referral account is invalid.' }, { status: 400 });
   }
-  if (!Number.isInteger(referralFeeBps) || referralFeeBps < 50 || referralFeeBps > 255) {
+  if (referralAccount && (!Number.isInteger(referralFeeBps) || referralFeeBps < 50 || referralFeeBps > 255)) {
     return NextResponse.json({ error: 'Referral fee must be between 0.50% and 2.55%.' }, { status: 400 });
   }
   if (!BASE58.test(inputMint) || !BASE58.test(outputMint) || !BASE58.test(taker) || inputMint === outputMint) {
@@ -49,10 +49,14 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const order = await requestOrder({ inputMint, outputMint, amount, taker, slippageBps, referralAccount: referralAccount || undefined, referralFeeBps });
-    if (typeof order.transaction !== 'string' || typeof order.requestId !== 'string') {
-      return NextResponse.json({ error: 'Jupiter did not return a signable order.' }, { status: 502 });
-    }
+    const order = await requestOrder({
+      inputMint,
+      outputMint,
+      amount,
+      taker,
+      slippageBps,
+      ...(referralAccount ? { referralAccount, referralFeeBps } : {}),
+    });
     return NextResponse.json({ ...order, taker }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Order request failed.';

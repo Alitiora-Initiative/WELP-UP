@@ -4,7 +4,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowDownWideNarrow, ArrowUpRight, ChevronLeft, ChevronRight, CircleHelp, LoaderCircle, RefreshCw, Search, Star } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowDownWideNarrow, ArrowUpRight, ChevronLeft, ChevronRight, CircleHelp, Download, LoaderCircle, RefreshCw, Search, Star } from 'lucide-react';
 import { ChartPanel } from '@/components/ChartPanel';
 
 type Asset = {
@@ -18,8 +19,14 @@ const compact = (value: number) => value >= 1e9 ? '$' + (value / 1e9).toFixed(1)
 const price = (value: number) => value >= 1000 ? '$' + value.toLocaleString('en-US', { maximumFractionDigits: 2 }) : value >= 1 ? '$' + value.toFixed(2) : value >= .01 ? '$' + value.toFixed(4) : '$' + value.toPrecision(4);
 const short = (value: string) => value.slice(0, 5) + '…' + value.slice(-5);
 const EMPTY_ASSETS: Asset[] = [];
+function csvCell(value: string | number | boolean) {
+  const text = String(value);
+  const safe = typeof value === 'string' && /^[\t\r ]*[=+\-@]/.test(text) ? `'${text}` : text;
+  return `"${safe.replace(/"/g, '""')}"`;
+}
 
 export function MarketBoard() {
+  const router = useRouter();
   const [feed, setFeed] = useState<Feed | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -67,6 +74,9 @@ export function MarketBoard() {
     });
     return filteredRows.sort((a, b) => sort === 'liquidity' ? b.liquidityUsd - a.liquidityUsd : sort === 'volume' ? b.volume24hUsd - a.volume24hUsd : b.score - a.score);
   }, [assets, query, filter, sort]);
+  const selectedAssets = assets.filter((asset) => selected.includes(asset.mint));
+  const exportRows = selected.length ? selectedAssets : filtered;
+  const canTradeSelected = selected.length === 1 && selectedAssets[0]?.eligible === true;
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const rows = filtered.slice((page - 1) * pageSize, page * pageSize);
 
@@ -76,6 +86,25 @@ export function MarketBoard() {
       try { localStorage.setItem('welp-watchlist', JSON.stringify(next)); } catch {}
       return next;
     });
+  }
+  function exportCsv() {
+    const columns = ['Symbol', 'Name', 'Mint', 'Price USD', '24h Change %', 'Liquidity USD', '24h Volume USD', 'Organic Score', 'Rule Score', 'State', 'Eligible', 'Blockers', 'Warnings'];
+    const lines = [
+      columns.map(csvCell).join(','),
+      ...exportRows.map((asset) => [
+        asset.symbol, asset.name, asset.mint, asset.priceUsd, asset.priceChange24h, asset.liquidityUsd,
+        asset.volume24hUsd, asset.organicScore, asset.score, asset.state, asset.eligible ? 'yes' : 'no',
+        asset.blockers.join('; '), asset.warnings.join('; '),
+      ].map(csvCell).join(',')),
+    ];
+    const blobUrl = URL.createObjectURL(new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = `welp-market-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 0);
   }
   const updated = feed?.updatedAt ? new Date(feed.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
   const tabs: Array<{ key: Filter; value: number }> = [
@@ -106,7 +135,11 @@ export function MarketBoard() {
     <section className="market-board">
       <div className="market-board-heading"><div><h2>market board</h2><span>{feed ? feed.total + ' assets' : '—'} · {pageSize} per page · {updated}</span></div></div>
       <div className="market-tabs">{tabs.map((tab) => <button key={tab.key} className={filter === tab.key ? 'selected' : ''} onClick={() => { setFilter(tab.key); setPage(1); }}><span>{tab.key === 'Eligible' ? <i className="tab-dot green" /> : tab.key === 'Blocked' ? <i className="tab-dot red" /> : tab.key === 'Score 90+' ? <i className="tab-dot blue" /> : tab.key === 'Verified' ? <i className="tab-dot violet" /> : null}{tab.key}</span><b>{tab.value}</b></button>)}</div>
-      <div className="selection-bar"><span>{selected.length} selected</span><button className="text-action" disabled={!selected.length} onClick={() => setSelected([])}>Clear</button></div>
+      <div className="selection-bar"><span>{selected.length} selected</span><div className="selection-actions">
+        <button className="outline-button small" disabled={!exportRows.length} onClick={exportCsv}><Download size={13} /> Export CSV ({exportRows.length})</button>
+        <button className="outline-button small" disabled={!canTradeSelected} title={!canTradeSelected ? 'Select exactly one eligible token.' : undefined} onClick={() => { const asset = selectedAssets[0]; if (asset?.eligible) router.push('/swap?mint=' + encodeURIComponent(asset.mint)); }}>Trade selected</button>
+        <button className="text-action" disabled={!selected.length} onClick={() => setSelected([])}>Clear</button>
+      </div></div>
       <div className="market-table-wrap"><table className="market-table"><thead><tr>
         <th><input aria-label="Select all rows on this page" type="checkbox" checked={rows.length > 0 && rows.every((row) => selected.includes(row.mint))} onChange={(event) => setSelected((current) => event.target.checked ? Array.from(new Set([...current, ...rows.map((row) => row.mint)])) : current.filter((id) => !rows.some((row) => row.mint === id)))} /></th>
         <th>ASSET</th><th>PRICE</th><th>24H</th><th>LIQUIDITY</th><th>24H VOL</th><th>ORGANIC</th><th><button className="sort-heading" onClick={() => setSort('score')}>SCORE <ArrowDownWideNarrow size={12} /></button></th><th>STATE</th><th>CHART</th><th />
@@ -118,7 +151,7 @@ export function MarketBoard() {
           <td className="numeric">{compact(asset.liquidityUsd)}</td><td className="numeric">{compact(asset.volume24hUsd)}</td><td className="numeric">{asset.organicScore}</td><td className="score-cell">{asset.score}</td>
           <td><span className={'asset-state state-' + asset.state.toLowerCase()}>{asset.state}</span><small className="state-reason">{asset.blockers[0] || asset.warnings[0] || ''}</small></td>
           <td><button type="button" className="market-chart-button" aria-pressed={chartMint === asset.mint} onClick={() => setChartMint(asset.mint)}>Chart</button></td>
-          <td><Link className="outline-button" href={'/swap?mint=' + encodeURIComponent(asset.mint)}>Buy</Link></td>
+          <td><Link className="outline-button" href={'/swap?mint=' + encodeURIComponent(asset.mint)}>{asset.eligible ? 'Buy' : 'Review'}</Link></td>
           <td><button className={'watch-button ' + (watchlist.includes(asset.mint) ? 'is-watched' : '')} aria-label={watchlist.includes(asset.mint) ? 'Remove from watchlist' : 'Add to watchlist'} onClick={() => toggleWatch(asset.mint)}><Star size={15} fill={watchlist.includes(asset.mint) ? 'currentColor' : 'none'} /></button></td>
         </tr>)}
         {!rows.length ? <tr><td colSpan={11} className="empty-table">{loading ? <><LoaderCircle className="spin" size={18} /> Loading Jupiter assets…</> : error ? 'Waiting for the feed to recover.' : 'No assets match this search or filter.'}</td></tr> : null}

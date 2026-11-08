@@ -19,19 +19,25 @@ export async function requestOrder(params: {
   referralFeeBps?: number;
 }) {
   const url = new URL(`${SWAP_BASE}/order`);
-  for (const [key, value] of Object.entries(params)) {
-    if (value === undefined) continue;
-    url.searchParams.set(key, String(value));
-  }
+  url.searchParams.set('inputMint', params.inputMint);
+  url.searchParams.set('outputMint', params.outputMint);
+  url.searchParams.set('amount', params.amount);
+  url.searchParams.set('taker', params.taker);
+  url.searchParams.set('slippageBps', String(params.slippageBps));
   if (params.referralAccount) {
     url.searchParams.set('referralAccount', params.referralAccount);
-    if (params.referralFeeBps) url.searchParams.set('referralFee', String(params.referralFeeBps));
+    if (params.referralFeeBps !== undefined) url.searchParams.set('referralFee', String(params.referralFeeBps));
   }
   const response = await fetch(url, { headers: headers(), cache: 'no-store', signal: AbortSignal.timeout(20_000) });
   const data = await response.json().catch(() => null);
-  if (!response.ok || !data || data.error || data.errorCode || data.errorMessage) {
-    const message = typeof data?.errorMessage === 'string' ? data.errorMessage : 'Jupiter could not create this order.';
+  const errorMessage = typeof data?.errorMessage === 'string' ? data.errorMessage.trim() : '';
+  const hasErrorCode = data?.errorCode !== undefined && data.errorCode !== null && Number(data.errorCode) !== 0;
+  if (!response.ok || !data || data.error || hasErrorCode || errorMessage) {
+    const message = errorMessage || 'Jupiter could not create this order.';
     throw new Error(message);
+  }
+  if (typeof data.transaction !== 'string' || !data.transaction.trim() || typeof data.requestId !== 'string' || !data.requestId.trim()) {
+    throw new Error('Jupiter returned a quote without a signable transaction.');
   }
   return data as Record<string, unknown>;
 }

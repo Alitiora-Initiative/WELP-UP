@@ -122,6 +122,7 @@ button { cursor: pointer; }
 .tab-dot { width: 7px; height: 7px; display: inline-block; border-radius: 50%; }
 .tab-dot.green { background: var(--terminal-accent); }.tab-dot.red { background: var(--terminal-red); }.tab-dot.blue { background: var(--terminal-blue); }.tab-dot.violet { background: #a397f7; }
 .selection-bar { display: flex; align-items: center; gap: 17px; padding: 8px 24px 12px; color: #8c9684; font-size: 9px; }
+.selection-actions { display: flex; align-items: center; gap: 7px; margin-left: auto; }
 .market-table-wrap { width: 100%; overflow-x: auto; border-top: 1px solid var(--terminal-border-soft); }
 .market-table { width: 100%; border-collapse: collapse; min-width: 950px; text-align: left; }
 .market-table thead { background: #171b14; }
@@ -310,6 +311,8 @@ button { cursor: pointer; }
   .market-tabs button > span { gap: 5px; }
   .market-board-heading { align-items: flex-start; flex-direction: column; }
   .selection-bar { gap: 11px; padding-left: 13px; padding-right: 13px; }
+  .selection-bar { flex-wrap: wrap; }
+  .selection-actions { flex-wrap: wrap; margin-left: 0; }
   .rules-explainer { grid-template-columns: 1fr auto; }
   .rules-explainer > div { grid-column: 1; }
   .rules-explainer button { grid-column: 2; grid-row: 1 / span 2; }

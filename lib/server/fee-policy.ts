@@ -24,7 +24,7 @@ export const WELP_FEE_POLICY = Object.freeze({
     Number.isInteger(Number(process.env.WELP_REFERRAL_FEE_BPS ?? 50)) &&
     Number(process.env.WELP_REFERRAL_FEE_BPS ?? 50) >= 50 &&
     Number(process.env.WELP_REFERRAL_FEE_BPS ?? 50) <= 255,
-  collectionDisabledReason: 'Trading remains disabled until a valid server-owned Jupiter referral account and 0.50%–2.55% fee are configured.',
+  collectionDisabledReason: 'No WELP referral fee is configured; wallet-approved swaps remain available, though Jupiter or route providers may still charge fees.',
 });
 
 export function splitProtocolSwapFee(grossInputBaseUnits: bigint) {

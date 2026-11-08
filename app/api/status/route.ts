@@ -88,9 +88,9 @@ export async function GET() {
     Promise.resolve({ name: 'Autonomous agents', state: 'Not enabled', detail: 'No production executor or unattended trading runtime is configured.' }),
     Promise.resolve({
       name: 'Fee routing',
-      state: WELP_FEE_POLICY.collectionEnabled ? 'Jupiter referral configured' : 'Not configured; trading disabled',
+      state: WELP_FEE_POLICY.collectionEnabled ? 'WELP referral fee configured' : 'No WELP referral fee',
       detail: WELP_FEE_POLICY.collectionEnabled
-        ? `Jupiter referral fee is configured at ${(WELP_FEE_POLICY.referralFeeBps / 100).toFixed(2)}%; this is not WELP-program fee enforcement.`
+        ? `A Jupiter referral fee is configured at ${(WELP_FEE_POLICY.referralFeeBps / 100).toFixed(2)}%; this is not WELP-program fee enforcement.`
         : WELP_FEE_POLICY.collectionDisabledReason,
     }),
   ]);
