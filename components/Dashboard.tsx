@@ -370,7 +370,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
 
           <div className="mainnet-banner" role="note">
             <ShieldCheck size={19} />
-            <div><strong>Wallet-approved swaps are live.</strong><span>Live market data is flowing and the disclosed 0.50% gross swap fee is enabled. You approve every swap in your own wallet; no unattended trading is active.</span></div>
+            <div><strong>Wallet-approved swaps are live.</strong><span>Live market data is flowing and swaps route through Jupiter with no WELP fee while the referral account is unconfigured. You approve every swap in your own wallet; no unattended trading is active.</span></div>
             <a href="https://docs.jup.ag/user-docs/trade/swap" target="_blank" rel="noreferrer" aria-label="Read swap documentation"><CircleHelp size={17} /></a>
           </div>
 

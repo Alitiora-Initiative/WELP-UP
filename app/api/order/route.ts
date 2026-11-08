@@ -7,9 +7,7 @@ export const runtime = 'nodejs';
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
 export async function POST(request: NextRequest) {
-  if (!WELP_FEE_POLICY.collectionEnabled) {
-    return NextResponse.json({ error: 'Trading is temporarily unavailable until the disclosed WELP fee is included atomically in the wallet-approved transaction.' }, { status: 503 });
-  }
+  // Swaps run without a WELP fee until a server-owned Jupiter referral account is configured.
   let body: Record<string, unknown>;
   try {
     body = await request.json();
