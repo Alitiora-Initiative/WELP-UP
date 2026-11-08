@@ -32,8 +32,13 @@ test('pre-commit hook runs the repository-wide quality sweep', () => {
 });
 
 test('Git hook is executable and the hook test runs in CI', () => {
-  assert.notEqual(statSync(new URL('../.githooks/pre-commit', import.meta.url)).mode & 0o111, 0);
-  assert.notEqual(statSync(new URL('../scripts/pre-commit-checks.sh', import.meta.url)).mode & 0o111, 0);
+  if (process.platform !== 'win32') {
+    assert.notEqual(statSync(new URL('../.githooks/pre-commit', import.meta.url)).mode & 0o111, 0);
+    assert.notEqual(statSync(new URL('../scripts/pre-commit-checks.sh', import.meta.url)).mode & 0o111, 0);
+  } else {
+    assert.match(hook, /^#!\\/usr\\/bin\\/env sh/);
+    assert.match(checks, /^#!\\/usr\\/bin\\/env sh/);
+  }
   assert.equal(packageJson.scripts['test:git-hooks'], 'node --experimental-strip-types --test tests/git-hooks.test.mjs');
   assert.match(ciWorkflow, /npm run test:git-hooks/);
 });
