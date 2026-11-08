@@ -88,10 +88,10 @@ export async function GET() {
     Promise.resolve({ name: 'Autonomous agents', state: 'Not enabled', detail: 'No production executor or unattended trading runtime is configured.' }),
     Promise.resolve({
       name: 'Fee routing',
-      state: process.env.WELP_REFERRAL_ACCOUNT ? 'Jupiter referral configured' : 'Not configured',
-      detail: process.env.WELP_REFERRAL_ACCOUNT
-        ? `Jupiter referral fee is configured at ${(WELP_FEE_POLICY.swapFeeBps / 100).toFixed(2)}%; this is not atomic WELP on-chain fee enforcement.`
-        : 'No Jupiter referral account is configured; no WELP swap fee is collected.',
+      state: WELP_FEE_POLICY.collectionEnabled ? 'Jupiter referral configured' : 'Not configured; trading disabled',
+      detail: WELP_FEE_POLICY.collectionEnabled
+        ? `Jupiter referral fee is configured at ${(WELP_FEE_POLICY.referralFeeBps / 100).toFixed(2)}%; this is not WELP-program fee enforcement.`
+        : WELP_FEE_POLICY.collectionDisabledReason,
     }),
   ]);
   const overall = checks.some((item) => item.state === 'Unavailable')

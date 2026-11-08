@@ -22,8 +22,9 @@ export async function POST(request: NextRequest) {
   const taker = typeof body.taker === 'string' ? body.taker : '';
   const amount = typeof body.amount === 'string' ? body.amount : '';
   const slippageBps = Number(body.slippageBps ?? 100);
-  const referralAccount = typeof body.referralAccount === 'string' ? body.referralAccount : process.env.WELP_REFERRAL_ACCOUNT || '';
-  const referralFeeBps = Number(body.referralFeeBps ?? process.env.WELP_REFERRAL_FEE_BPS ?? WELP_FEE_POLICY.swapFeeBps);
+  // Fee destination and rate are server-owned; never accept browser overrides.
+  const referralAccount = WELP_FEE_POLICY.referralAccount;
+  const referralFeeBps = WELP_FEE_POLICY.referralFeeBps;
   if (referralAccount && !BASE58.test(referralAccount)) {
     return NextResponse.json({ error: 'Referral account is invalid.' }, { status: 400 });
   }

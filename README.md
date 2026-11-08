@@ -5,7 +5,7 @@ WELP UP is a Solana market research and wallet-signed trading interface at [welp
 ## Current feature boundaries
 
 - **Markets and signals:** read live upstream Solana market data. Feed or RPC outages are reported as unavailable; the app does not fabricate prices, balances, listings or volume.
-- **Trading:** user reviews and signs each supported transaction in their wallet. Automated trading and custody are not enabled. The fee-enforced swap flow must remain disabled unless an actual on-chain instruction atomically includes the disclosed fee.
+- **Trading:** user reviews and signs supported transactions in their wallet. Automated trading and custody are not enabled. Jupiter swaps fail closed unless a valid server-owned Jupiter referral destination and fee are configured. This referral path is separate from WELP's undeployed on-chain treasury program and must not be described as treasury revenue until its destination and settlement are verified.
 - **Pump launch:** the launch route prepares a PumpPortal `create` transaction targeting the Pump bonding-curve pool; the connected wallet must sign it, and the site submits the signed transaction to Solana. A successful transaction's mint is its Solana contract address (CA). This does not guarantee listing or indexing by third-party platforms.
 - **Custom supply and decimals:** UI or program source is not proof of mainnet support. Keep this feature disabled until the program is built, reviewed, deployed, initialized and independently verified on mainnet.
 - **Development fund:** the homepage shows the confirmed SOL balance of the public development wallet against a 4 SOL goal. It links to the account explorer and reports unavailable when RPC verification fails. Donations are voluntary, go directly to that address and are not controlled by WELP software. The goal does not trigger an unattended transaction or guarantee deployment.
@@ -15,7 +15,7 @@ WELP UP is a Solana market research and wallet-signed trading interface at [welp
 
 WELP does not ask for seed phrases. Every supported asset transfer requires the user's wallet signature. Never place private keys in source, issues, chat, browser storage or deployment logs. A deployment key must be protected outside the application, funded only for a reviewed deployment, and used only after reproducible builds, tests, security review and verification of program ID, binary, upgrade authority, treasury and fee destinations.
 
-The current Anchor source and sample program ID are not evidence of a deployed or audited mainnet program. No user funds should be sent to a program/PDA until its deployed code and permissions have been independently verified. The 0.50% fee policy only applies to swaps that actually execute through a WELP-controlled on-chain instruction; it cannot tax direct trades on Pump, Jupiter or other DEXs. A 14-day 60/40 allocation is a policy design until implemented and verified on-chain.
+The current Anchor source and sample program ID are not evidence of a deployed or audited mainnet program. No user funds should be sent to a program/PDA until its deployed code and permissions have been independently verified. The 0.50% policy does not tax direct trades on Pump, Jupiter or other DEXs unless the actual route carries a verifiable WELP fee transfer. A 14-day 60/40 allocation is a policy design until implemented and verified on-chain.
 
 ## Local development
 
