@@ -44,9 +44,11 @@ export function LaunchpadCreatorStudio() {
             maxLength={32}
             onChange={(event) => setName(event.target.value)}
             placeholder="Enter token name"
+            aria-invalid={name.length > 0 && !nameValid}
+            aria-describedby="lp-name-help"
             value={name}
           />
-          <small>1–32 characters.</small>
+          <small id="lp-name-help">1–32 characters.</small>
         </label>
 
         <label className="lp-field">
@@ -56,9 +58,11 @@ export function LaunchpadCreatorStudio() {
             maxLength={10}
             onChange={(event) => setSymbol(event.target.value.toUpperCase())}
             placeholder="Enter ticker"
+            aria-invalid={symbol.length > 0 && !symbolValid}
+            aria-describedby="lp-symbol-help"
             value={symbol}
           />
-          <small>1–10 letters or numbers.</small>
+          <small id="lp-symbol-help">1–10 letters or numbers.</small>
         </label>
 
         <label className="lp-field lp-supply-field">
@@ -68,9 +72,11 @@ export function LaunchpadCreatorStudio() {
             maxLength={10}
             onChange={(event) => setSupply(event.target.value)}
             placeholder="Enter whole-token supply"
+            aria-invalid={supply.trim().length > 0 && decimals !== null && !validation.ok}
+            aria-describedby="lp-supply-help"
             value={supply}
           />
-          <small>
+          <small id="lp-supply-help">
             Supply range: 0–1,000,000,000 whole tokens. Zero can be reviewed but cannot be launched.
           </small>
         </label>
@@ -131,7 +137,7 @@ export function LaunchpadCreatorStudio() {
             </div>
           </div>
         ) : (
-          <p className="lp-validation-message">{validation.error}</p>
+          <p className="lp-validation-message" role="alert">{validation.error}</p>
         )}
 
         {validation.ok && !validation.launchable ? (
@@ -165,7 +171,7 @@ export function LaunchpadCreatorStudio() {
       </div>
 
       {(name.length > 0 && !nameValid) || (symbol.length > 0 && !symbolValid) ? (
-        <p className="lp-validation-message">
+        <p className="lp-validation-message" role="alert">
           Enter a valid token name (1–32 characters) and ticker (1–10 letters or numbers).
         </p>
       ) : null}
