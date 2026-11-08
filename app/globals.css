@@ -938,8 +938,8 @@ h2 { margin: 0; font: 600 17px var(--display); letter-spacing: -.02em; }
 /* ===== Light mode overrides (.light on <html>) ===== */
 .light {
   color-scheme: light;
-  --bg: #f4f6f4;
-  --sidebar: #eef0ee;
+  --bg: #ffffff;
+  --sidebar: #ffffff;
   --surface: #ffffff;
   --surface-raised: #f9faf9;
   --border: #d4dbd5;

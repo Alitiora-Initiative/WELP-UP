@@ -40,7 +40,7 @@ function readTheme(): Theme {
     const v = localStorage.getItem(THEME_KEY) as Theme | null;
     if (v && (['system', 'light', 'dark'] as string[]).includes(v)) return v;
   } catch { /* ignore */ }
-  return 'system';
+  return 'dark';
 }
 
 function readScale(): TextScale {

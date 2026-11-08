@@ -1,6 +1,8 @@
 # WELP UP
 
-WELP UP is a Solana market research and wallet-signed trading interface at [welpup.fun](https://welpup.fun). It provides live market reads, rule-based signals, wallet-derived portfolio data, market analysis and a token launch interface.
+[![License: MIT](https://img.shields.io/badge/License-MIT-22c55e)](LICENSE) [![Solana: Mainnet](https://img.shields.io/badge/Solana-Mainnet-111111)](https://welpup.fun)
+
+WELP UP is a Solana market research and wallet-signed trading interface at [welpup.fun](https://welpup.fun). Fork the repo, open a pull request, and send updates. Reviewers merge changes that keep live data honest and wallet signing in the user's wallet. It provides live market reads, rule-based signals, wallet-derived portfolio data, market analysis and a token launch interface.
 
 ## Current feature boundaries
 

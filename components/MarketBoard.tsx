@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowDownWideNarrow, ArrowUpRight, ChevronLeft, ChevronRight, CircleHelp, Download, LoaderCircle, RefreshCw, Search, Star } from 'lucide-react';
+import { ArrowDownWideNarrow, ArrowUpRight, ChevronLeft, ChevronRight, CircleHelp, LoaderCircle, RefreshCw, Search, Star } from 'lucide-react';
 import { ChartPanel } from '@/components/ChartPanel';
 
 type Asset = {
@@ -77,12 +77,6 @@ export function MarketBoard() {
       return next;
     });
   }
-  function exportRows(items: Asset[], filename: string) {
-    const fields = ['symbol','name','mint','price_usd','change_24h_pct','liquidity_usd','volume_24h_usd','holders','organic_score','rule_score','state','verified','blockers','warnings'];
-    const lines = [fields.join(','), ...items.map((a) => [a.symbol,a.name,a.mint,a.priceUsd,a.priceChange24h,a.liquidityUsd,a.volume24hUsd,a.holders,a.organicScore,a.score,a.state,a.verified,a.blockers.join('; '),a.warnings.join('; ')].map((v) => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(','))];
-    const url = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' }));
-    const anchor = document.createElement('a'); anchor.href = url; anchor.download = filename; anchor.click(); URL.revokeObjectURL(url);
-  }
   const updated = feed?.updatedAt ? new Date(feed.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
   const tabs: Array<{ key: Filter; value: number }> = [
     { key: 'All', value: feed?.total ?? 0 }, { key: 'Eligible', value: feed?.eligible ?? 0 },
@@ -110,9 +104,9 @@ export function MarketBoard() {
     {rulesOpen ? <div className="rules-explainer"><div><strong>Hard rules</strong><span>Active freeze authority · liquidity below $100k · 24h volume below $100k · top holders above 60%.</span></div><div><strong>Warnings</strong><span>Liquidity below $250k · 24h drawdown beyond −25% · concentrated holders · incomplete feed data.</span></div><button onClick={() => setRulesOpen(false)} aria-label="Close explanation">×</button></div> : null}
 
     <section className="market-board">
-      <div className="market-board-heading"><div><h2>market board</h2><span>{feed ? feed.total + ' assets' : '—'} · {pageSize} per page · {updated}</span></div><button className="outline-button" onClick={() => exportRows(filtered, 'welp-market-board.csv')} disabled={!filtered.length}><Download size={14} /> Export CSV</button></div>
+      <div className="market-board-heading"><div><h2>market board</h2><span>{feed ? feed.total + ' assets' : '—'} · {pageSize} per page · {updated}</span></div></div>
       <div className="market-tabs">{tabs.map((tab) => <button key={tab.key} className={filter === tab.key ? 'selected' : ''} onClick={() => { setFilter(tab.key); setPage(1); }}><span>{tab.key === 'Eligible' ? <i className="tab-dot green" /> : tab.key === 'Blocked' ? <i className="tab-dot red" /> : tab.key === 'Score 90+' ? <i className="tab-dot blue" /> : tab.key === 'Verified' ? <i className="tab-dot violet" /> : null}{tab.key}</span><b>{tab.value}</b></button>)}</div>
-      <div className="selection-bar"><span>{selected.length} selected</span><button className="text-action" disabled={!selected.length} onClick={() => setSelected([])}>Clear</button><button className="text-action" disabled={!selected.length} onClick={() => exportRows(assets.filter((asset) => selected.includes(asset.mint)), 'welp-selected-assets.csv')}>Export selected <ArrowUpRight size={13} /></button></div>
+      <div className="selection-bar"><span>{selected.length} selected</span><button className="text-action" disabled={!selected.length} onClick={() => setSelected([])}>Clear</button></div>
       <div className="market-table-wrap"><table className="market-table"><thead><tr>
         <th><input aria-label="Select all rows on this page" type="checkbox" checked={rows.length > 0 && rows.every((row) => selected.includes(row.mint))} onChange={(event) => setSelected((current) => event.target.checked ? Array.from(new Set([...current, ...rows.map((row) => row.mint)])) : current.filter((id) => !rows.some((row) => row.mint === id)))} /></th>
         <th>ASSET</th><th>PRICE</th><th>24H</th><th>LIQUIDITY</th><th>24H VOL</th><th>ORGANIC</th><th><button className="sort-heading" onClick={() => setSort('score')}>SCORE <ArrowDownWideNarrow size={12} /></button></th><th>STATE</th><th>CHART</th><th />
@@ -124,6 +118,7 @@ export function MarketBoard() {
           <td className="numeric">{compact(asset.liquidityUsd)}</td><td className="numeric">{compact(asset.volume24hUsd)}</td><td className="numeric">{asset.organicScore}</td><td className="score-cell">{asset.score}</td>
           <td><span className={'asset-state state-' + asset.state.toLowerCase()}>{asset.state}</span><small className="state-reason">{asset.blockers[0] || asset.warnings[0] || ''}</small></td>
           <td><button type="button" className="market-chart-button" aria-pressed={chartMint === asset.mint} onClick={() => setChartMint(asset.mint)}>Chart</button></td>
+          <td><Link className="outline-button" href={'/swap?mint=' + encodeURIComponent(asset.mint)}>Buy</Link></td>
           <td><button className={'watch-button ' + (watchlist.includes(asset.mint) ? 'is-watched' : '')} aria-label={watchlist.includes(asset.mint) ? 'Remove from watchlist' : 'Add to watchlist'} onClick={() => toggleWatch(asset.mint)}><Star size={15} fill={watchlist.includes(asset.mint) ? 'currentColor' : 'none'} /></button></td>
         </tr>)}
         {!rows.length ? <tr><td colSpan={11} className="empty-table">{loading ? <><LoaderCircle className="spin" size={18} /> Loading Jupiter assets…</> : error ? 'Waiting for the feed to recover.' : 'No assets match this search or filter.'}</td></tr> : null}
