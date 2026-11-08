@@ -161,7 +161,6 @@ test('GeckoTerminalProvider does not convert a current price response into a fak
 });
 
 test('fetchWithFallback uses the one configured real OHLCV source only', async () => {
-  const provider = new GeckoTerminalProvider();
   const originalFetch = globalThis.fetch;
   let calls = 0;
   globalThis.fetch = async () => {
