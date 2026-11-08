@@ -72,6 +72,10 @@ for manifest in "$@"; do
   # remains compatible with Solana 1.18.26's bundled Rust 1.75 toolchain.
   pin_if_present "$manifest" jobserver 0.1.35 0.1.34
 
+  # Anchor 0.30.1 IDL generation requires Span::source_file(), removed in
+  # proc-macro2 1.0.95. Keep the IDL builder on the last compatible release.
+  pin_if_present "$manifest" proc-macro2 1.0.107 1.0.94
+
   # Newer crypto/TOML transitive releases also exceed the bundled Cargo.
   pin_if_present "$manifest" base64ct 1.8.3 1.7.3
   # Keep only the incompatible indexmap 2.x release constrained; indexmap 1.x
@@ -88,6 +92,7 @@ for manifest in "$@"; do
     "zeroize_derive:1.5.0" \
     "unicode-segmentation:1.13.3" \
     "jobserver:0.1.35" \
+    "proc-macro2:1.0.107" \
     "indexmap:2.14.2" \
     "proc-macro-crate:3.5.0" \
     "borsh:1.8.1" \

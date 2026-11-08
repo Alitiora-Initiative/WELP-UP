@@ -189,6 +189,8 @@ test('Anchor SBF build preserves Cargo 1.75-compatible lockfiles', () => {
   assert.ok(compatibilityScript.includes('pin_if_present "$manifest" unicode-segmentation 1.13.3 1.12.0'));
   assert.ok(compatibilityScript.includes('pin_if_present "$manifest" jobserver 0.1.35 0.1.34'));
   assert.ok(compatibilityScript.includes('"jobserver:0.1.35"'));
+  assert.match(compatibilityScript, /pin_if_present "\\$manifest" proc-macro2 1\\.0\\.107 1\\.0\\.94/);
+  assert.ok(compatibilityScript.includes('"proc-macro2:1.0.107"'));
   assert.match(compatibilityScript, /pin_if_present "\$manifest" indexmap 2\.14\.2 2\.11\.4/);
   assert.match(compatibilityScript, /package_version_exists/);
   assert.ok(workflow.includes('bash scripts/pin-sbf-compatible-locks.sh'));
