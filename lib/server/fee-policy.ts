@@ -17,9 +17,9 @@ export const WELP_FEE_POLICY = Object.freeze({
   epochDeveloperReleaseBps: 6_000,
   epochPermanentReserveBps: 4_000,
   treasuryPdaSeed: 'treasury-v1',
-  collectionEnabled: false,
+  collectionEnabled: true,
   collectionDisabledReason:
-    'The mainnet launchpad program has not been deployed and verified with atomic 0.50% swap-fee enforcement.',
+    'Swap collection is enabled with the disclosed 0.50% gross swap fee policy.',
 });
 
 export function splitProtocolSwapFee(grossInputBaseUnits: bigint) {

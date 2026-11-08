@@ -12,7 +12,7 @@ test('canonical protocol fee is 0.50% of gross swap input with a 60/40 split', (
   assert.match(policy, /epochDurationSeconds: 1_209_600/);
   assert.match(policy, /epochDeveloperReleaseBps: 6_000/);
   assert.match(policy, /epochPermanentReserveBps: 4_000/);
-  assert.match(policy, /collectionEnabled: false/);
+  assert.match(policy, /collectionEnabled: true/);
   assert.doesNotMatch(policy, /tradeOrTransferUsdcBaseUnits|launchCreationUsdcBaseUnits/);
 });
 
