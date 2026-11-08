@@ -136,8 +136,7 @@ export class GeckoTerminalProvider implements ChartProvider {
 
       const poolResponse = await fetch(poolUrl, {
         headers: { accept: GECKO_ACCEPT },
-        cache: 'force-cache',
-        next: { revalidate: 60 },
+        cache: 'no-store',
         signal: AbortSignal.timeout(10_000),
       });
       if (!poolResponse.ok) {
@@ -176,8 +175,7 @@ export class GeckoTerminalProvider implements ChartProvider {
 
       const candleResponse = await fetch(ohlcvUrl, {
         headers: { accept: GECKO_ACCEPT },
-        cache: 'force-cache',
-        next: { revalidate: 60 },
+        cache: 'no-store',
         signal: AbortSignal.timeout(10_000),
       });
       if (!candleResponse.ok) {
