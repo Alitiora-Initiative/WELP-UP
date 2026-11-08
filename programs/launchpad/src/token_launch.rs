@@ -12,8 +12,8 @@
 
 use crate::LaunchToken;
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::program_pack::Pack as TokenPack;
 use anchor_lang::solana_program::program::invoke_signed;
+use anchor_lang::solana_program::program_pack::Pack as TokenPack;
 
 pub const LAUNCH_SERVICE_FEE_LAMPORTS: u64 = 2_500_000;
 pub const MAX_WHOLE_TOKEN_SUPPLY: u64 = 1_000_000_000;
@@ -38,7 +38,10 @@ pub fn launch_token_impl(ctx: Context<LaunchToken>, params: TokenLaunchParams) -
         uri,
     } = &params;
 
-    require!(*decimals <= MAX_TOKEN_DECIMALS, LaunchError::DecimalsOutOfRange);
+    require!(
+        *decimals <= MAX_TOKEN_DECIMALS,
+        LaunchError::DecimalsOutOfRange
+    );
     require!(
         *whole_token_supply > 0 && *whole_token_supply <= MAX_WHOLE_TOKEN_SUPPLY,
         LaunchError::SupplyOutOfRange
@@ -49,13 +52,13 @@ pub fn launch_token_impl(ctx: Context<LaunchToken>, params: TokenLaunchParams) -
 
     // 1. Allocate and create the classic SPL mint. The mint keypair signs the
     //    outer transaction; the creator funds the rent.
-    let mint_rent = Rent::get()?.minimum_balance(        spl_token::state::Mint::LEN);
+    let mint_rent = Rent::get()?.minimum_balance(spl_token::state::Mint::LEN);
     anchor_lang::solana_program::program::invoke_signed(
         &anchor_lang::solana_program::system_instruction::create_account(
             ctx.accounts.creator.key,
             ctx.accounts.mint.key,
             mint_rent,
-                    spl_token::state::Mint::LEN as u64,
+            spl_token::state::Mint::LEN as u64,
             &spl_token::id(),
         ),
         &[
@@ -183,7 +186,9 @@ pub fn launch_token_impl(ctx: Context<LaunchToken>, params: TokenLaunchParams) -
             ctx.accounts.treasury_vault.to_account_info(),
         ],
     )?;
-    ctx.accounts.treasury.record_launch_fee(LAUNCH_SERVICE_FEE_LAMPORTS)?;
+    ctx.accounts
+        .treasury
+        .record_launch_fee(LAUNCH_SERVICE_FEE_LAMPORTS)?;
 
     emit!(TokenLaunched {
         mint: ctx.accounts.mint.key(),
@@ -204,9 +209,18 @@ fn validate_metadata_bytes(name: &str, symbol: &str, uri: &str) -> Result<()> {
     let name_bytes = name.as_bytes();
     let symbol_bytes = symbol.as_bytes();
     let uri_bytes = uri.as_bytes();
-    require!(!name_bytes.is_empty() && name_bytes.len() <= 48, LaunchError::InvalidName);
-    require!(!symbol_bytes.is_empty() && symbol_bytes.len() <= 10, LaunchError::InvalidSymbol);
-    require!(!uri_bytes.is_empty() && uri_bytes.len() <= 200, LaunchError::InvalidUri);
+    require!(
+        !name_bytes.is_empty() && name_bytes.len() <= 48,
+        LaunchError::InvalidName
+    );
+    require!(
+        !symbol_bytes.is_empty() && symbol_bytes.len() <= 10,
+        LaunchError::InvalidSymbol
+    );
+    require!(
+        !uri_bytes.is_empty() && uri_bytes.len() <= 200,
+        LaunchError::InvalidUri
+    );
     // Ticker must be printable ASCII with no internal whitespace.
     if !symbol_bytes.iter().all(|byte| (0x21..=0x7e).contains(byte)) {
         return Err(LaunchError::InvalidSymbol.into());
@@ -218,11 +232,13 @@ fn validate_metadata_bytes(name: &str, symbol: &str, uri: &str) -> Result<()> {
     Ok(())
 }
 
-
 /// Exact raw base units for a creator's whole-token supply and decimals,
 /// checked for u64 overflow before any token arithmetic runs.
 pub fn whole_mint_amount_u64(whole_supply: u64, decimals: u8) -> Result<u64> {
-    require!(decimals <= MAX_TOKEN_DECIMALS, LaunchError::DecimalsOutOfRange);
+    require!(
+        decimals <= MAX_TOKEN_DECIMALS,
+        LaunchError::DecimalsOutOfRange
+    );
     let factor = 10u128
         .checked_pow(decimals as u32)
         .ok_or(LaunchError::DecimalsOutOfRange)?;

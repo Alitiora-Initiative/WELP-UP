@@ -487,7 +487,10 @@ mod tests {
     #[test]
     fn creator_supply_scaling_is_exact_at_zero_and_nine_decimals() {
         assert_eq!(token_launch::whole_mint_amount_u64(1, 0).unwrap(), 1);
-        assert_eq!(token_launch::whole_mint_amount_u64(1_000_000_000, 9).unwrap(), 1_000_000_000_000_000_000);
+        assert_eq!(
+            token_launch::whole_mint_amount_u64(1_000_000_000, 9).unwrap(),
+            1_000_000_000_000_000_000
+        );
         assert!(token_launch::whole_mint_amount_u64(1, 10).is_err());
     }
 }
