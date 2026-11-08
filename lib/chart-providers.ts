@@ -155,8 +155,12 @@ export class GeckoTerminalProvider implements ChartProvider {
         const address = typeof attrs.address === 'string' ? attrs.address : addressFromId;
         const liquidity = asFiniteNumber(attrs.reserve_in_usd);
         return { address, liquidity };
-      }).filter((pool) => isValidMint(pool.address) && pool.liquidity !== null && pool.liquidity > 0)
-        .sort((a, b) => (b.liquidity ?? 0) - (a.liquidity ?? 0));
+      }).filter((pool): pool is { address: string; liquidity: number } =>
+        isValidMint(pool.address) &&
+        typeof pool.liquidity === 'number' &&
+        Number.isFinite(pool.liquidity) &&
+        pool.liquidity > 0
+      ).sort((a, b) => b.liquidity - a.liquidity);
 
       const selectedPool = candidates[0];
       if (!selectedPool) {
