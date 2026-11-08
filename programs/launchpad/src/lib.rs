@@ -19,9 +19,12 @@ pub const DISTRIBUTION_EPOCH_SECONDS: i64 = 1_209_600; // exactly 14 days
 pub const DEVELOPER_DISTRIBUTION_BPS: u128 = 6_000; // 60%
 pub const PERMANENT_RESERVE_BPS: u128 = 4_000; // 40%
 
+pub mod token_launch;
+
 #[program]
 pub mod welp_launchpad {
     use super::*;
+    use token_launch::{LaunchToken, TokenLaunchParams};
 
     /// Initialize the one global Treasury PDA. The destination is compiled
     /// into the program and cannot be supplied or changed by the caller.
@@ -229,6 +232,17 @@ pub struct TreasuryAccount {
 
 impl TreasuryAccount {
     pub const SPACE: usize = 8 + 32 + 32 + (8 * 4) + 2;
+
+    /// Record a verified on-chain fee payment so the epoch split stays exact.
+    /// Called by the rail's launch path with the enforced service fee.
+    pub fn record_launch_fee(&mut self, fee: u64) -> Result<()> {
+        let total = self
+            .total_fees_collected
+            .checked_add(fee)
+            .ok_or_else(|| error!(TreasuryError::ArithmeticOverflow))?;
+        self.total_fees_collected = total;
+        Ok(())
+    }
 }
 
 /// Calculate a 0.50% protocol fee from gross input, split 60/40.

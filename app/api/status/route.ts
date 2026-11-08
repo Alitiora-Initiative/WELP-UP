@@ -50,11 +50,37 @@ async function checkVault() {
   }
 }
 
+/** Live mainnet deployment status of the WELP custom launchpad program. */
+async function checkCustomLaunchProgram() {
+  const programId = 'BrcdB9sV7z9DvF9rDHG263HUxXgJM3iCQdF36TcxbFEn';
+  try {
+    const response = await fetch(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getAccountInfo', params: [programId, { encoding: 'base64', commitment: 'confirmed' }] }),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(10_000),
+    });
+    const data = await response.json();
+    const executable = data?.result?.value?.executable === true;
+    return {
+      name: 'Custom launch program',
+      state: executable ? 'Deployed' : 'Undeployed',
+      detail: executable
+        ? 'The WELP custom supply/precision rail is live on mainnet; the launchpad gates on this check.'
+        : 'The custom supply/decimals rail is code-complete but not deployed yet; the launchpad keeps it disabled until deployment.',
+    };
+  } catch {
+    return { name: 'Custom launch program', state: 'Unable to verify', detail: 'Custom launch program status could not be confirmed.' };
+  }
+}
+
 export async function GET() {
   const checks = await Promise.all([
     checkSolana().catch((error) => ({ name: 'Solana mainnet RPC', state: 'Unavailable', detail: error instanceof Error ? error.message : 'RPC check failed' })),
     checkJupiter().catch((error) => ({ name: 'Jupiter Token API v2', state: 'Unavailable', detail: error instanceof Error ? error.message : 'Feed check failed' })),
     checkVault(),
+    checkCustomLaunchProgram(),
     Promise.resolve({ name: 'Autonomous agents', state: 'Not enabled', detail: 'No production executor or unattended trading runtime is configured.' }),
     Promise.resolve({
       name: 'Fee routing',
