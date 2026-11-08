@@ -77,6 +77,33 @@ export function TerminalHome() {
       <div className="home-section-heading"><div><div className="eyebrow">CURRENT MARKET READ</div><h2>Live candidates. Published rules.</h2><p className="home-section-copy">The strongest eligible entries in the current feed. A score is a filter result, not a forecast or recommendation.</p></div><Link href="/signals" className="text-action">View all signals <ArrowUpRight size={13} /></Link></div>
       <div className="home-candidate-list">{featured.map((asset) => <div className="home-candidate" key={asset.mint}><div><strong>{asset.symbol}</strong><small>{asset.name}</small></div><span>{price(asset.priceUsd)}</span><span className={asset.priceChange24h >= 0 ? 'positive' : 'negative'}>{asset.priceChange24h >= 0 ? '+' : ''}{asset.priceChange24h.toFixed(2)}%</span><b>{asset.score}</b><Link href={'/swap?mint=' + encodeURIComponent(asset.mint)}>Route <ArrowUpRight size={12} /></Link></div>)}{!featured.length ? <div className="empty-panel">{error || 'Loading current market snapshot…'}</div> : null}</div>
     </section>
+    <section className="home-section">
+      <div className="home-section-heading">
+        <div>
+          <div className="eyebrow">THE PIPELINE</div>
+          <h2>From signal to signed move.</h2>
+          <p>Three boundaries. Read, score, sign.</p>
+        </div>
+        <Link href="/swap" className="text-action">Open trade desk <ArrowUpRight size={13} /></Link>
+      </div>
+      <div className="home-steps">
+        <div className="home-step">
+          <div className="home-step-top"><span className="home-step-number">01</span><span className="home-step-icon"><ChartNoAxesCombined size={16} /></span></div>
+          <h3>Read the market</h3>
+          <p>Live tracked Solana pools and prices from the Jupiter Token API feed.</p>
+        </div>
+        <div className="home-step">
+          <div className="home-step-top"><span className="home-step-number">02</span><span className="home-step-icon"><CircleGauge size={16} /></span></div>
+          <h3>Score the setup</h3>
+          <p>Deterministic signals from 80 to 98 with every blocker shown.</p>
+        </div>
+        <div className="home-step">
+          <div className="home-step-top"><span className="home-step-number">03</span><span className="home-step-icon"><ArrowDownUp size={16} /></span></div>
+          <h3>Sign the swap</h3>
+          <p>A Jupiter route is prepared and your wallet approves the transaction.</p>
+        </div>
+      </div>
+    </section>
     <section className="home-safety-banner"><div><ShieldCheck size={20} /><div><strong>Your wallet. Your approval.</strong><p>WELP never asks for a seed phrase. Every available swap is reviewed and signed by your connected wallet. Vault funding and autonomous execution remain disabled.</p></div></div><Link href="/safety">Read safety limits <ArrowUpRight size={13} /></Link></section>
   </main>;
 }
