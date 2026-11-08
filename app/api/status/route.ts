@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { WELP_FEE_POLICY } from '@/lib/server/fee-policy';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -55,8 +56,18 @@ export async function GET() {
     checkJupiter().catch((error) => ({ name: 'Jupiter Token API v2', state: 'Unavailable', detail: error instanceof Error ? error.message : 'Feed check failed' })),
     checkVault(),
     Promise.resolve({ name: 'Autonomous agents', state: 'Not enabled', detail: 'No production executor or unattended trading runtime is configured.' }),
-    Promise.resolve({ name: 'Fee routing', state: 'Disabled', detail: 'No active collection flow or configured platform treasury.' }),
+    Promise.resolve({
+      name: 'Fee routing',
+      state: WELP_FEE_POLICY.collectionEnabled ? 'Operational' : 'Disabled',
+      detail: WELP_FEE_POLICY.collectionEnabled
+        ? `Disclosed ${(WELP_FEE_POLICY.swapFeeBps / 100).toFixed(2)}% gross swap fee collection enabled.`
+        : WELP_FEE_POLICY.collectionDisabledReason,
+    }),
   ]);
-  const overall = checks.some((item) => item.state === 'Unavailable') ? 'Degraded' : 'Operational · limited features';
+  const overall = checks.some((item) => item.state === 'Unavailable')
+    ? 'Degraded'
+    : WELP_FEE_POLICY.collectionEnabled
+      ? 'Operational'
+      : 'Operational · limited features';
   return NextResponse.json({ updatedAt: new Date().toISOString(), overall, checks }, { headers: { 'Cache-Control': 'no-store' } });
 }

@@ -15,9 +15,18 @@ export async function requestOrder(params: {
   amount: string;
   taker: string;
   slippageBps: number;
+  referralAccount?: string;
+  referralFeeBps?: number;
 }) {
   const url = new URL(`${SWAP_BASE}/order`);
-  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, String(value));
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined) continue;
+    url.searchParams.set(key, String(value));
+  }
+  if (params.referralAccount) {
+    url.searchParams.set('referralAccount', params.referralAccount);
+    if (params.referralFeeBps) url.searchParams.set('referralFee', String(params.referralFeeBps));
+  }
   const response = await fetch(url, { headers: headers(), cache: 'no-store', signal: AbortSignal.timeout(20_000) });
   const data = await response.json().catch(() => null);
   if (!response.ok || !data || data.error || data.errorCode || data.errorMessage) {

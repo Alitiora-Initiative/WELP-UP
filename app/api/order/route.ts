@@ -22,6 +22,14 @@ export async function POST(request: NextRequest) {
   const taker = typeof body.taker === 'string' ? body.taker : '';
   const amount = typeof body.amount === 'string' ? body.amount : '';
   const slippageBps = Number(body.slippageBps ?? 100);
+  const referralAccount = typeof body.referralAccount === 'string' ? body.referralAccount : process.env.WELP_REFERRAL_ACCOUNT || '';
+  const referralFeeBps = Number(body.referralFeeBps ?? process.env.WELP_REFERRAL_FEE_BPS ?? WELP_FEE_POLICY.swapFeeBps);
+  if (referralAccount && !BASE58.test(referralAccount)) {
+    return NextResponse.json({ error: 'Referral account is invalid.' }, { status: 400 });
+  }
+  if (!Number.isInteger(referralFeeBps) || referralFeeBps < 50 || referralFeeBps > 255) {
+    return NextResponse.json({ error: 'Referral fee must be between 0.50% and 2.55%.' }, { status: 400 });
+  }
   if (!BASE58.test(inputMint) || !BASE58.test(outputMint) || !BASE58.test(taker) || inputMint === outputMint) {
     return NextResponse.json({ error: 'Wallet address or token mint is invalid.' }, { status: 400 });
   }
@@ -42,7 +50,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const order = await requestOrder({ inputMint, outputMint, amount, taker, slippageBps });
+    const order = await requestOrder({ inputMint, outputMint, amount, taker, slippageBps, referralAccount: referralAccount || undefined, referralFeeBps });
     if (typeof order.transaction !== 'string' || typeof order.requestId !== 'string') {
       return NextResponse.json({ error: 'Jupiter did not return a signable order.' }, { status: 502 });
     }
