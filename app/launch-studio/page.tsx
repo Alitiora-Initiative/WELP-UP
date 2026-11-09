@@ -7,8 +7,8 @@ export const dynamic = 'force-dynamic';
 
 const launchStages = [
   {
-    label: 'Branded token metadata',
-    detail: 'Every launch is named with the WELP UP suffix and served from welpup.fun metadata with the WELP logo.',
+    label: 'Creator-owned token metadata',
+    detail: 'Your name, ticker, description, links and logo remain intact. WELP-UP attribution is limited to launch provenance and the contract-address record.',
     state: 'Live',
   },
   {

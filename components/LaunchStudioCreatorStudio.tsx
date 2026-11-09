@@ -88,6 +88,7 @@ export function LaunchStudioCreatorStudio() {
   const [name, setName] = useState('');
   const [symbol, setSymbol] = useState('');
   const [description, setDescription] = useState('');
+  const [logo, setLogo] = useState('');
   const [website, setWebsite] = useState('');
   const [twitter, setTwitter] = useState('');
   const [telegram, setTelegram] = useState('');
@@ -161,7 +162,7 @@ export function LaunchStudioCreatorStudio() {
     const prepareResponse = await fetch('/api/launch/prepare', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ owner: buyer, name, symbol, description, website, twitter, telegram, initialBuySol: buy }),
+      body: JSON.stringify({ owner: buyer, name, symbol, description, logo, website, twitter, telegram, initialBuySol: buy }),
     });
     const prepared = await prepareResponse.json() as PreparedLaunch & { error?: string };
     if (!prepareResponse.ok || !prepared.transaction || !prepared.mint) {
@@ -200,6 +201,7 @@ export function LaunchStudioCreatorStudio() {
       name: brandedName,
       symbol: brandedSymbol,
       description,
+      logo,
       website, twitter, telegram,
     });
     const params = { wholeTokenSupply: supply.trim(), decimals, name: brandedName, symbol: brandedSymbol, uri };
@@ -307,21 +309,22 @@ export function LaunchStudioCreatorStudio() {
       </div>
 
       <div className="lp-form-grid">
-        <label className="lp-field"><span>Token name</span><input value={name} onChange={(event) => setName(event.target.value)} maxLength={32} placeholder="Moon Rocket" autoComplete="off" /><small>WELP UP branding is appended automatically.</small></label>
-        <label className="lp-field"><span>Ticker</span><input value={symbol} onChange={(event) => setSymbol(event.target.value.toUpperCase())} maxLength={10} placeholder="MOON" autoComplete="off" /><small>WUP suffix is appended automatically.</small></label>
+            <label className="lp-field"><span>Token name</span><input value={name} onChange={(event) => setName(event.target.value)} maxLength={32} placeholder="Moon Rocket" autoComplete="off" /><small>Your public token name is preserved exactly as entered.</small></label>
+        <label className="lp-field"><span>Ticker</span><input value={symbol} onChange={(event) => setSymbol(event.target.value.toUpperCase())} maxLength={10} placeholder="MOON" autoComplete="off" /><small>Your ticker is preserved; only the CA receives WELP-UP branding.</small></label>
         {rail === 'pump' ? (
           <label className="lp-field"><span>Initial dev buy (SOL)</span><input inputMode="decimal" value={initialBuy} onChange={(event) => setInitialBuy(event.target.value)} placeholder="0.01" /><small>0.001–1 SOL. Spent from your wallet in the same transaction.</small></label>
         ) : (
           <>
             <label className="lp-field"><span>Whole-token supply</span><input inputMode="numeric" value={supply} onChange={(event) => { setSupply(event.target.value.replace(/[^\d]/g, '')); }} placeholder="1000000000" autoComplete="off" /><small>0 to 1,000,000,000 whole tokens. You receive the full supply in your wallet.</small></label>
-            <label className="lp-field"><span>Mint precision (decimals)</span><select value={decimals} onChange={(event) => setDecimals(Number(event.target.value))}>
+            <fieldset className="lp-field lp-decimals-field"><legend>Mint precision (decimals)</legend><div className="lp-decimals-options" role="radiogroup" aria-label="Mint precision">
               {Array.from({ length: MAX_TOKEN_DECIMALS + 1 }, (_value, index) => (
-                <option key={index} value={index}>{index}</option>
+                <button key={index} type="button" role="radio" aria-checked={decimals === index} className={'lp-decimal-option' + (decimals === index ? ' is-selected' : '')} onClick={() => setDecimals(index)} disabled={pending}><strong>{index}</strong><small>{index === 0 ? 'Whole units' : `${index} decimal${index === 1 ? '' : 's'}`}</small></button>
               ))}
-            </select><small>0 to 9 decimals, enforced on-chain by the WELP program.</small></label>
+            </div><small>0 to 9 decimals, enforced on-chain by the WELP program.</small></fieldset>
           </>
         )}
         <label className="lp-field"><span>Description</span><input value={description} onChange={(event) => setDescription(event.target.value)} maxLength={500} placeholder="Optional public description" autoComplete="off" /></label>
+        <label className="lp-field lp-logo-field"><span>Token logo URL (HTTPS)</span><input type="url" value={logo} onChange={(event) => setLogo(event.target.value)} maxLength={500} placeholder="https://your-domain.com/logo.png" autoComplete="url" /><small>Your logo is shown in wallets and market listings. WELP UP branding is reserved for the contract address only.</small></label>
         <label className="lp-field"><span>Project website (HTTPS)</span><input value={website} onChange={(event) => setWebsite(event.target.value)} maxLength={200} placeholder="https://example.com" autoComplete="url" /></label>
         <label className="lp-field"><span>X profile (HTTPS)</span><input value={twitter} onChange={(event) => setTwitter(event.target.value)} maxLength={200} placeholder="https://x.com/project" autoComplete="url" /></label>
         <label className="lp-field"><span>Telegram (HTTPS)</span><input value={telegram} onChange={(event) => setTelegram(event.target.value)} maxLength={200} placeholder="https://t.me/project" autoComplete="url" /></label>
@@ -336,7 +339,7 @@ export function LaunchStudioCreatorStudio() {
 
       <div className="lp-preview glass-card" aria-live="polite">
         <div className="lp-preview-top"><div><span className="lp-kicker">BRANDED METADATA</span><strong>{brandedName || 'Token name'}</strong></div><span className="lp-preview-badge">{brandedSymbol || 'TICKER'}</span></div>
-        <p className="lp-preview-instruction">Coin name will end with <strong>WELP UP</strong> and ticker with <strong>WUP</strong>. Metadata is served by welpup.fun and the image is the WELP UP logo.</p>
+        <p className="lp-preview-instruction">Your name, ticker, description, links, and logo stay yours. Only the contract address is WELP-UP branded, so market listings show your identity instead of a shared WELP UP logo.</p>
       </div>
 
       <div className="lp-studio-footer">

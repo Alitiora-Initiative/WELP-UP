@@ -159,7 +159,8 @@
   font: 9px ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: .07em;
 }
-.lp-field input {
+.lp-field input,
+.lp-field select {
   width: 100%;
   min-height: 46px;
   padding: 0 15px;
@@ -172,7 +173,8 @@
   transition: border-color .18s ease, box-shadow .18s ease;
 }
 .lp-field input::placeholder { color: #52525b; }
-.lp-field input:focus {
+.lp-field input:focus,
+.lp-field select:focus {
   border-color: rgba(74, 222, 128, .65);
   box-shadow: 0 0 0 3px rgba(34, 197, 94, .09);
 }
