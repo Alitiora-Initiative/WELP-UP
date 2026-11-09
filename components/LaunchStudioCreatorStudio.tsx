@@ -102,7 +102,7 @@ export function LaunchStudioCreatorStudio() {
 
   const brandedName = brandLaunchName(name);
   const brandedSymbol = brandLaunchSymbol(symbol);
-  const welpRailReady = programStatus?.deployed === true;
+  const welpRailReady = programStatus?.launchEnabled === true;
   const canLaunchPump = Boolean(owner && brandedName && brandedSymbol && !pending);
   const canLaunchWelp = Boolean(
     owner &&
@@ -209,7 +209,7 @@ export function LaunchStudioCreatorStudio() {
       { creator, mint: mintSigner.address, creatorTokenAccount, metadata, treasury, treasuryVault },
       params,
     );
-    const { value: blockhash } = await client.rpc.getLatestBlockhash({ commitment: 'confirmed' }).send();
+    const { value: blockhash } = await client.rpc.getLatestBlockhash({ commitment: 'finalized' }).send();
     const message = pipe(
       createTransactionMessage({ version: 0 }),
       (current) => setTransactionMessageFeePayerSigner(signer as never, current),
@@ -297,8 +297,8 @@ export function LaunchStudioCreatorStudio() {
             {programStatus === null
               ? 'Checking mainnet deployment…'
               : welpRailReady
-                ? 'Executable program detected; operator launch gate enabled. This is not an independent audit.'
-                : 'On-chain deployment pending.'}
+                ? 'Program, initialized treasury accounts, and operator gate verified. This is not an independent audit.'
+                : programStatus.detail ?? 'Checking mainnet deployment and treasury readiness.'}
           </em>
           <span className={'lp-rail-badge' + (welpRailReady ? ' ready' : '')}>
             {programStatus === null ? '…' : welpRailReady ? 'LIVE' : 'PENDING DEPLOY'}
@@ -328,9 +328,7 @@ export function LaunchStudioCreatorStudio() {
       </div>
       {rail === 'welp' ? (
         <p className="lp-fee-note">
-          <ServerCog size={14} /> The WELP service fee is {Number(LAUNCH_SERVICE_FEE_LAMPORTS) / 1e9} SOL and is paid
-          straight to the on-chain treasury vault PDA inside your launch transaction — the
-          website cannot redirect it, and the program records it for the epoch split.
+          <ServerCog size={14} /> If enabled, the current on-chain launch charge is {Number(LAUNCH_SERVICE_FEE_LAMPORTS) / 1e9} SOL. The executable program and initialized treasury must verify before a launch can be signed; no WELP launch fee is charged while the custom rail is gated.
         </p>
       ) : null}
 
@@ -361,7 +359,7 @@ export function LaunchStudioCreatorStudio() {
         {rail === 'pump' ? (
           <p className="lp-raw-note">This launch uses the public pump.fun bonding curve through PumpPortal. No WELP service fee is added by this transaction.</p>
         ) : (
-          <p className="lp-raw-note">The WELP custom rail creates a classic SPL mint with your exact supply and precision plus Metaplex metadata for instant wallet rendering, pays the fixed service fee into the canonical treasury vault PDA and never grants the website a key.</p>
+          <p className="lp-raw-note">This custom launch rail stays gated until the executable program, initialized treasury accounts, and operator enable flag all verify on mainnet. The page does not charge a launch fee while the rail is gated.</p>
         )}
       </div>
     </section>

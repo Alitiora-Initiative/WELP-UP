@@ -11,9 +11,18 @@ export type SupportedTokenDecimals = (typeof SUPPORTED_TOKEN_DECIMALS)[number];
 
 export const U64_MAX = (1n << 64n) - 1n;
 export const BASIS_POINTS_DENOMINATOR = 10_000n;
-export const PROTOCOL_SWAP_FEE_BPS = 50n; // 0.50% of gross swap input
-export const TREASURY_EPOCH_DEVELOPER_BPS = 6_000n; // 60% of eligible accrued fees
-export const TREASURY_EPOCH_RESERVE_BPS = 4_000n; // 40% permanently retained by policy
+/** 1% of gross launch/purchase volume -> Official Project Treasury Wallet. */
+export const PROTOCOL_SWAP_FEE_BPS = 100n;
+/** 0.5% of gross volume -> Liquid Private Developer Wallet. */
+export const CREATOR_FEE_BPS = 50n;
+/** 0.02% of the genesis mint -> Private Developer Wallet pre-launch allocation. */
+export const GENESIS_DEV_ALLOCATION_BPS = 2n;
+/** 60% of accumulated treasury inflows -> Liquid Developer Wallet after a 14-day epoch. */
+export const TREASURY_EPOCH_DEVELOPER_BPS = 6_000n;
+/** 40% retained in the treasury as the permanent protocol stability reserve. */
+export const TREASURY_EPOCH_RESERVE_BPS = 4_000n;
+/** Two-week treasury epoch, in seconds (14 days). */
+export const TREASURY_EPOCH_SECONDS = 1_209_600;
 
 export type LaunchSupplyValidation =
   | {
@@ -88,18 +97,23 @@ export function validateLaunchSupply(
 export type ProtocolSwapFeeRoute = {
   grossInputBaseUnits: bigint;
   protocolFeeBaseUnits: bigint;
+  creatorFeeBaseUnits: bigint;
   netSwapInputBaseUnits: bigint;
 };
 
 /**
- * Exact integer fee preview for a WELP-controlled swap:
- * 0.50% of gross input is credited to the protocol treasury. The separate
- * 14-day treasury epoch releases 60% of eligible new inflows and protects
- * the remaining 40% as reserve.
+ * Exact integer fee preview for a WELP-controlled launch/purchase volume:
+ * 1% of gross input is routed to the Official Project Treasury Wallet and the
+ * separate 0.5% creator slice is routed to the Liquid Developer Wallet, both from
+ * the same gross base with multiplication before division (no truncation loss).
+ * The remaining net input is the spendable amount.
  *
- * This function only calculates amounts. It does not prove that a swap
+ * The same gross volume seeds the two-week treasury epoch: 60% releases to the
+ * developer as liquid capital and 40% stays embedded as the protocol reserve.
+ *
+ * This function only calculates amounts. It does not prove that a swap or launch
  * occurred, sign a transaction, or collect funds. On-chain enforcement is
- * required before the website may submit mainnet swaps using this policy.
+ * required before the website may submit mainnet transactions using this policy.
  */
 export function calculateProtocolSwapFee(grossInputBaseUnits: bigint): ProtocolSwapFeeRoute {
   if (grossInputBaseUnits <= 0n) {
@@ -111,17 +125,57 @@ export function calculateProtocolSwapFee(grossInputBaseUnits: bigint): ProtocolS
 
   const protocolFeeBaseUnits =
     (grossInputBaseUnits * PROTOCOL_SWAP_FEE_BPS) / BASIS_POINTS_DENOMINATOR;
-  if (protocolFeeBaseUnits === 0n) {
-    throw new RangeError('Swap input is too small to express the 0.50% fee in base units.');
-  }
+  const creatorFeeBaseUnits =
+    (grossInputBaseUnits * CREATOR_FEE_BPS) / BASIS_POINTS_DENOMINATOR;
+  const totalFeeBaseUnits = protocolFeeBaseUnits + creatorFeeBaseUnits;
+  const netSwapInputBaseUnits = grossInputBaseUnits - totalFeeBaseUnits;
 
-  const netSwapInputBaseUnits = grossInputBaseUnits - protocolFeeBaseUnits;
+  if (protocolFeeBaseUnits === 0n) {
+    throw new RangeError('Swap input is too small to express the protocol fee in base units.');
+  }
 
   return {
     grossInputBaseUnits,
     protocolFeeBaseUnits,
+    creatorFeeBaseUnits,
     netSwapInputBaseUnits,
   };
+}
+
+/**
+ * Two-week treasury epoch split: exactly 60% of the accumulated treasury base
+ * releases to the Liquid Developer Wallet and exactly 40% remains embedded in the
+ * treasury as the permanent protocol stability reserve, with zero rounding leaks.
+ */
+export function calculateTreasuryEpochSplit(treasuryBaseUnits: bigint): {
+  treasuryBaseUnits: bigint;
+  developerBaseUnits: bigint;
+  reserveBaseUnits: bigint;
+} {
+  if (treasuryBaseUnits < 0n) {
+    throw new RangeError('Treasury base units cannot be negative.');
+  }
+  const developerBaseUnits =
+    (treasuryBaseUnits * TREASURY_EPOCH_DEVELOPER_BPS) / BASIS_POINTS_DENOMINATOR;
+  const reserveBaseUnits = treasuryBaseUnits - developerBaseUnits;
+  return { treasuryBaseUnits, developerBaseUnits, reserveBaseUnits };
+}
+
+/**
+ * Genesis pre-launch developer allocation: 0.02% of the freshly minted supply is
+ * routed to the Private Developer Wallet while 99.98% stays with the creator.
+ */
+export function calculateGenesisAllocation(supplyBaseUnits: bigint): {
+  creatorBaseUnits: bigint;
+  developerBaseUnits: bigint;
+} {
+  if (supplyBaseUnits < 0n) {
+    throw new RangeError('Supply base units cannot be negative.');
+  }
+  const developerBaseUnits =
+    (supplyBaseUnits * GENESIS_DEV_ALLOCATION_BPS) / BASIS_POINTS_DENOMINATOR;
+  const creatorBaseUnits = supplyBaseUnits - developerBaseUnits;
+  return { creatorBaseUnits, developerBaseUnits };
 }
 
 /** Format raw units without converting through floating point. */

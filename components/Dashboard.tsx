@@ -39,6 +39,11 @@ type Order = {
   priceImpact?: number | string | null;
   feeBps?: number;
   feeMint?: string;
+  platformFee?: { feeBps?: number; amount?: string; feeMint?: string } | null;
+  welpReferral?:
+    | { state: 'included'; feeBps: number; feeMint: string; tokenAccount: string }
+    | { state: 'not_configured' }
+    | { state: 'not_collected'; reason: string };
   slippageBps?: number;
   taker: string;
 };
@@ -377,7 +382,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
 
           <div className="mainnet-banner" role="note">
             <ShieldCheck size={19} />
-            <div><strong>Wallet-approved swaps are live.</strong><span>Live market data is flowing and swaps route through Jupiter with no WELP referral fee while its account is unconfigured; Jupiter or route providers may still charge fees. You approve every swap in your own wallet; no unattended trading is active.</span></div>
+            <div><strong>Wallet-approved swaps are live.</strong><span>Quotes show whether a verified WELP referral fee is included and report Jupiter’s quoted fee rate. Jupiter or other route providers may also charge fees. You approve every swap in your own wallet; no unattended trading is active.</span></div>
             <a href="https://docs.jup.ag/user-docs/trade/swap" target="_blank" rel="noreferrer" aria-label="Read swap documentation"><CircleHelp size={17} /></a>
           </div>
 
@@ -458,8 +463,11 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
                   <div className="quote-line"><span>Estimated receive</span><strong>{formatUnits(order.outAmount, amountOutDecimals)} {receiveToken}</strong></div>
                   <div className="quote-line"><span>Price impact</span><strong>{orderImpact !== null && Number.isFinite(orderImpact) ? `${orderImpact.toFixed(3)}%` : 'Unavailable'}</strong></div>
                   <div className="quote-line"><span>Max slippage</span><strong>{((order.slippageBps ?? 150) / 100).toFixed(2)}%</strong></div>
-                  {typeof order.feeBps === 'number' ? <div className="quote-line"><span>Jupiter route fee</span><strong>{(order.feeBps / 100).toFixed(2)}%</strong></div> : null}
-                  <p className="quote-note">Your wallet will show the exact transaction. Only approve if the details match this quote.</p>
+                  {typeof order.feeBps === 'number' ? <div className="quote-line"><span>Total quoted fee rate</span><strong>{(order.feeBps / 100).toFixed(2)}%{order.feeMint ? ` · ${shortAddress(order.feeMint)}` : ''}</strong></div> : null}
+                  {typeof order.platformFee?.feeBps === 'number' ? <div className="quote-line"><span>Jupiter platform fee rate</span><strong>{(order.platformFee.feeBps / 100).toFixed(2)}%</strong></div> : null}
+                  <div className="quote-line"><span>WELP referral fee</span><strong>{order.welpReferral?.state === 'included' ? `${(order.welpReferral.feeBps / 100).toFixed(2)}% · ${shortAddress(order.welpReferral.feeMint)}` : order.welpReferral?.state === 'not_collected' ? 'Not collected' : 'Not configured'}</strong></div>
+                  {order.welpReferral?.state === 'not_collected' ? <p className="quote-note">This quote does not include a WELP referral fee: {order.welpReferral.reason}</p> : null}
+                  <p className="quote-note">Your wallet will show the exact transaction. Review all provider fees and amounts before approving.</p>
                 </div>
               ) : null}
               {tradeError ? <div className="inline-error" role="alert">{tradeError}</div> : null}

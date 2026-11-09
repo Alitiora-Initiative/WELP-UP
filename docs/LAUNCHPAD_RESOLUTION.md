@@ -12,13 +12,13 @@ stale “Launchpad” naming with the chosen product name.
 
 ### 1. Core architectural problem and strategic constraints
 
-The launchpad cannot currently be presented as a live token factory. The Anchor
-launchpad crate is a treasury-only local implementation; no production launch
-program ID, deployer keypair or live launch indexer is configured, and the
-frontend launch route is a configuration/status page plus a wallet-signed
-creator studio. The capital constraint ($0.06 USD developer balance) blocks a
-direct mainnet custom-program deployment, so the launch resolution must keep the
-launchpad capital-free.
+The WELP custom rail cannot currently be presented as a live token factory.
+The Anchor source contains token-mint/metadata and treasury instructions, but
+the configured mainnet address is not an executable program and no live launch
+indexer is configured. The creator studio also offers a separate Pump.fun
+launch flow through PumpPortal. The custom rail must remain gated until the
+program, treasury state, audit and operator enablement are independently
+verified on mainnet.
 
 ### 2. Capital-free launch resolution
 
@@ -28,10 +28,11 @@ launchpad capital-free.
    shared, audited, multi-tenant launchpad program or the user-pays-rent model
    (creator signs the launch transaction and funds rent) before any custom
    launch is enabled.
-3. On-chain service fee: fixed service fee (currently 2.5 SOL mirrored from
-   `programs/launchpad/src/token-launch.rs`) settled inside the signed launch
-   transaction into the canonical treasury vault PDA; the website never holds a
-   key and cannot redirect it.
+3. Custom launch charge: source currently specifies a flat 0.0025 SOL charge
+   (`2,500,000` lamports) in `programs/launchpad/src/token_launch.rs`. It is not
+   collected today because the WELP program and treasury are not deployed and
+   initialized on mainnet. This launch charge is separate from the variable
+   Jupiter referral fee on swaps.
 
 ### 3. Token metadata resolution (followed to the last letter)
 

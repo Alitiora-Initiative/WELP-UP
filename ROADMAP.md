@@ -11,7 +11,7 @@ The launchpad and protocol-security milestone is in progress but not production-
 - [ ] Integrate an audited Raydium pool-creation CPI for graduation; verify and burn LP tokens only after independent validation.
 - [ ] Add a wallet-approved launchpad purchase/creator flow using the repository's current Solana Kit wallet stack and the existing `app/launchpad/page.tsx` route.
 - [ ] Keep Helius credentials and privileged RPC operations on the backend; add bounded priority-fee estimates, RPC fallback, retry, and connection cleanup.
-- [ ] Enforce the 0.50% gross-input protocol fee on WELP-controlled swaps by atomically crediting 100% to the correct treasury vault; after 14 days, release 60% of eligible new SOL inflows and retain 40% as reserve. The current SOL-only vault does not support SPL-token input fees.
+- [ ] Implement the target 1.00% protocol + 0.50% creator/developer split and 14-day 60/40 treasury release. Current Jupiter referral collection is a single 50–255 bps fee to the dev-wallet partner and does not implement this allocation; the configured treasury program address is not executable on mainnet. See [fee and treasury status](docs/FEES_AND_TREASURY.md).
 - [ ] Harden API boundaries, secrets handling, idempotency, replay protection, monitoring, dependency scanning, adversarial tests, and privacy controls.
 - [ ] Keep all deployments and user-facing transaction paths mainnet-only. Before mainnet use, complete source review, reproducible SBF builds, host/SBF-backed checks, independent audit, production key management, program verification and a separate release review. Do not deploy or test on Devnet.
 

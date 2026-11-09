@@ -11,7 +11,7 @@ const chapters = [
   ['03', 'Current system', 'Live market data, deterministic signals, Jupiter Swap API v2, public wallet reads, and browser-local activity snapshots.'],
   ['04', 'Vault architecture', 'A proposed per-user PDA vault design. The source scaffold is not deployed or audited on mainnet and must not receive deposits.'],
   ['05', 'Agents and copy trading', 'A proposed constrained executor and strategy marketplace. No live autonomous execution or verified strategy performance is currently available.'],
-  ['06', 'Fees and governance', 'The disclosed protocol swap fee is 0.50% of gross swap input, credited to the platform treasury with a 60/40 developer/reserve split after each 14-day epoch. A separate proposed US$0.10 bot creation/activation fee plus a 0–30% creator share of positive net profit remains a proposal.'],
+  ['06', 'Fees and governance', 'The target math is 1.00% protocol plus 0.50% creator/developer, but it is not active collection. Jupiter referral collection is a separate configurable 50–255 bps fee paid to one referral partner. No WELP treasury epoch is active on mainnet.'],
   ['07', 'Security and risks', 'Threats, launch gates, irreversibility, liquidity risk, smart-contract risk, and no guarantee of returns.'],
 ];
 
@@ -27,7 +27,7 @@ export default function WhitepaperPage() {
         <p style={{ fontSize: 22, color: '#99a69c', lineHeight: 1.6, maxWidth: 720 }}>A transparent Solana market console built around real market data and user-approved execution.</p>
         <div style={{ border: '1px solid #24351e', borderRadius: 16, padding: 22, background: '#101413', margin: '32px 0' }}>
           <strong style={{ color: '#f2bd75' }}>Status disclosure</strong>
-          <p style={{ color: '#99a69c', lineHeight: 1.7, marginBottom: 0 }}>This paper describes current functionality separately from proposed features. The vault is not deployed or audited on mainnet; unattended agents and copy trading are not active; supported wallet-approved swaps now use the disclosed 0.50% gross swap fee. This is not an investment offer or security audit.</p>
+          <p style={{ color: '#99a69c', lineHeight: 1.7, marginBottom: 0 }}>This paper describes current functionality separately from proposed features. The vault is not deployed or audited on mainnet; unattended agents and copy trading are not active; wallet-approved Jupiter swaps may include Jupiter&apos;s own quoted fees. WELP does not currently collect its target fee split or operate a treasury epoch on mainnet. This is not an investment offer or security audit.</p>
         </div>
         <h2 style={{ marginTop: 42 }}>Contents</h2>
         <div style={{ display: 'grid', gap: 12 }}>

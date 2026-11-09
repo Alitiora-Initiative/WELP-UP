@@ -207,7 +207,7 @@ Each buy instruction must:
 5. enforce maximum quote in and minimum tokens out;
 6. enforce the early-window cumulative wallet cap;
 7. enforce remaining sale inventory and funding cap;
-8. collect the fixed WELP trade fee in the same transaction;
+8. calculate and collect the disclosed target protocol and creator/developer fee legs in the same transaction, using the current fee-policy source of truth;
 9. transfer the exact quote amount into the escrow;
 10. transfer the exact token allocation from inventory to the buyer;
 11. update position and launch counters;
@@ -296,9 +296,9 @@ The burn amount, LP mint, source account and authority are validated. The burn i
 
 ## 8. WELP protocol swap fee
 
-WELP's fee policy is **0.50% (50 basis points) of gross input** for each swap that actually executes through a WELP-controlled on-chain instruction. It is not 0.5% of a creator fee and is not a fixed USDC charge.
+The target fee math is **1.00% (100 bps) protocol + 0.50% (50 bps) creator/developer** of gross input. It is not active fee collection and is not a fixed USDC charge. The two legs must not be described as live until an actual signed transaction and balance changes prove them.
 
-At collection, **100% of the 0.50% fee is credited to the protocol treasury**. After at least 14 days, the epoch releases 60% of eligible new fee inflows to the published developer/operator recipient and adds the remaining 40% to the protected treasury reserve. This allocation happens once at epoch maturity; do not split the fee a second time at collection.
+The intended settlement sends the 1.00% protocol leg to the treasury and the 0.50% creator/developer leg to its disclosed recipient. After at least 14 days, the treasury epoch releases 60% of eligible protocol inflows and retains 40% as reserve. These separate allocations are arithmetic policy only until the same transaction and treasury program enforce them.
 
 Calculate the fee from the input asset's raw base units using checked integer arithmetic. A successful swap and treasury credit must commit atomically. If any leg fails, the entire transaction must roll back. Each operation requires a unique receipt/nonce to prevent duplicate collection.
 
@@ -306,7 +306,7 @@ The current treasury vault is a SOL System Program PDA. It is not a generic SPL-
 
 WELP cannot intercept ordinary wallet-to-wallet SPL transfers or swaps routed directly to another DEX. A fee applies only to WELP-controlled instructions. Post-graduation Raydium swaps cannot be described as taxed by WELP unless a reviewed adapter or other supported on-chain mechanism actually receives and routes the fee.
 
-**Current status:** the fee policy and integer calculations are in application and Rust source, but the launchpad program is not deployed, per-mint token vaults and a buy/sell instruction are absent, and the current Jupiter order/execute path cannot accept extra custom fee instructions. Trading stays fail-closed until a composable transaction route and on-chain settlement are deployed, verified and audited.
+**Current status:** the app offers user-approved Jupiter v2 swaps. The separate Jupiter referral rail is optional and pays its partner wallet; it is not the 1.00% + 0.50% settlement above. The launch/treasury program is not executable on mainnet, its fee/PDA state is not active, and no epoch payout is occurring. See [current fee and treasury status](FEES_AND_TREASURY.md).
 
 ## 9. Frontend and transaction service
 
@@ -498,9 +498,9 @@ Discovery search/filter categories may include quote asset, newest, market cap a
 
 The implementation status and fee waterfall are documented in [TREASURY_AND_CREATOR_FEES.md](./TREASURY_AND_CREATOR_FEES.md).
 
-WELP's target protocol fee is 50 basis points (0.50%) of gross input for swaps that execute through a WELP-controlled on-chain instruction. The full fee is credited to the input asset's treasury vault in the same transaction as the swap. After a minimum 14-day epoch, 60% of eligible new SOL inflows is released to the published developer recipient and 40% remains as protected treasury reserve. The split occurs once at epoch maturity.
+WELP's target fee calculation is 100 basis points (1.00%) for the protocol and 50 basis points (0.50%) for the creator/developer. The protocol allocation is intended for the input asset's treasury vault in the same transaction as the swap. After a minimum 14-day epoch, 60% of eligible protocol inflows is released to the published developer recipient and 40% remains as protected treasury reserve. This is not implemented on mainnet.
 
-The current treasury vault is SOL-only. Generic SPL-token input vaults, swap instructions, fee receipts and live fee transfers are not implemented. The current Rust fee helper is math only and does not collect funds. The 0.50% policy is not active on mainnet, and swap endpoints remain fail-closed.
+The configured launch/treasury program address is non-executable on mainnet. Generic SPL-token input vaults, swap instructions, fee receipts and live treasury fee transfers are not implemented. The Rust fee helper is math only and does not collect funds. Jupiter swaps remain available with no WELP fee if referral collection is unconfigured; configured orders now fail closed if the exact referral fee account is missing.
 
 ### 14.2 Treasury distribution
 
@@ -521,7 +521,7 @@ The local crate now contains \`initialize_treasury\` and \`disburse_treasury_fun
 
 Raydium CPMM has separate trade-fee and creator-fee buckets. The creator-fee rate comes from `AmmConfig.creator_fee_rate` and is shared by pools using that config, while each pool stores an enable flag and fee side. A `CreatorFeeShare` PDA can override the creator's share rate for a specific creator/config pair; that split is applied at collection and the shared amount is moved to Raydium's protocol-fee bucket. That bucket is not the WELP Treasury PDA. See [Raydium CPMM fees](https://github.com/raydium-io/raydium-docs-v1/blob/main/products/cpmm/fees.mdx) and [creator-fee flow](https://github.com/raydium-io/raydium-docs-v1/blob/main/user-flows/how-creator-fees-work.mdx).
 
-WELP must not claim that its own instructions intercept post-graduation Raydium swaps. Raydium's native creator-fee mechanism is independent of the WELP 0.50% protocol swap fee and does not automatically credit the WELP treasury. No WELP creator-fee slider or post-graduation fee route is enabled. Do not advertise or configure any external fee unless its actual destination and collection path are verified.
+WELP must not claim that its own instructions intercept post-graduation Raydium swaps. Raydium's native creator-fee mechanism is independent of the WELP target 1.00% protocol + 0.50% creator allocation and does not automatically credit the WELP treasury. No WELP creator-fee slider or post-graduation fee route is enabled. Do not advertise or configure any external fee unless its actual destination and collection path are verified.
 
 ## 15. Graduation economics — fixed target mismatch
 
@@ -548,7 +548,7 @@ The implementation branch leaves this decision unresolved and the sale action di
 
 The proposed initial buy is 0.02% of the selected total supply (2 basis points of supply). It must be an ordinary creator-signed purchase instruction placed after create/initialize in the same transaction. It must:
 - calculate the exact token amount in raw units;
-- calculate the quote cost using the same curve and 0.50% protocol-fee logic as any other buyer;
+- calculate the quote cost using the same curve and target 1.00% protocol + 0.50% creator-fee logic as any other buyer;
 - count against the creator's 5% early-window per-wallet allocation;
 - be visible with its amount, fees, destinations and expected output before signing;
 - be optional or explicitly confirmed by the creator (never hidden);

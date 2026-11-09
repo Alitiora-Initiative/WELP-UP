@@ -37,7 +37,7 @@ A new Anchor 0.30.1 crate is present at \`programs/launchpad\`. The current impl
 - \`initialize_treasury\`, which records the Solana Clock timestamp;
 - \`disburse_treasury_funds\`, a permissionless harvest gated by at least 1,209,600 seconds;
 - a protected 40% reserve counter excluded from later epoch distributions;
-- checked Rust math and unit tests for the 0–3% creator fee, the 0.5%-of-creator-fee split and remainder carry.
+- checked Rust math and unit tests for the target 1.00% protocol plus 0.50% creator/developer allocation and remainder carry.
 
 **Deployment status: local source only; not deployed to Devnet or Mainnet.** The program ID in \`lib.rs\` is a sample local ID with no deployment keypair. Do not derive a production PDA or send funds to it. The fee routing helper is not yet called by a launch buy/sell handler and does not transfer any funds. Mint initialization, purchases, curve, escrow, refunds, Raydium CPMM CPI, LP burn and production indexing are not implemented.
 

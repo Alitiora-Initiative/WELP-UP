@@ -58,7 +58,7 @@ export function TerminalShell({ children }: { children: ReactNode }) {
  const pathname=usePathname();
  const [open,setOpen]=useState(false);
  const [activeMenu,setActiveMenu]=useState<string|null>(null);
- useEffect(()=>{const onKeyDown=(event:KeyboardEvent)=>{if(event.key==='Escape'){setOpen(false);setActiveMenu(null);}};window.addEventListener('keydown',onKeyDown);return()=>window.removeEventListener('keydown',onKeyDown);},[]);
+ useEffect(()=>{let disposed=false;let stopReferralCapture:(()=>void)|undefined;void import('@/lib/referral-attribution').then((module)=>{if(!disposed)stopReferralCapture=module.installReferralCapture();}).catch(()=>{});const onKeyDown=(event:KeyboardEvent)=>{if(event.key==='Escape'){setOpen(false);setActiveMenu(null);}};window.addEventListener('keydown',onKeyDown);return()=>{disposed=true;stopReferralCapture?.();window.removeEventListener('keydown',onKeyDown);};},[]);
  const isActive=(items:NavItem[])=>items.some(item=>pathname===item.href||(item.href!=='/'&&pathname.startsWith(item.href+'/')));
  const activeGroup=navGroups.find(group=>group.label===activeMenu);
  return <div className="terminal-site">

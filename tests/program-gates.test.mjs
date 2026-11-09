@@ -140,9 +140,11 @@ test('legacy initializer cannot imply that non-persisted caps are enforced', () 
 });
 
 
-test('launchpad fee calculation is 0.50% of gross swap input with a 60/40 allocation', () => {
+test('launchpad fee arithmetic matches 1% protocol plus 0.5% creator allocation', () => {
   const launchpad = readFileSync(new URL('../programs/launchpad/src/lib.rs', import.meta.url), 'utf8');
-  assert.match(launchpad, /PROTOCOL_SWAP_FEE_BPS: u128 = 50/);
+  assert.match(launchpad, /PROTOCOL_SWAP_FEE_BPS: u128 = 100/);
+  assert.match(launchpad, /CREATOR_SWAP_FEE_BPS: u128 = 50/);
+  assert.match(launchpad, /creator_fee_base_units/);
   assert.match(launchpad, /DEVELOPER_DISTRIBUTION_BPS: u128 = 6_000/);
   assert.match(launchpad, /PERMANENT_RESERVE_BPS: u128 = 4_000/);
   assert.match(launchpad, /pub fn calculate_protocol_swap_fee/);

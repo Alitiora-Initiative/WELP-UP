@@ -29,21 +29,20 @@ The user is responsible for wallet security, device security, transaction review
 
 The Service may prepare swaps through third-party Solana protocols and market data providers. Such providers operate independently. Quotes can expire, routes can fail, liquidity can change and execution can differ from estimates. A transaction's finalized on-chain outcome is authoritative.
 
-Swap execution is currently disabled until the disclosed WELP fee can be included atomically in the transaction. No AI service or server may silently sign transactions on a user's behalf.
+Wallet-approved Jupiter swaps are available through the site's order and execution routes. When WELP referral collection is not configured, swaps do not charge a WELP referral fee; third-party route fees may still apply. When collection is configured, WELP checks the referral account and the exact fee-mint token account before returning a signable order. Every swap still requires the user's wallet signature. No AI service or server may silently sign transactions on a user's behalf.
 
 ## 5. Fees
 
-The intended WELP fee schedule is:
+The codebase contains a target fee policy calculation that is not active collection:
 
-- **Each supported trade:** 0.10 USD-equivalent per operation.
-- **Each supported transfer:** 0.10 USD-equivalent per operation.
-- **Launchpad token creation:** 0.50 USD-equivalent per launch.
-- **Fee distribution:** 60% to the published developer/operator fee wallet and 40% to the WELP protocol treasury PDA.
-- **Creator rewards:** paid only from a separately disclosed creator-reward allocation after the on-chain accounting and claim mechanism is deployed.
+- **Protocol allocation:** 1.00% of gross swap input.
+- **Creator/developer allocation:** 0.50% of gross swap input.
+- **Genesis allocation:** 0.02% of supply, for a launch path that is not currently live.
+- **Treasury epoch target:** after 14 days, 60% of eligible treasury inflows to the developer/operator and 40% retained as reserve.
 
-The intended collection asset is USDC on Solana, with six decimal places. The $0.10 trade fee, $0.10 supported-transfer fee, $0.50 launch-creation fee, and 60/40 split are fixed protocol constants to be enforced by the on-chain program, not mutable operator settings. The final transaction must show the fee amount and destination before the user signs. Solana network fees, account rent and third-party protocol fees are separate from WELP fees.
+The live Jupiter referral rail accepts one configured rate (50–255 basis points) and sends referral proceeds to the referral partner's token account after Jupiter's share. It does not implement the 1.00% + 0.50% split or the treasury epoch. The current referral partner is the dev wallet, not a separate treasury. The WELP treasury program is not deployed as an executable mainnet program.
 
-**No fee is authorized merely by these Terms.** Fee collection is not enabled until the required on-chain program, treasury PDA, recipient token accounts, atomic fee enforcement, disclosures and mainnet verification are complete. If the fee instruction is absent or cannot be verified in the wallet prompt, the user should not assume a fee was paid or that the operation is enabled.
+No fee is charged merely by these Terms or by a policy calculation. The quote must show the referral state and fee mint, and the resulting transaction must be confirmed on-chain to establish collection. Network fees, rent, Jupiter's share, and DEX/pool fees are separate. See the [current fee and treasury status](docs/FEES_AND_TREASURY.md).
 
 ## 6. Launchpad
 

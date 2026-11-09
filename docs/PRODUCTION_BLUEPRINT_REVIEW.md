@@ -68,8 +68,9 @@ The production boundary should be strengthened, not bypassed.
 - The app uses `@solana/kit` and the connected wallet adapter, not the older `@solana/wallet-adapter-react` / `@solana/web3-sdk` imports in the proposed snippet.
 - The app requests Jupiter Swap API v2 `GET /order`, asks the connected wallet to sign, then posts the signed transaction and `requestId` to `POST /execute`.
 - API routes validate base58 addresses, SOL/token direction, integer raw units, slippage and an existing 0.001–0.02 SOL buy policy.
-- The API routes currently return 503 while `WELP_FEE_POLICY.collectionEnabled` is false. This is intentional: the fee has not been integrated atomically into the wallet-approved transaction.
-- The interface previously described mainnet trading as “on” while the server-side execution route was gated. That is misleading.
+- Wallet-approved swaps continue when referral collection is unconfigured and are explicitly fee-free to WELP in that state.
+- When configured, `/api/order` verifies the on-chain Jupiter referral account and exact fee-mint token account before returning a referral-fee order. If setup is unavailable, it requests a fresh quote without referral parameters and labels the quote as not collecting a WELP fee.
+- Jupiter referral collection is not an atomic WELP treasury split. The referral partner wallet receives claims; the WELP treasury program remains undeployed.
 
 **Change made in this branch**
 - Corrected the workspace status banner so it states that wallet-approved swaps are currently gated, live market data remains available, and unattended trading is not active. This prevents the UI from advertising an execution capability that the API refuses.

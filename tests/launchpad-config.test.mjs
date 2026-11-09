@@ -69,13 +69,14 @@ test('raw base-unit formatting remains exact for 0, 6 and 9 decimals', () => {
   assert.equal(formatBaseUnits(1_000_000_000n, 9), '1');
 });
 
-test('protocol swap fee is 0.50% of gross input and is credited to treasury before epoch distribution', () => {
+test('protocol swap fees are 1% to treasury and 0.5% to developer before epoch distribution', () => {
   const route = calculateProtocolSwapFee(1_000_000_000n);
   assert.equal(route.grossInputBaseUnits, 1_000_000_000n);
-  assert.equal(route.protocolFeeBaseUnits, 5_000_000n);
-  assert.equal(route.netSwapInputBaseUnits, 995_000_000n);
+  assert.equal(route.protocolFeeBaseUnits, 10_000_000n);
+  assert.equal(route.creatorFeeBaseUnits, 5_000_000n);
+  assert.equal(route.netSwapInputBaseUnits, 985_000_000n);
   assert.equal(
-    route.netSwapInputBaseUnits + route.protocolFeeBaseUnits,
+    route.netSwapInputBaseUnits + route.protocolFeeBaseUnits + route.creatorFeeBaseUnits,
     route.grossInputBaseUnits,
   );
 });
@@ -88,7 +89,8 @@ test('protocol swap fee rejects zero, negative, overflow and amounts below fee p
 
 test('protocol fee uses integer rounding with no floating point', () => {
   const route = calculateProtocolSwapFee(10_000n);
-  assert.equal(route.protocolFeeBaseUnits, 50n);
-  assert.equal(route.netSwapInputBaseUnits, 9_950n);
+  assert.equal(route.protocolFeeBaseUnits, 100n);
+  assert.equal(route.creatorFeeBaseUnits, 50n);
+  assert.equal(route.netSwapInputBaseUnits, 9_850n);
 });
 

@@ -96,11 +96,11 @@ Official sources:
 
 ## 7. WELP protocol swap-fee settlement
 
-Source of truth: docs/FEES_AND_TREASURY.md. Target fee is **0.50% of gross input** on each WELP-controlled swap.
+Source of truth: docs/FEES_AND_TREASURY.md. Target fee calculation is **1.00% protocol + 0.50% creator/developer** of gross input; it is not currently collected by an executable WELP mainnet program.
 
 At collection, 100% of the protocol fee is credited to treasury. After at least 14 days, 60% of eligible new SOL inflows is released to the developer/operator receiving wallet and 40% is added to the protected reserve. The split must occur once at epoch maturity, never twice.
 
-- [ ] Enforce 50 basis points of gross input in the on-chain buy/sell/swap instruction, with checked integer math and explicit rounding.
+- [ ] Enforce 100 basis points protocol plus 50 basis points creator/developer of gross input in the on-chain buy/sell/swap instruction, with checked integer math and explicit rounding.
 - [ ] Credit 100% of the fee into the correct input-asset treasury vault in the same atomic transaction as the swap.
 - [ ] Implement per-mint treasury token accounts and token CPI settlement before accepting SPL-token input routes; the current treasury vault holds SOL only.
 - [ ] Prevent duplicate fee collection with a unique operation receipt, and emit an event containing payer, mint, gross input, fee amount and slot.
@@ -108,7 +108,7 @@ At collection, 100% of the protocol fee is credited to treasury. After at least 
 - [ ] Do not imply that WELP taxes arbitrary SPL transfers or swaps that bypass WELP.
 - [ ] Keep swap endpoints fail-closed until composable transaction building, deployed program verification and SBF-backed adversarial tests pass.
 
-The prior fixed $0.10/$0.50 USDC charge schedule and creator-configurable 0–3% fee design are superseded and must not remain in frontend or on-chain code.
+The prior fixed $0.10/$0.50 USDC charge schedule and creator-configurable 0–3% fee design are superseded. The live Jupiter referral configuration is a separately disclosed, single 50–255 bps rate; it does not implement the target allocation above.
 
 ## 8. TypeScript service and transaction assembly
 
@@ -194,11 +194,11 @@ Design and current implementation detail: [TREASURY_AND_CREATOR_FEES.md](./TREAS
 - [x] Enforce the 1,209,600-second minimum epoch before any disbursal.
 - [x] Pay 60% of new, previously undistributed fee inflows to the fixed developer account.
 - [x] Add the remaining 40% to \`locked_reserve_lamports\` and exclude it from every future harvest, preventing repeated 60/40 calls from slowly draining the reserve.
-- [x] Test 50-bps gross-input fee math, exact epoch boundary, backwards clock, one-time 60/40 epoch release and treasury account sizing.
+- [x] Test target 100-bps protocol plus 50-bps creator/developer arithmetic, exact epoch boundary, backwards clock, one-time 60/40 epoch release and treasury account sizing.
 - [x] Keep host-only ProgramTest dependencies outside the Anchor SBF workspace in `programs/program-tests`.
 - [x] Add `scripts/pin-sbf-compatible-locks.sh` to constrain edition2024-sensitive transitive crates for the Solana 1.18/Cargo 1.75 SBF toolchain.
 - [x] Keep host-only ProgramTest dependencies outside the Anchor SBF workspace in `programs/program-tests`.
-- [ ] Connect the 50-bps gross-input fee helper to a verified buy/sell instruction and atomically credit 100% of the fee to the matching treasury vault.
+- [ ] Connect both target fee legs to verified buy/sell instructions and atomically credit the protocol allocation and creator/developer allocation to their independently verified destinations.
 - [ ] Add operation receipt/nonces, replay tests and event reconciliation for each fee-bearing swap.
 - [x] Add treasury ProgramTest integration coverage for rent preservation, unauthorized destination substitution, unsolicited donations, fee-ledger reconciliation, premature withdrawal rollback and repeated epochs in `programs/program-tests/tests/treasury_program_test.rs`.
 - [ ] Confirm both SBF artifacts build and both ProgramTest suites pass against the built binaries in the dedicated Anchor SBF workflow.
@@ -206,7 +206,7 @@ Design and current implementation detail: [TREASURY_AND_CREATOR_FEES.md](./TREAS
 
 ### Protocol swap fee design
 
-- [ ] Enforce 50 basis points (0.50%) of gross input on each WELP-controlled swap using checked integer arithmetic.
+- [ ] Enforce 100 basis points (1.00%) protocol plus 50 basis points (0.50%) creator/developer of gross input on each WELP-controlled swap using checked integer arithmetic.
 - [ ] Credit 100% of the protocol fee to a treasury vault for the exact input mint in the same atomic transaction as the swap.
 - [ ] After at least 14 days, release 60% of eligible new SOL inflows and protect the remaining 40% as reserve. Apply this split once, at epoch maturity.
 - [ ] Implement per-mint treasury token vaults and token CPI settlement before accepting SPL-token input routes; the current treasury vault is SOL-only.

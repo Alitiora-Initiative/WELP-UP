@@ -19,8 +19,8 @@ WELP Launchpad should feel like a launch studio and a transparent token director
 2. Enter name, symbol, description, image URI, optional website/social links.
 3. Choose total supply and decimals (0–9). The UI previews the exact raw integer supply and rejects overflow, zero supply and malformed metadata.
 4. Choose a supported quote asset: SOL or canonical mainnet USDC. The selected pair must be explicit before signing.
-5. Review token program, mint authority, freeze authority, metadata mutability, launch fee, creator reward terms and all account rent.
-6. Sign a single creation transaction. The creator pays account rent and the 0.50 USDC launch fee from their own wallet.
+5. Review token program, mint authority, freeze authority, metadata mutability, the proposed custom-launch charge, creator reward terms and all account rent.
+6. The creator signs the creation transaction only after the custom program and treasury are deployed, initialized and audited. At present, this WELP custom-launch transaction is gated and collects no launch fee.
 7. Verify the mint account and permanent LaunchRecord PDA from the confirmed transaction.
 8. Initialize the selected liquidity pool through a reviewed DEX adapter. Pool creation is a separate state transition and must never be implied by mint creation alone.
 9. Publish the launch card only after on-chain verification.
@@ -40,11 +40,11 @@ The board must not use the word "live" for a minted token with no verified pool.
 
 ## Fee and creator-reward accounting
 
-- Launch fee: 0.50 USDC, six decimals.
-- Protocol split: 60% to the developer/operator recipient defined in the server-only fee policy; 40% to the WELP treasury PDA.
-- Trading/transfer fee target: 0.10 USDC per supported WELP operation.
+- Custom launch charge in current source: flat 0.0025 SOL (2,500,000 lamports), only intended for a future enabled WELP custom-launch transaction. It is not collected on mainnet today.
+- Swap-fee policy: see [fees and treasury](FEES_AND_TREASURY.md); the target 1.00% + 0.50% allocation is not active collection, and its 14-day treasury split is not live.
+- Proposed swap-fee math: 1.00% protocol plus 0.50% creator/developer, subject to implementation in a verified mainnet program. It is not active collection; see [fees and treasury](FEES_AND_TREASURY.md). Do not describe the former 0.10 USDC operation charge as current.
 - Creator rewards are a separate stream. The reward rate is intentionally unset until a clear percentage, source of funds, eligibility rules, claim schedule and accounting model are approved.
-- Creator rewards must never be funded from personal safe deposits, and they must not silently change the fixed 60/40 protocol split.
+- Creator rewards must never be funded from personal safe deposits, and they must not silently change the disclosed target fee policy.
 - Every charge and reward must have an on-chain receipt and unique nonce. A backend database may index events but cannot create or modify balances.
 
 ## DEX integration boundary

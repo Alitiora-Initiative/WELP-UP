@@ -17,13 +17,13 @@
 - Live Solana token/market reads and deterministic risk/signal evaluation from retrieved feed data.
 - Mainnet-only Wallet Standard discovery and connection.
 - Wallet balance and confirmed transaction-signature reads.
-- Jupiter order preparation and user-signed execution interface. Current order/execute endpoints remain fail-closed because the WELP 0.50% protocol fee is not yet enforced atomically on-chain.
+- Jupiter v2 order preparation and user-signed execution interface. Swaps are available fee-free to WELP when referral collection is not configured; configured referral orders verify the exact on-chain fee token account and fail closed when setup is incomplete. This referral route is separate from the unimplemented 1.00% + 0.50% treasury/creator policy and does not enforce the epoch split.
 - Browser-local automation policies that scan the live Jupiter market feed while the Automation page remains open. When a real server-side model is configured, one new match can receive read-only AI review. This does not create, sign or submit a trade and is not a persistent background agent.
 - Launchpad route with token parameter validation and actual program/indexer release status. It is not a token-mint or buy/sell transaction service yet.
 
 ## Current protocol fee policy
 
-WELP's target fee is **0.50% (50 bps) of gross input** for a swap that executes through a WELP-controlled, fee-enforcing on-chain instruction.
+The target fee calculation is **1.00% (100 bps) protocol plus 0.50% (50 bps) creator/developer** of gross input. This is not active collection: the Jupiter referral rail charges one configurable 50–255 bps fee to one referral partner, and the custom fee-enforcing program is not executable on mainnet. See [fees and treasury](docs/FEES_AND_TREASURY.md).
 
 At collection, 100% of the fee must be credited to treasury in the same atomic transaction as the swap. After at least 14 days, the treasury program releases 60% of eligible new SOL fee inflows to the published developer recipient and retains 40% as protected reserve. The split occurs once at epoch maturity.
 

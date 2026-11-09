@@ -6,7 +6,7 @@
 
 ## 1. Abstract
 
-WELP UP! is a Solana market-analysis and wallet-approved trading interface. The current web application provides live token/market reads, deterministic rule-based signal analysis, Wallet Standard connection, wallet balance and transaction reads, a policy-based automation watcher, and Jupiter Swap API v2 order preparation and execution after a user signs—subject to the currently enforced fee and protocol release gates.
+WELP UP! is a Solana market-analysis and wallet-approved trading interface. The current web application provides live token/market reads, deterministic rule-based signal analysis, Wallet Standard connection, wallet balance and transaction reads, a policy-based automation watcher, and Jupiter Swap API v2 order preparation and execution after the user signs. Jupiter referral fee collection is separately configurable and is not the WELP treasury waterfall.
 
 The app has a Launchpad route for reviewing token parameters and release status. It does not currently mint tokens, run a bonding curve, accept launch purchases, manage buyer escrow/refunds, graduate a pool, or collect a live protocol fee. These features are not described as live until verified mainnet instructions and on-chain records exist.
 
@@ -29,7 +29,7 @@ The web application reads Solana token and market information from Jupiter Token
 
 The application discovers installed Solana Wallet Standard providers that advertise the Solana mainnet chain. It requests an order from Jupiter Swap API v2, presents the transaction to the connected wallet for review/signature, and submits the signed order through the Jupiter execution API. A quote is not a fill; only a confirmed transaction signature establishes execution.
 
-**Current trading gate:** WELP's target fee is 0.50% (50 basis points) of gross input for each WELP-controlled swap. The complete fee must be credited to the treasury atomically with the swap. The current launchpad program does not yet implement a swap or fee-credit instruction, and the current Jupiter order/execute path cannot append arbitrary WELP instructions. The order and execute endpoints therefore remain fail-closed. The website must not advertise the app as open for real WELP-fee-enforced trading.
+**Current trading and fee state:** wallet-approved Jupiter swaps are available. With referral collection unconfigured, a swap has no WELP fee. With referral collection configured, the order API verifies Jupiter's referral account and the canonical token account for the quote's fee mint before returning the signable order. Jupiter referral fees accrue to the referral partner; they do not flow directly into a WELP treasury. The on-chain treasury program is not executable on mainnet, so its epoch split is inactive. See [fees and treasury](docs/FEES_AND_TREASURY.md).
 
 ### 3.3 Automation and AI research
 
@@ -51,21 +51,17 @@ This is not an available mainnet custody service. The checked-in vault program I
 
 ### 5.1 Launchpad status
 
-The current Launchpad page validates token name, ticker, whole-token supply and mint precision, and displays the actual program/indexer release gate. It is a configuration and status page only. The current Anchor launchpad crate implements a local treasury state and distribution core plus a pure 0.50% fee calculation helper. It does not implement mint creation, supply authority revocation, launch state, bonding-curve buy/sell, quote escrow, refunds, graduation, Raydium CPMM pool creation or LP burn. No production launch ID, deployer keypair, deployed bytecode or live launch indexer is configured.
+The current Launchpad page validates token name, ticker, whole-token supply and mint precision, and displays the actual program/indexer release gate. It is a configuration and status page only. The current Anchor launchpad crate implements a local treasury state and distribution core plus pure target fee arithmetic. It does not implement mint creation, supply authority revocation, launch state, bonding-curve buy/sell, quote escrow, refunds, graduation, Raydium CPMM pool creation or LP burn. No production launch ID, deployer keypair, deployed bytecode or live launch indexer is configured.
 
 ### 5.2 Protocol swap fee
 
-The target protocol fee is **0.50% (50 basis points) of gross input** for swaps that execute through a WELP-controlled, fee-enforcing on-chain instruction:
+The target fee calculations in the codebase are **1.00% protocol + 0.50% creator/developer** of gross input, plus a separate 0.02% genesis allocation. They are not active collection and do not map directly onto Jupiter's referral rail, which accepts one configurable 50–255 bps rate and pays one referral partner after Jupiter's share.
 
-$$
-\\text{fee} = \\left\\lfloor \\frac{\\text{gross input} \\times 50}{10,000} \\right\\rfloor
-$$
+The target treasury calculation releases 60% of eligible new inflows after a 14-day epoch and retains 40% as reserve. No mainnet program or treasury PDA is currently enforcing this split. A math helper or an RPC account address is not proof of collection or payout.
 
-At collection, 100% of the fee is credited to the treasury vault for the input asset. After at least 14 days, the epoch releases 60% of eligible new SOL inflows to the published developer/operator recipient and adds the remaining 40% to the protected treasury reserve. The split is applied once at epoch maturity—not at collection and again at distribution.
+The configured launch/treasury program address is currently a non-executable System Program account. No WELP treasury PDA is active there. The Rust and TypeScript helpers calculate target amounts only; they do not collect funds.
 
-The current treasury vault is a SOL System Program PDA. It is not a generic SPL-token vault. SPL-token input fees require per-mint treasury token accounts and token-program CPI settlement, which are not implemented. The Rust and TypeScript fee helpers calculate amounts only; they do not collect funds.
-
-WELP cannot intercept arbitrary wallet transfers or swaps routed directly through another DEX. A fee applies only when the transaction executes through a WELP-controlled on-chain instruction. No fee collection is active on mainnet.
+WELP cannot intercept arbitrary wallet transfers or direct trades routed outside its app. A Jupiter referral fee can only be included in WELP-created Jupiter orders when the referral account and exact fee-mint token account are ready. Current mainnet referral collection remains incomplete until those accounts and production environment settings are verified.
 
 ## 6. Mainnet-only release gates
 

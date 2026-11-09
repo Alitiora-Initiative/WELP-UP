@@ -1,63 +1,56 @@
-# WELP UP protocol swap-fee policy
+# WELP swap fees and treasury status
 
-**Policy:** WELP charges **0.50% (50 basis points) of gross input** on each swap that executes through a WELP-controlled, fee-enforcing swap instruction.
+**Checked:** 9 November 2026. This document separates the live Jupiter referral path from the proposed WELP fee allocation and treasury program.
 
-The fee is calculated before the swap from the input asset's raw base-unit amount:
+## Live swap path
 
-\[
-\text{protocol fee}=\left\lfloor\frac{\text{gross input}\times 50}{10,000}\right\rfloor
-\]
+The browser requests an order from Jupiter Swap API v2, signs it with the connected wallet, and submits it to Jupiter's execution endpoint. The API pins the order to versioned transaction v0. No server-held signer is used for user swaps.
 
-There is no separate fixed $0.10 trade fee, $0.10 transfer fee, or $0.50 token-launch creation fee under this policy. The old creator-configurable 0–3% fee is also removed. This fee is not 0.5% of a creator fee; it is 0.5% of gross swap input.
+Live quotes work through Jupiter Swap API v2 keyless access; a server-side `JUPITER_API_KEY` is optional and provides a higher rate tier. Jupiter currently documents 0.5 requests/second for keyless access, so a production deployment serving multiple users should use a free server-side key and monitor its rate limits. `/api/status` independently checks the token feed and a quote-only Jupiter order request. A successful quote check proves the provider can return a price, not that a particular user's balance, route, wallet signing, or execution will succeed.
 
-## Allocation
+WELP referral collection is optional configuration. Set `WELP_REFERRAL_ACCOUNT` and `WELP_REFERRAL_FEE_BPS` on the server to request a Jupiter referral fee. The fee rate must be from 50 to 255 basis points. The order route verifies that:
 
-At collection, 100% of the 0.50% fee is credited to the protocol treasury. After at least one 14-day epoch, the program releases 60% of eligible new fee inflows to the developer/operator and adds the remaining 40% to the protected treasury reserve. The same fee is split once, at epoch distribution—not once at collection and again at distribution.
+1. The referral account exists and is owned by Jupiter's referral program.
+2. Jupiter returns the configured referral account and a fee mint.
+3. The canonical associated token account for that referral account and exact fee mint exists, uses the correct token program, and has matching mint and owner bytes.
 
-The published developer receiving address is:
+If configured collection is incomplete or cannot be verified, `/api/order` requests a fresh quote without referral parameters and labels it `not_collected`. This keeps wallet-approved swaps available without silently claiming a WELP fee. The quote UI shows the no-WELP-fee state before wallet signing. Jupiter's own platform/route fees may still apply. The quote's `feeBps`, `platformFee.feeBps`, and `feeMint` are separate fields and must not be presented as WELP revenue.
 
-ETuGxX6Znxr9q59THJtcYDJKt6RvCfN7wp79tRnbG1xG
+The referral account `welpup` was created on mainnet at `2puMMFLeeVYPifiJGeNefnYiGFpXSDNTDSAMiq9ndUuV`. Its partner is the dev wallet `ETuGxX6Znxr9q59THJtcYDJKt6RvCfN7wp79tRnbG1xG`. Referral fees are claimed to that partner's token account; the referral rail does not route directly to a WELP treasury PDA. Jupiter retains 20% of the integrator fee. The partner must claim and separately route proceeds to a designated treasury if one is established. The official dashboard is [referral.jup.ag](https://referral.jup.ag/).
 
-It is a public receiving address, not a private key or signing credential. This address is the sole developer recipient for the epoch's 60% release. The 40% reserve remains in treasury and must not be included in later distribution calculations.
+At the last mainnet account check, the SOL referral token account was absent and the dev wallet held 0.001256102 SOL. The mainnet rent quote for a standard 165-byte token account was 0.001488440 SOL, before transaction fees. These values are time-sensitive and must be rechecked before acting. SOL referral collection could not be enabled with that balance. The fee route checks the exact `feeMint` per quote, so every fee mint returned by Jupiter needs its own initialized referral account.
 
-## Scope and limitations
+## Fee policy calculations (not active collection)
 
-The fee applies only to swaps that actually pass through a WELP-controlled on-chain instruction. WELP cannot intercept or tax arbitrary wallet transfers or swaps routed directly through another DEX program without invoking WELP.
+`lib/server/fee-policy.ts` and `lib/launchpad-config.ts` calculate the requested target split:
 
-The fee is assessed on the gross input asset. For a SOL-in swap it is denominated in lamports; for an SPL-token-in swap it is denominated in that token's raw base units. Integer math must use checked arithmetic and an explicitly defined rounding direction. A route whose fee rounds to zero base units must be rejected or governed by a separately reviewed minimum-fee rule; it must not silently charge a different percentage.
+- 100 bps (1.00%) protocol allocation.
+- 50 bps (0.50%) creator/developer allocation.
+- 2 bps (0.02%) genesis allocation.
+- 14-day treasury epoch with 60% developer release and 40% retained reserve.
 
-## Atomic enforcement requirements
+These calculations do not collect, transfer, reserve, or distribute funds. Jupiter's referral option charges one configured fee rate to one referral token account. It does not implement the separate 100-bps and 50-bps transfers, WELP's 60/40 epoch, or an on-chain treasury. Do not set a referral rate and describe it as the proposed allocation unless the transaction and final balances prove the chosen economics.
 
-A successful swap and its fee transfers must be one Solana transaction. If either fee leg, the swap CPI, or any account validation fails, the entire transaction must roll back. The on-chain program must:
+## Treasury deployment status
 
-1. Validate the exact mainnet program IDs, source mint, source token account, token program, signer and destination accounts.
-2. Derive the developer and treasury token accounts for the actual input mint; do not accept arbitrary fee destinations from the caller.
-3. Calculate exactly 50 basis points from gross input using checked integer arithmetic.
-4. Credit 100% of the fee to the treasury at collection. After the epoch matures, release 60% of new, not-yet-distributed inflows to the developer and lock the remaining 40% in the protected reserve.
-5. Bind an operation receipt/nonce to the payer and swap so an operation cannot be charged twice.
-6. Emit an event recording the payer, input mint, gross input, fee amount, both recipient amounts and slot.
-7. Display the 0.50% fee, amount and recipient split before the wallet is asked to sign.
+The source declares launch/treasury program ID `BrcdB9sV7z9DvF9rDHG263HUxXgJM3iCQdF36TcxbFEn`. Mainnet RPC reports the address is owned by the System Program and is not executable. No WELP treasury program or treasury PDA is active at this address. Rust unit tests and fee math are not deployment evidence.
 
-No browser setting or server-side flag is sufficient to enforce the fee. The program must verify and execute it on-chain.
+The existing referral account's partner is the dev wallet, and the repository does not define a separate treasury receiving wallet. Therefore the current route can only accrue claimable referral proceeds for that partner. To implement the desired treasury waterfall, choose and verify a treasury authority (preferably a governance-controlled multisig), then either:
 
-## Current implementation status
+1. Deploy and independently review a treasury program that receives fees atomically, records mint-specific balances, and enforces the epoch; or
+2. Claim referrals to the partner wallet and run a disclosed, auditable settlement process that transfers proceeds to the verified treasury and applies the 60/40 split after the epoch.
 
-The TypeScript policy and integer fee calculation are defined in source. This is not proof of fee collection.
+The first option requires an audited program, production deployment key, verified executable address, upgrade-authority policy, mint-specific vaults, replay protection, event/indexer reconciliation, and mainnet transaction tests. The second option is not an on-chain enforced epoch and must be described as operator-managed.
 
-The current Anchor welp_launchpad crate is **not deployed on Solana mainnet** and has no production deployment keypair. Its sample program ID must not be used to derive a payment address. The current source does not yet have a production bonding-curve swap instruction or a composable Jupiter swap CPI with both fee transfers. The application order and execute endpoints therefore remain fail-closed; they do not submit mainnet swaps that omit the protocol fee.
+## Operational checklist
 
-The previous fixed-amount USDC supported-transfer instruction and its integration test have been removed from the program source. No direct SPL transfer fee is charged. The current treasury vault is a SOL System Program PDA, not a generic SPL-token vault. Asset-specific token vaults and token transfer CPIs are not implemented, so non-SOL input-asset fees remain unsupported.
+- [x] Create the named Jupiter referral account on mainnet.
+- [x] Verify referral account program owner and partner.
+- [x] Add quote-time verification of the exact referral token account.
+- [ ] Fund a payer and initialize the SOL referral token account.
+- [ ] Set Vercel `WELP_REFERRAL_ACCOUNT` and `WELP_REFERRAL_FEE_BPS` only after fee-account verification.
+- [ ] Make a small, explicitly approved swap and inspect the confirmed transaction and referral balance delta.
+- [ ] Establish a treasury address and documented custody/governance model.
+- [ ] Implement and independently review the 1.00% + 0.50% allocation and 14-day 60/40 settlement before describing those policy calculations as active fees.
 
-## Treasury release and upgrade authority
-
-The existing treasury design uses a 14-day epoch and a 60/40 allocation model. The final deployed program must specify whether the 60% operator allocation is transferred at fee collection or at epoch maturity; this must be implemented exactly once, not duplicated. The 40% treasury reserve must remain separately accounted and protected.
-
-A program-controlled reserve is not permanently inaccessible while the program remains upgradeable by a privileged upgrade authority. Before public launch, either revoke upgrade authority after independent review or publish the exact multisig governance and its powers.
-
-## Network and third-party costs
-
-Solana network fees, priority fees, account rent, DEX routing fees and pool-creation costs are separate from the WELP protocol fee. They must be shown separately when applicable and must never be presented as WELP revenue.
-
-## Release gates
-
-Mainnet fee collection stays disabled until all of these are complete: production program ID and deployed binary are verified; SBF and ProgramTest checks pass; the actual swap instruction composes both fee transfers atomically; wrong mint/account/authority, insufficient funds, replay and rollback tests pass; the deployed IDL and upgrade authority are verified; and an independent Solana/Anchor security review is complete.
+Network fees, priority fees, account rent, Jupiter's share, and DEX/pool fees are separate from WELP proceeds. For the current state, use `/api/status`; it reports environment readiness and on-chain account checks rather than inferring activation from source constants.

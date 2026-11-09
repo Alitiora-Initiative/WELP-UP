@@ -1,6 +1,6 @@
 # WELP UP Protocol Architecture
 
-Status: engineering specification, not a deployment or a claim that these protocol modules are live.
+Status: historical engineering specification, not a deployment or a claim that these protocol modules are live. Its older example fee schedules are superseded; current swap, referral, and treasury facts are maintained in [FEES_AND_TREASURY.md](FEES_AND_TREASURY.md).
 
 WELP UP is intended to become an independent Solana application and protocol stack. The application must not claim that a feature is live until its program is deployed, its IDL and program binary are verified, mainnet transactions have been observed, and the user-facing flow has been tested against those transactions.
 

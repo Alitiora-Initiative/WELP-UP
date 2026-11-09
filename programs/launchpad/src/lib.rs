@@ -4,7 +4,8 @@
 //! audited production launchpad. The program id below is a sample local ID.
 //! Replace it with a deployment keypair-generated ID before any deployment.
 //! The launch buy/curve/refund/Raydium instructions are not enabled in this
-//! crate yet; the 50-bps gross-input fee arithmetic below is a tested primitive for that route.
+//! crate yet; the target 100-bps protocol + 50-bps creator fee arithmetic below
+//! is a tested primitive and does not collect or transfer funds.
 
 use anchor_lang::{prelude::*, system_program};
 
@@ -14,7 +15,8 @@ pub const TREASURY_SEED: &[u8] = b"treasury-v1";
 pub const TREASURY_VAULT_SEED: &[u8] = b"treasury-vault-v1";
 pub const DEVELOPER_WALLET: Pubkey = pubkey!("ETuGxX6Znxr9q59THJtcYDJKt6RvCfN7wp79tRnbG1xG");
 pub const BASIS_POINTS_DENOMINATOR: u128 = 10_000;
-pub const PROTOCOL_SWAP_FEE_BPS: u128 = 50; // 0.50% of gross swap input
+pub const PROTOCOL_SWAP_FEE_BPS: u128 = 100; // target 1.00% protocol allocation
+pub const CREATOR_SWAP_FEE_BPS: u128 = 50; // target 0.50% creator/developer allocation
 pub const DISTRIBUTION_EPOCH_SECONDS: i64 = 1_209_600; // exactly 14 days
 pub const DEVELOPER_DISTRIBUTION_BPS: u128 = 6_000; // 60%
 pub const PERMANENT_RESERVE_BPS: u128 = 4_000; // 40%
@@ -275,7 +277,7 @@ impl TreasuryAccount {
     }
 }
 
-/// Calculate a 0.50% protocol fee from gross input, split 60/40.
+/// Calculate the target 1.00% protocol + 0.50% creator allocation from gross input.
 ///
 /// This is a pure arithmetic primitive. It does not prove a swap occurred and
 /// does not move funds; the production swap instruction must invoke it and
@@ -284,7 +286,9 @@ impl TreasuryAccount {
 pub struct ProtocolSwapFeeRoute {
     pub gross_input_base_units: u64,
     pub protocol_fee_base_units: u64,
+    pub creator_fee_base_units: u64,
     pub treasury_credit_base_units: u64,
+    pub developer_credit_base_units: u64,
     pub net_swap_input_base_units: u64,
 }
 
@@ -296,15 +300,25 @@ pub fn calculate_protocol_swap_fee(gross_input_base_units: u64) -> Result<Protoc
         BASIS_POINTS_DENOMINATOR,
     )?;
     require!(protocol_fee > 0, TreasuryError::FeeBelowMinimumUnit);
+    let creator_fee = mul_div_floor_u64(
+        gross_input_base_units,
+        CREATOR_SWAP_FEE_BPS,
+        BASIS_POINTS_DENOMINATOR,
+    )?;
+    let total_fee = protocol_fee
+        .checked_add(creator_fee)
+        .ok_or(TreasuryError::ArithmeticOverflow)?;
 
     let net_swap_input = gross_input_base_units
-        .checked_sub(protocol_fee)
+        .checked_sub(total_fee)
         .ok_or(TreasuryError::ArithmeticUnderflow)?;
 
     Ok(ProtocolSwapFeeRoute {
         gross_input_base_units,
         protocol_fee_base_units: protocol_fee,
+        creator_fee_base_units: creator_fee,
         treasury_credit_base_units: protocol_fee,
+        developer_credit_base_units: creator_fee,
         net_swap_input_base_units: net_swap_input,
     })
 }
@@ -390,7 +404,7 @@ pub enum TreasuryError {
     TreasuryAccountingInvariant,
     #[msg("A swap input must be greater than zero.")]
     ZeroSwapInput,
-    #[msg("The 0.50% protocol fee is below one raw input base unit.")]
+    #[msg("The protocol fee is below one raw input base unit.")]
     FeeBelowMinimumUnit,
     #[msg("Checked arithmetic overflow.")]
     ArithmeticOverflow,
@@ -414,14 +428,18 @@ mod tests {
     }
 
     #[test]
-    fn protocol_fee_is_half_percent_of_gross_input_and_credits_treasury() {
+    fn target_protocol_and_creator_fees_are_1_percent_and_half_percent() {
         let route = calculate_protocol_swap_fee(1_000_000_000).unwrap();
         assert_eq!(route.gross_input_base_units, 1_000_000_000);
-        assert_eq!(route.protocol_fee_base_units, 5_000_000);
-        assert_eq!(route.treasury_credit_base_units, 5_000_000);
-        assert_eq!(route.net_swap_input_base_units, 995_000_000);
+        assert_eq!(route.protocol_fee_base_units, 10_000_000);
+        assert_eq!(route.creator_fee_base_units, 5_000_000);
+        assert_eq!(route.treasury_credit_base_units, 10_000_000);
+        assert_eq!(route.developer_credit_base_units, 5_000_000);
+        assert_eq!(route.net_swap_input_base_units, 985_000_000);
         assert_eq!(
-            route.net_swap_input_base_units + route.protocol_fee_base_units,
+            route.net_swap_input_base_units
+                + route.protocol_fee_base_units
+                + route.creator_fee_base_units,
             route.gross_input_base_units
         );
     }
@@ -429,9 +447,11 @@ mod tests {
     #[test]
     fn protocol_fee_uses_checked_integer_rounding() {
         let route = calculate_protocol_swap_fee(10_000).unwrap();
-        assert_eq!(route.protocol_fee_base_units, 50);
-        assert_eq!(route.treasury_credit_base_units, 50);
-        assert_eq!(route.net_swap_input_base_units, 9_950);
+        assert_eq!(route.protocol_fee_base_units, 100);
+        assert_eq!(route.creator_fee_base_units, 50);
+        assert_eq!(route.treasury_credit_base_units, 100);
+        assert_eq!(route.developer_credit_base_units, 50);
+        assert_eq!(route.net_swap_input_base_units, 9_850);
     }
 
     #[test]
