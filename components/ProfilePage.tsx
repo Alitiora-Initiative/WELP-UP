@@ -3,10 +3,8 @@
 import { useEffect, useState } from 'react';
 import { Check, Copy, LockKeyhole, ShieldCheck, UserRound, Wallet } from 'lucide-react';
 import { useConnectedWallet } from '@solana/kit-plugin-wallet/react';
-import { AppSidebar } from '@/components/AppSidebar';
 import { client } from '@/components/Providers';
 import { TransactionHistory } from '@/components/TransactionHistory';
-import { WalletConnectionControl } from '@/components/WalletConnectionControl';
 
 type WalletProfile = {
   owner: string;
@@ -61,18 +59,7 @@ export function ProfilePage() {
   }
 
   return (
-    <main className="app-shell">
-      <AppSidebar active="profile" status={walletAddress ? 'Wallet session active' : 'Waiting for site wallet'} />
-      <section className="workspace" id="top">
-        <header className="topbar">
-          <div className="breadcrumb"><span>ACCOUNT</span><span className="crumb-slash">/</span><strong>Profile</strong></div>
-          <div className="topbar-right">
-            <span className="market-open"><span className="market-pip" /> WALLET SETTINGS</span>
-            <WalletConnectionControl />
-          </div>
-        </header>
-
-        <div className="page-content">
+    <main className="terminal-page feature-page profile-page-rebuild">
           <section className="welcome-row">
             <div>
               <p className="eyebrow"><UserRound size={14} /> ACCOUNT PROFILE</p>
@@ -144,8 +131,6 @@ export function ProfilePage() {
           </section>
 
           {walletAddress ? <TransactionHistory owner={walletAddress} /> : null}
-        </div>
-      </section>
     </main>
   );
 }
