@@ -1,92 +1,73 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowDownUp, ArrowRight, Activity, BookOpenCheck, Bot, ChartNoAxesCombined, CircleDollarSign, ExternalLink, LockKeyhole, ShieldCheck, Sparkles, Vault, Wallet } from 'lucide-react';
-import { AppSidebar } from '@/components/AppSidebar';
-import { WalletConnectionControl } from '@/components/WalletConnectionControl';
+import { useEffect, useState } from 'react';
+import { ArrowRight, ArrowUpRight, BarChart3, Bot, CheckCircle2, ChevronRight, CircleDollarSign, LockKeyhole, ScanSearch, ShieldCheck, Sparkles, Wallet } from 'lucide-react';
 
-const steps = [
-  { number: '01', icon: Wallet, title: 'Site wallet session', copy: 'Balances, signals, and swaps stay locked until the wallet session on this website is active.' },
-  { number: '02', icon: Activity, title: 'Review the market', copy: 'The current rule engine checks live Solana pools and surfaces candidates with the reasons behind each score.' },
-  { number: '03', icon: ArrowDownUp, title: 'Choose and approve', copy: 'Set an amount, inspect the route, then sign each individual swap in Phantom. The opening amount is 0.001 SOL and remains editable.' },
+type MarketAsset = { symbol: string; priceUsd: number; priceChange24h: number; liquidityUsd?: number; volume24hUsd?: number };
+type MarketResponse = { assets?: MarketAsset[] };
+
+const quickLinks = [
+  { href: '/markets', icon: ScanSearch, label: 'Market screener', copy: 'Search live Solana assets, liquidity and turnover.' },
+  { href: '/signals', icon: BarChart3, label: 'Signal engine', copy: 'Review transparent scores and qualification blockers.' },
+  { href: '/swap', icon: CircleDollarSign, label: 'Swap desk', copy: 'Inspect a Jupiter route before you approve it.' },
+  { href: '/portfolio', icon: Wallet, label: 'Portfolio', copy: 'View wallet-derived balances and activity.' },
 ];
 
-const destinations = [
-  { href: '/signals', icon: Activity, title: 'Live signals', copy: 'Review candidates, price movement, score and entry status.' },
-  { href: '/autonomous', icon: Bot, title: 'Autonomous AI', copy: 'Live agent execution is not enabled; no simulated bot performance is shown.' },
-  { href: '/vault', icon: Vault, title: 'Vault', copy: 'Vault funding is disabled until a verified and audited mainnet program is available.' },
-  { href: '/swap', icon: ArrowDownUp, title: 'Swap', copy: 'Prepare a quote and approve one transaction in your wallet.' },
-  { href: '/activity', icon: ChartNoAxesCombined, title: 'Portfolio activity', copy: 'See recorded wallet snapshots, scans and approved swaps.' },
-  { href: '/safety', icon: ShieldCheck, title: 'Safety rules', copy: 'Read the current limits and what the app does not do yet.' },
-];
+function formatPrice(value: number) {
+  if (value >= 1000) return `$${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+  if (value >= 1) return `$${value.toFixed(2)}`;
+  return `$${value.toPrecision(4)}`;
+}
 
 export function HomePage() {
+  const [assets, setAssets] = useState<MarketAsset[]>([]);
+  const [feedState, setFeedState] = useState<'loading' | 'live' | 'offline'>('loading');
+
+  useEffect(() => {
+    let mounted = true;
+    fetch('/api/markets', { cache: 'no-store' })
+      .then(async (response) => {
+        const data = await response.json() as MarketResponse;
+        if (!response.ok) throw new Error('Market feed unavailable');
+        if (mounted) { setAssets(Array.isArray(data.assets) ? data.assets.slice(0, 5) : []); setFeedState('live'); }
+      })
+      .catch(() => { if (mounted) setFeedState('offline'); });
+    return () => { mounted = false; };
+  }, []);
+
+  const gainers = assets.filter((asset) => asset.priceChange24h >= 0).length;
+  const totalVolume = assets.reduce((sum, asset) => sum + (asset.volume24hUsd ?? 0), 0);
+
   return (
-    <main className="app-shell">
-      <AppSidebar active="home" status="Analysis only · no auto-trading" />
-      <section className="workspace" id="top">
-        <header className="topbar">
-          <div className="breadcrumb"><span>WELCOME</span><span className="crumb-slash">/</span><strong>WELP UP</strong></div>
-          <div className="topbar-right">
-            <span className="market-open"><span className="market-pip" /> SOLANA MAINNET</span>
-            <WalletConnectionControl />
-          </div>
-        </header>
-
-        <div className="page-content home-page">
-          <section className="home-hero">
-            <div className="home-hero-copy">
-              <p className="eyebrow"><Sparkles size={14} /> SOLANA MARKET RESEARCH CONSOLE</p>
-              <h1>Stay in control.<br /><em>See every move.</em></h1>
-              <p className="home-hero-lede">WELP scans Solana markets, explains the signals it finds, and gives you a clear place to review swaps and wallet activity.</p>
-              <div className="home-hero-actions"><Link className="primary-button home-primary-link" href="/dashboard">Open trading console <ArrowRight size={15} /></Link><Link className="home-secondary-link" href="/safety">How it works <ArrowRight size={14} /></Link></div>
-              <div className="home-hero-proof"><span><LockKeyhole size={14} /> Your wallet signs transactions</span><span><ShieldCheck size={14} /> No unattended trading is active</span></div>
-            </div>
-            <div className="home-preview-card" aria-label="Illustrative WELP portfolio interface preview">
-              <div className="preview-topline"><span><i /> WALLET OVERVIEW</span><span className="preview-badge">INTERFACE PREVIEW</span></div>
-              <div className="preview-balance-label">Estimated wallet value</div>
-              <div className="preview-balance">Session required <span>live</span></div>
-              <div className="preview-chart-wrap">
-                <div className="preview-chart-labels"><span>Portfolio snapshots</span><span>History begins after connect</span></div>
-                <svg viewBox="0 0 580 170" className="preview-chart" role="img" aria-label="Decorative chart preview with no account data">
-                  <defs><linearGradient id="preview-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#b9f36d" stopOpacity=".2" /><stop offset="100%" stopColor="#b9f36d" stopOpacity="0" /></linearGradient></defs>
-                  <path className="preview-grid" d="M5 32H575 M5 86H575 M5 140H575" />
-                  <path d="M5 118 C38 100 58 124 89 105 S140 93 171 107 S226 70 257 83 S304 104 335 74 S385 96 414 70 S466 55 494 82 S543 49 575 41 L575 160 L5 160Z" fill="url(#preview-fill)" />
-                  <path d="M5 118 C38 100 58 124 89 105 S140 93 171 107 S226 70 257 83 S304 104 335 74 S385 96 414 70 S466 55 494 82 S543 49 575 41" fill="none" stroke="#b9f36d" strokeWidth="2.5" strokeLinecap="round" />
-                </svg>
-                <div className="preview-chart-times"><span>Site wallet</span><span>History starts after the session</span></div>
-              </div>
-              <div className="preview-activity-row"><span className="preview-activity-icon"><Activity size={15} /></span><span><strong>Market scan</strong><small>Signals appear here as they update</small></span><span className="preview-waiting">WAITING</span></div>
-              <div className="preview-caption">Illustrative product view · no user balances or returns shown</div>
-            </div>
-          </section>
-
-          <section className="home-status-strip" aria-label="Current product status">
-            <div><span className="home-status-icon"><Activity size={15} /></span><span><small>MARKET ANALYSIS</small><strong>Rule-based scanner is live</strong></span></div>
-            <div><span className="home-status-icon"><LockKeyhole size={15} /></span><span><small>TRADE EXECUTION</small><strong>One Phantom approval per swap</strong></span></div>
-            <div><span className="home-status-icon home-status-planned"><CircleDollarSign size={15} /></span><span><small>AUTONOMOUS VAULT</small><strong>Planned · not available yet</strong></span></div>
-          </section>
-
-          <section className="home-section" id="flow">
-            <div className="home-section-heading"><div><p className="eyebrow">A SIMPLE, TRANSPARENT FLOW</p><h2>From market scan to wallet approval</h2></div><Link className="home-text-link" href="/signals">Explore signals <ArrowRight size={14} /></Link></div>
-            <div className="home-steps">{steps.map((step) => <article className="home-step panel" key={step.number}><div className="home-step-top"><span className="home-step-number">{step.number}</span><span className="home-step-icon"><step.icon size={17} /></span></div><h3>{step.title}</h3><p>{step.copy}</p></article>)}</div>
-          </section>
-
-          <section className="home-section home-tools-section">
-            <div className="home-section-heading"><div><p className="eyebrow">YOUR WORKSPACE</p><h2>Every tool has its own page</h2></div><Link className="home-text-link" href="/dashboard">Open overview <ArrowRight size={14} /></Link></div>
-            <div className="home-destination-grid">{destinations.map((destination) => <Link className="home-destination panel" href={destination.href} key={destination.href}><span className="home-destination-icon"><destination.icon size={17} /></span><span><strong>{destination.title}</strong><small>{destination.copy}</small></span><ArrowRight className="home-destination-arrow" size={15} /></Link>)}</div>
-          </section>
-
-          <section className="home-vault-card">
-            <span className="home-vault-icon"><ShieldCheck size={19} /></span>
-            <div><p className="eyebrow">NON-CUSTODIAL VAULT · SECURITY REVIEW IN PROGRESS</p><h2>Your keys. Your vault. Your rules.</h2><p>Set up your on-chain PDA vault, deposit SOL, and configure owner controls. Live bot execution activates after STRIDE security review. You retain full pause, revoke, and withdrawal rights at all times.</p></div>
-            <Link className="home-vault-link" href="/vault">Open vault <ArrowRight size={14} /></Link>
-          </section>
-
-          <div className="home-minimum-note"><BookOpenCheck size={16} /><span>Current swap form starts at 0.001 SOL. You can adjust it from that minimum up to 0.02 SOL per buy.</span><Link href="/terms">Read Terms &amp; Conditions</Link></div>
-          <footer className="footer home-footer"><span>WELP UP · Built for Solana</span><span>Digital assets can lose all value. Review every wallet transaction.</span><a href="https://github.com/Alitiora-Initiative/WELP-UP" target="_blank" rel="noreferrer">Source <ExternalLink size={12} /></a></footer>
+    <main className="terminal-page home-dashboard">
+      <section className="dashboard-hero">
+        <div className="dashboard-hero-copy">
+          <p className="eyebrow"><span className="eyebrow-dot" /> SOLANA MARKET INTELLIGENCE</p>
+          <h1>See the market.<br /><span>Keep the keys.</span></h1>
+          <p className="dashboard-lede">A non-custodial workspace for researching live Solana markets, reviewing transparent signals, and approving every transaction yourself.</p>
+          <div className="dashboard-actions"><Link href="/markets" className="primary-action">Open market board <ArrowRight size={15} /></Link><Link href="/signals" className="text-link">Review signals <ArrowUpRight size={14} /></Link></div>
+          <div className="dashboard-trust"><span><LockKeyhole size={14} /> Wallet-approved execution</span><span><ShieldCheck size={14} /> No unattended trading</span></div>
+        </div>
+        <div className="dashboard-command-card">
+          <div className="command-card-header"><span><i /> WELP COMMAND CENTRE</span><span className="command-badge">NON-CUSTODIAL</span></div>
+          <div className="command-card-title"><span>Market pulse</span><strong>{feedState === 'live' ? 'LIVE' : feedState === 'offline' ? 'OFFLINE' : 'CONNECTING'}</strong></div>
+          <div className="pulse-grid"><div><small>Assets indexed</small><strong>{assets.length || '—'}</strong></div><div><small>Positive movers</small><strong>{assets.length ? `${gainers}/${assets.length}` : '—'}</strong></div><div><small>24h volume</small><strong>{totalVolume ? `$${(totalVolume / 1000000).toFixed(1)}M` : '—'}</strong></div></div>
+          <div className="command-card-footer"><span className={feedState === 'live' ? 'status-live' : ''}><i /> {feedState === 'live' ? 'Market feed connected' : feedState === 'offline' ? 'Market feed unavailable' : 'Connecting to market feed'}</span><Link href="/system-status">System status <ChevronRight size={13} /></Link></div>
         </div>
       </section>
+
+      <section className="dashboard-section market-snapshot-section">
+        <div className="section-heading"><div><p className="eyebrow">LIVE SNAPSHOT</p><h2>Markets worth a closer look</h2></div><Link href="/markets" className="text-link">View all markets <ArrowRight size={14} /></Link></div>
+        <div className="market-snapshot-grid">{assets.length ? assets.map((asset) => <Link href="/markets" className="snapshot-card" key={asset.symbol}><span className="asset-avatar">{asset.symbol.slice(0, 1)}</span><span><strong>{asset.symbol}</strong><small>{formatPrice(asset.priceUsd)}</small></span><em className={asset.priceChange24h >= 0 ? 'positive' : 'negative'}>{asset.priceChange24h >= 0 ? '+' : ''}{asset.priceChange24h.toFixed(2)}%</em></Link>) : <div className="dashboard-empty"><Sparkles size={16} /><span>{feedState === 'offline' ? 'The live market feed is temporarily unavailable.' : 'Connecting to the live market feed…'}</span></div>}</div>
+      </section>
+
+      <section className="dashboard-section">
+        <div className="section-heading"><div><p className="eyebrow">WORKSPACE</p><h2>One desk for every decision</h2></div><span className="section-note">Research first. Approve second.</span></div>
+        <div className="quick-link-grid">{quickLinks.map(({ href, icon: Icon, label, copy }) => <Link href={href} className="quick-link-card" key={href}><span className="quick-link-icon"><Icon size={17} /></span><span><strong>{label}</strong><small>{copy}</small></span><ArrowUpRight className="quick-link-arrow" size={15} /></Link>)}</div>
+      </section>
+
+      <section className="dashboard-status-panel"><div className="status-panel-title"><span className="status-panel-icon"><CheckCircle2 size={18} /></span><div><p className="eyebrow">OPERATING MODEL</p><h2>Clear controls by default</h2></div></div><div className="status-panel-items"><span><Bot size={15} /><strong>AI analysis</strong><small>Read-only workspace</small></span><span><Wallet size={15} /><strong>Wallet access</strong><small>Connect when you choose</small></span><span><ShieldCheck size={15} /><strong>Vault execution</strong><small>Gated until verified</small></span></div></section>
     </main>
   );
 }
