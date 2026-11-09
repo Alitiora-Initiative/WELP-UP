@@ -69,8 +69,6 @@ const price = (value: number) => value >= 1000
       ? '$' + value.toFixed(4)
       : '$' + value.toPrecision(4);
 
-const compactMint = (value: string) => value.slice(0, 5) + '…' + value.slice(-5);
-
 const quickLinks = [
   { href: '/markets', icon: ChartNoAxesCombined, title: 'Market screener', copy: 'Search assets and compare live liquidity.' },
   { href: '/signals', icon: CircleGauge, title: 'Signal engine', copy: 'Review transparent scores and blockers.' },
