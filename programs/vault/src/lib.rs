@@ -139,23 +139,14 @@ pub mod welp_vault {
 
     // ── Global config ──────────────────────────────────────────────────
 
-    /// Initializes the global fee configuration once. The first signer becomes
-    /// the immutable authority for future fee configuration changes.
+    /// Global configuration is disabled until a reviewed bootstrap authority is
+    /// pinned in deployment configuration. A first-caller initializer is unsafe.
     pub fn initialize_global_config(
-        ctx: Context<InitializeGlobalConfig>,
-        treasury_recipient: Pubkey,
-        fee_recipient: Pubkey,
+        _ctx: Context<InitializeGlobalConfig>,
+        _treasury_recipient: Pubkey,
+        _fee_recipient: Pubkey,
     ) -> Result<()> {
-        require!(treasury_recipient != Pubkey::default(), VaultError::InvalidRecipient);
-        require!(fee_recipient != Pubkey::default(), VaultError::InvalidRecipient);
-
-        let config = &mut ctx.accounts.global_config;
-        config.authority = ctx.accounts.authority.key();
-        config.treasury_recipient = treasury_recipient;
-        config.fee_recipient = fee_recipient;
-        config.pause_all = false;
-        config.bump = ctx.bumps.global_config;
-        Ok(())
+        err!(VaultError::GlobalConfigInitDisabled)
     }
 
     /// Collects a user-signed SOL protocol fee into the configured fee

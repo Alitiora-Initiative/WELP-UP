@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { executeOrder } from '@/lib/jupiter';
+import { WELP_FEE_POLICY } from '@/lib/server/fee-policy';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
+  if (!WELP_FEE_POLICY.collectionEnabled) {
+    return NextResponse.json({ error: 'WELP fee routing is not configured. Swap execution is disabled until the treasury referral destination is verified.' }, { status: 503 });
+  }
   let body: Record<string, unknown>;
   try {
     body = await request.json();

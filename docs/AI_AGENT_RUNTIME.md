@@ -1,7 +1,7 @@
 # WELP UP market analyst runtime
 
 **Current implementation:** server-side, one-request, read-only market analysis.  
-**Default state:** unavailable until a server-side OpenAI API key is configured.  
+**Default state:** configured for the Vercel AI Gateway; live output still depends on gateway availability and deployment authorization.
 **Not an autonomous trading agent:** this runtime has no wallet, signing, transaction, bot-control, or vault permissions.
 
 ## Request flow
@@ -9,23 +9,16 @@
 1. The browser sends a question (1–500 characters) to `POST /api/agent`.
 2. The server calls the same live Jupiter market-feed handler used by the market board. If the feed fails or has no usable timestamp, analysis stops.
 3. The server reduces the feed to at most 18 public assets and forwards only market fields needed for research: price changes, liquidity, volume, market cap, holder count, organic score, rule score, turnover, buy pressure, concentration, verification, suspicious-token flag, blockers and warnings. Wallet addresses, balances, private keys, local policies, and transaction details are not included.
-4. The server sends the question and snapshot to the OpenAI Responses API with `store: false`, no tools, and instructions to treat market fields as untrusted data.
-5. The server returns text plus the model and market timestamp. No conversation or model response is persisted by WELP.
+4. The server sends the question and snapshot through the Vercel AI Gateway using the AI SDK, with no tools and instructions to treat market fields as untrusted data.
+5. The server returns text plus the provider, model and market timestamp. No conversation or model response is persisted by WELP.
 
-The API key is read only from `OPENAI_API_KEY` on the server. The model is selected explicitly by `WELP_AI_MODEL`; no default model is assumed because model access varies by API project. The key must never use a `NEXT_PUBLIC_` prefix or be included in browser code.
+The model is selected by `WELP_AI_MODEL` or defaults to the verified Gateway model `anthropic/claude-sonnet-5.5`. Gateway authentication is supplied by the Vercel runtime; no provider key is read by browser code.
 
 ## Vercel configuration
 
-Add both variables in the Vercel project’s Environment Variables, scoped to Preview first:
+Optionally set `WELP_AI_MODEL` in the Vercel project’s Environment Variables to select another model available through the Gateway. Redeploy the Preview environment, then open `/agent`. The page calls `GET /api/agent` to report the provider and model without exposing credentials. Test a simple market-summary question and confirm the answer includes the current feed timestamp. Promote to Production only after reviewing costs, privacy, and abuse controls.
 
-| Variable | Required | Purpose |
-|---|---:|---|
-| `OPENAI_API_KEY` | Yes | Server-only API credential |
-| `WELP_AI_MODEL` | Yes | A model identifier enabled for your API project |
-
-Redeploy the Preview environment, then open `/agent`. The page calls `GET /api/agent` to report whether the key exists. It never returns the key. Test a simple market-summary question and confirm the answer includes the current feed timestamp. Promote to Production only after reviewing costs, privacy, and abuse controls.
-
-No credential was available to this code change, so provider authentication and generated output have not been live-tested. Without the key, the endpoint returns an explicit 503 and the UI explains what is missing; it does not show canned AI responses.
+Gateway authentication and generated output still require a live deployment test; local typechecks do not prove provider availability. If the Gateway is unavailable, the endpoint returns an explicit provider error and never falls back to canned AI responses.
 
 ## Safety boundaries
 

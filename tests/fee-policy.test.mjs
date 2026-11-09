@@ -19,15 +19,15 @@ test('canonical protocol fee is 0.50% of gross swap input with a 60/40 split', (
   assert.doesNotMatch(policy, /tradeOrTransferUsdcBaseUnits|launchCreationUsdcBaseUnits/);
 });
 
-test('Jupiter order and execute endpoints allow wallet-approved swaps without a WELP referral account', () => {
+test('Jupiter order and execute endpoints fail closed until the WELP fee destination is verified', () => {
   for (const route of [order, execute]) {
-    assert.doesNotMatch(route, /WELP_FEE_POLICY\.collectionEnabled/);
-    assert.doesNotMatch(route, /status: 503/);
+    assert.match(route, /WELP_FEE_POLICY\.collectionEnabled/);
+    assert.match(route, /status: 503/);
   }
   assert.match(order, /const referralAccount = WELP_FEE_POLICY\.referralAccount/);
   assert.match(order, /const referralFeeBps = WELP_FEE_POLICY\.referralFeeBps/);
   assert.doesNotMatch(order, /body\.referralAccount|body\.referralFeeBps/);
-  assert.match(policy, /wallet-approved swaps remain available/);
+  assert.match(policy, /routes fail closed until a verified treasury referral destination is configured/);
 });
 
 test('Jupiter v2 order sends only documented fields and requires a signable transaction', () => {
