@@ -8,6 +8,7 @@
 //! is a tested primitive and does not collect or transfer funds.
 
 use anchor_lang::{prelude::*, system_program};
+use anchor_spl::{associated_token::AssociatedToken, token::Token};
 
 declare_id!("BrcdB9sV7z9DvF9rDHG263HUxXgJM3iCQdF36TcxbFEn");
 
@@ -43,8 +44,8 @@ pub struct LaunchToken<'info> {
     /// CHECK: constrained to the canonical executable Metaplex program.
     #[account(address = anchor_spl::metadata::ID)]
     pub metadata_program: UncheckedAccount<'info>,
-    pub token_program: Program<'info, anchor_spl::token::Token>,
-    pub associated_token_program: Program<'info, anchor_spl::associated_token::AssociatedToken>,
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }
 
