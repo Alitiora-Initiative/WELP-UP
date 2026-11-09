@@ -84,7 +84,7 @@ export function TerminalHome() {
     </section>
     <section className="home-section-terminal">
       <div className="home-section-heading"><div><div className="eyebrow">THE WORKSPACE</div><h2>Every tool has its own page.</h2></div><Link href="/markets" className="text-action">Open market board <ArrowUpRight size={13} /></Link></div>
-      <div className="home-tools-grid">{links.map((item) => <Link className="home-tool-card" href={item.href} key={item.href}><div className="home-tool-top"><span>{item.number}</span><item.icon size={18} /></div><h3>{item.title}</h3><p>{item.description}</p><small>{item.tag}</small><ArrowUpRight className="home-tool-arrow" size={14} /></Link>)}</div>
+      <div className="home-link-rail">{links.map((item) => <Link className="primary-action" href={item.href} key={item.href}>{item.title}</Link>)}</div>
     </section>
     <section className="home-section-terminal">
       <div className="home-section-heading"><div><div className="eyebrow">CURRENT MARKET READ</div><h2>Live candidates. Published rules.</h2><p className="home-section-copy">The strongest eligible entries in the current feed. A score is a filter result, not a forecast or recommendation.</p></div><Link href="/signals" className="text-action">View all signals <ArrowUpRight size={13} /></Link></div>

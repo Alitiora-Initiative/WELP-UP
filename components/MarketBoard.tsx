@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowDownWideNarrow, ArrowUpRight, ChevronLeft, ChevronRight, CircleHelp, Download, LoaderCircle, RefreshCw, Search, Star } from 'lucide-react';
+import { ArrowDownWideNarrow, ArrowUpRight, ChevronLeft, ChevronRight, CircleHelp, LoaderCircle, RefreshCw, Search, Star } from 'lucide-react';
 import { ChartPanel } from '@/components/ChartPanel';
 
 type Asset = {
@@ -19,11 +19,6 @@ const compact = (value: number) => value >= 1e9 ? '$' + (value / 1e9).toFixed(1)
 const price = (value: number) => value >= 1000 ? '$' + value.toLocaleString('en-US', { maximumFractionDigits: 2 }) : value >= 1 ? '$' + value.toFixed(2) : value >= .01 ? '$' + value.toFixed(4) : '$' + value.toPrecision(4);
 const short = (value: string) => value.slice(0, 5) + '…' + value.slice(-5);
 const EMPTY_ASSETS: Asset[] = [];
-function csvCell(value: string | number | boolean) {
-  const text = String(value);
-  const safe = typeof value === 'string' && /^[\t\r ]*[=+\-@]/.test(text) ? `'${text}` : text;
-  return `"${safe.replace(/"/g, '""')}"`;
-}
 
 export function MarketBoard() {
   const router = useRouter();
@@ -75,8 +70,7 @@ export function MarketBoard() {
     return filteredRows.sort((a, b) => sort === 'liquidity' ? b.liquidityUsd - a.liquidityUsd : sort === 'volume' ? b.volume24hUsd - a.volume24hUsd : b.score - a.score);
   }, [assets, query, filter, sort]);
   const selectedAssets = assets.filter((asset) => selected.includes(asset.mint));
-  const exportRows = selected.length ? selectedAssets : filtered;
-  const canTradeSelected = selected.length === 1 && selectedAssets[0]?.eligible === true;
+  const swapTarget = selectedAssets.find((asset) => asset.eligible) ?? null;
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const rows = filtered.slice((page - 1) * pageSize, page * pageSize);
 
@@ -86,25 +80,6 @@ export function MarketBoard() {
       try { localStorage.setItem('welp-watchlist', JSON.stringify(next)); } catch {}
       return next;
     });
-  }
-  function exportCsv() {
-    const columns = ['Symbol', 'Name', 'Mint', 'Price USD', '24h Change %', 'Liquidity USD', '24h Volume USD', 'Organic Score', 'Rule Score', 'State', 'Eligible', 'Blockers', 'Warnings'];
-    const lines = [
-      columns.map(csvCell).join(','),
-      ...exportRows.map((asset) => [
-        asset.symbol, asset.name, asset.mint, asset.priceUsd, asset.priceChange24h, asset.liquidityUsd,
-        asset.volume24hUsd, asset.organicScore, asset.score, asset.state, asset.eligible ? 'yes' : 'no',
-        asset.blockers.join('; '), asset.warnings.join('; '),
-      ].map(csvCell).join(',')),
-    ];
-    const blobUrl = URL.createObjectURL(new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = `welp-market-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 0);
   }
   const updated = feed?.updatedAt ? new Date(feed.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
   const tabs: Array<{ key: Filter; value: number }> = [
@@ -136,8 +111,7 @@ export function MarketBoard() {
       <div className="market-board-heading"><div><h2>market board</h2><span>{feed ? feed.total + ' assets' : '—'} · {pageSize} per page · {updated}</span></div></div>
       <div className="market-tabs">{tabs.map((tab) => <button key={tab.key} className={filter === tab.key ? 'selected' : ''} onClick={() => { setFilter(tab.key); setPage(1); }}><span>{tab.key === 'Eligible' ? <i className="tab-dot green" /> : tab.key === 'Blocked' ? <i className="tab-dot red" /> : tab.key === 'Score 90+' ? <i className="tab-dot blue" /> : tab.key === 'Verified' ? <i className="tab-dot violet" /> : null}{tab.key}</span><b>{tab.value}</b></button>)}</div>
       <div className="selection-bar"><span>{selected.length} selected</span><div className="selection-actions">
-        <button className="outline-button small" disabled={!exportRows.length} onClick={exportCsv}><Download size={13} /> Export CSV ({exportRows.length})</button>
-        <button className="outline-button small" disabled={!canTradeSelected} title={!canTradeSelected ? 'Select exactly one eligible token.' : undefined} onClick={() => { const asset = selectedAssets[0]; if (asset?.eligible) router.push('/swap?mint=' + encodeURIComponent(asset.mint)); }}>Trade selected</button>
+        <button className="outline-button small" disabled={!swapTarget} title={swapTarget ? 'Open the swap desk with a live quote for the selected token.' : 'Select an eligible token first.'} onClick={() => { if (swapTarget) router.push('/swap?mint=' + encodeURIComponent(swapTarget.mint)); }}>Open swap desk</button>
         <button className="text-action" disabled={!selected.length} onClick={() => setSelected([])}>Clear</button>
       </div></div>
       <div className="market-table-wrap"><table className="market-table"><thead><tr>

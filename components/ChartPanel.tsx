@@ -26,6 +26,47 @@ type ChartData = {
 
 type Props = { mint: string; name: string; symbol: string };
 
+const TRADINGVIEW_BY_MINT: Record<string, string> = {
+  So11111111111111111111111111111111111111112: 'BINANCE:SOLUSDT',
+  EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: 'BINANCE:USDCUSDT',
+  Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB: 'BINANCE:USDTUSD',
+  '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh': 'BINANCE:BTCUSDT',
+  '7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs': 'BINANCE:ETHUSDT',
+};
+
+function liveChartSrc(mint: string) {
+  const tradingView = TRADINGVIEW_BY_MINT[mint];
+  if (tradingView) {
+    const params = new URLSearchParams({
+      symbol: tradingView,
+      interval: '15',
+      hidesidetoolbar: '1',
+      hidetoptoolbar: '0',
+      symboledit: '0',
+      saveimage: '0',
+      theme: 'dark',
+      style: '1',
+      locale: 'en',
+      hideideas: '1',
+      withdateranges: '1',
+    });
+    return `https://www.tradingview.com/widgetembed/?${params.toString()}`;
+  }
+  const params = new URLSearchParams({
+    embed: '1',
+    loadChartSettings: '0',
+    trades: '0',
+    info: '0',
+    chartLeftToolbar: '0',
+    chartTheme: 'dark',
+    theme: 'dark',
+    chartStyle: '1',
+    chartType: 'usd',
+    interval: '15',
+  });
+  return `https://dexscreener.com/solana/${encodeURIComponent(mint)}?${params.toString()}`;
+}
+
 const INTERVALS: Array<{ key: Interval; label: string }> = [
   { key: '1m', label: '1m' },
   { key: '5m', label: '5m' },
@@ -182,6 +223,19 @@ export function ChartPanel({ mint, name, symbol }: Props) {
         <div className="chart-live-error" role="alert"><AlertTriangle size={16} /><span>{fetchError}</span></div>
       ) : null}
 
+      <div className="chart-embed">
+        <iframe
+          key={mint}
+          title={`Live chart for ${name} (${symbol})`}
+          src={liveChartSrc(mint)}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+        />
+      </div>
+      <p className="chart-live-footnote">
+        {TRADINGVIEW_BY_MINT[mint] ? 'TradingView live chart for this asset.' : 'DexScreener live chart for this Solana mint. TradingView does not list most memecoins, so those open on the pool chart instead.'}
+      </p>
+
       {geometry.length > 0 ? (
         <>
           <div className="chart-live-reading" aria-live="polite">
@@ -189,7 +243,7 @@ export function ChartPanel({ mint, name, symbol }: Props) {
             {lastCandle ? <strong className={changePositive ? 'is-up' : 'is-down'}>{currency.format(lastCandle.close)}</strong> : null}
           </div>
           <div className="chart-svg-wrap">
-            <svg className="chart-candles-svg" viewBox="0 0 1000 320" role="group" aria-label="Interactive candlestick plot. Focus a candle to read its OHLCV values.">
+            <svg className="chart-candles-svg" viewBox="0 0 1000 320" role="group" aria-label="Pool candle backup. Focus a candle to read its OHLCV values.">
               {[0, 1, 2, 3, 4].map((step) => {
                 const y = 20 + step * 62.5;
                 return <g key={step}>

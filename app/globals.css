@@ -1321,3 +1321,171 @@ h2 { margin: 0; font: 600 17px var(--display); letter-spacing: -.02em; }
   .app-shell .content-grid { grid-template-columns:minmax(0,1fr); }
   .app-shell .topbar { padding-inline:14px; }
 }
+
+/* ===== Glossy green pill action system — final authority for all buttons ===== */
+.app-shell .primary-button,
+.app-shell .connect-button,
+.app-shell .refresh-button,
+.app-shell .profile-copy-button,
+.app-shell .vault-secondary-button,
+.app-shell .studio-create-button,
+.app-shell .leaderboard-copy-button,
+.app-shell .history-pagination button,
+.app-shell .market-pagination button,
+.app-shell .primary-action,
+.app-shell .select-signal,
+.app-shell .direction-tab.selected {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: 999px !important;
+  background: linear-gradient(180deg, #e1ffa2 0%, #caff6b 48%, #aeea48 100%) !important;
+  background-color: #c9f76a !important;
+  color: #14200a !important;
+  font-weight: 800;
+  line-height: 1.25;
+  text-wrap: balance;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), inset 0 -2px 3px rgba(57, 89, 14, 0.16), 0 4px 14px rgba(158, 220, 55, 0.14);
+  transition: transform 0.16s ease, filter 0.16s ease, box-shadow 0.16s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.app-shell .primary-button::before,
+.app-shell .connect-button::before,
+.app-shell .refresh-button::before,
+.app-shell .profile-copy-button::before,
+.app-shell .vault-secondary-button::before,
+.app-shell .studio-create-button::before,
+.app-shell .leaderboard-copy-button::before,
+.app-shell .history-pagination button::before,
+.app-shell .market-pagination button::before,
+.app-shell .primary-action::before,
+.app-shell .select-signal::before,
+.app-shell .direction-tab.selected::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 auto;
+  height: 58%;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.1) 38%, rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
+}
+.app-shell .primary-button:hover:not(:disabled),
+.app-shell .connect-button:hover:not(:disabled),
+.app-shell .refresh-button:hover:not(:disabled),
+.app-shell .profile-copy-button:hover:not(:disabled),
+.app-shell .vault-secondary-button:hover:not(:disabled),
+.app-shell .studio-create-button:hover:not(:disabled),
+.app-shell .leaderboard-copy-button:hover:not(:disabled),
+.app-shell .history-pagination button:hover:not(:disabled),
+.app-shell .market-pagination button:hover:not(:disabled),
+.app-shell .primary-action:hover:not(:disabled),
+.app-shell .select-signal:hover:not(:disabled),
+.app-shell .direction-tab.selected:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: saturate(1.08) brightness(1.04);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -2px 3px rgba(57, 89, 14, 0.16), 0 7px 19px rgba(158, 220, 55, 0.22);
+}
+.app-shell .primary-button:active:not(:disabled),
+.app-shell .connect-button:active:not(:disabled),
+.app-shell .refresh-button:active:not(:disabled),
+.app-shell .profile-copy-button:active:not(:disabled),
+.app-shell .vault-secondary-button:active:not(:disabled),
+.app-shell .studio-create-button:active:not(:disabled),
+.app-shell .leaderboard-copy-button:active:not(:disabled),
+.app-shell .history-pagination button:active:not(:disabled),
+.app-shell .market-pagination button:active:not(:disabled),
+.app-shell .primary-action:active:not(:disabled),
+.app-shell .select-signal:active:not(:disabled),
+.app-shell .direction-tab.selected:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
+  filter: brightness(0.97);
+}
+.app-shell .primary-button:disabled,
+.app-shell .connect-button:disabled,
+.app-shell .refresh-button:disabled,
+.app-shell .profile-copy-button:disabled,
+.app-shell .vault-secondary-button:disabled,
+.app-shell .studio-create-button:disabled,
+.app-shell .leaderboard-copy-button:disabled,
+.app-shell .history-pagination button:disabled,
+.app-shell .market-pagination button:disabled,
+.app-shell .primary-action:disabled,
+.app-shell .select-signal:disabled,
+.app-shell .direction-tab.selected:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+  filter: saturate(0.55);
+}
+.app-shell .stop-button { border: 1px solid transparent; border-radius: 999px; background: #d47460; color: #1a1310; min-height: 38px; padding: 0 16px; font-weight: 800; }
+.app-shell .stop-button:hover:not(:disabled) { background: #e89d8c; }
+
+.app-shell .outline-button,
+.app-shell .text-button,
+.app-shell .text-action,
+.app-shell .home-secondary-link,
+.app-shell .home-text-link,
+.app-shell .launchpad-text-link,
+.app-shell .leaderboard-cancel-button,
+.app-shell .settings-reset-button {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid rgba(185, 243, 109, 0.34);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(185, 243, 109, 0.14), rgba(185, 243, 109, 0.05));
+  color: #d5e8cc;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(0, 0, 0, 0.18), 0 3px 9px rgba(0, 0, 0, 0.2);
+  transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease, filter 0.16s ease;
+}
+.app-shell .outline-button:hover:not(:disabled),
+.app-shell .text-button:hover:not(:disabled),
+.app-shell .text-action:hover:not(:disabled),
+.app-shell .home-secondary-link:hover:not(:disabled),
+.app-shell .home-text-link:hover:not(:disabled),
+.app-shell .launchpad-text-link:hover:not(:disabled),
+.app-shell .leaderboard-cancel-button:hover:not(:disabled),
+.app-shell .settings-reset-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(185, 243, 109, 0.6);
+  background: linear-gradient(180deg, rgba(185, 243, 109, 0.24), rgba(185, 243, 109, 0.1));
+  color: #d5ff8a;
+}
+.app-shell .outline-button:disabled,
+.app-shell .text-button:disabled,
+.app-shell .text-action:disabled,
+.app-shell .home-secondary-link:disabled,
+.app-shell .home-text-link:disabled,
+.app-shell .launchpad-text-link:disabled,
+.app-shell .leaderboard-cancel-button:disabled,
+.app-shell .settings-reset-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.app-shell .direction-tabs { border: 0; border-radius: 999px; background: rgba(185, 243, 109, 0.06); padding: 3px; gap: 0; box-shadow: none; }
+.app-shell .direction-tab { border: 0; border-radius: 999px; background: transparent; color: #839087; min-height: 31px; }
+.app-shell .direction-tab.selected { border: 0; background: linear-gradient(180deg, #e1ffa2, #aeea48); color: #14200a; font-weight: 800; }
+.app-shell .live-status, .app-shell .status-pill { border-radius: 999px; }
+.app-shell .watch-button { border-radius: 999px; }
+.app-shell .icon-button { border-radius: 999px; }
+.app-shell .market-pagination button,
+.app-shell .history-pagination button { border-radius: 999px; }
+.app-shell button:not(.text-action):not(.sort-heading):not(.watch-button):not(.mobile-nav-toggle):not(.leaderboard-modal-close):not(.icon-button) { border-radius: 999px; }

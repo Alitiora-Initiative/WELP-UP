@@ -1733,3 +1733,155 @@ html, body { background: #080908 !important; color: #f0f3ec !important; }
   .chart-candles-svg { min-height: 220px; }
   .chart-live-reading { align-items: flex-start; flex-direction: column; }
 }
+
+/* ===== Glossy green pill action system — final authority for all buttons ===== */
+.terminal-site .primary-action,
+.terminal-site .primary-button,
+.terminal-site .launchpad-primary,
+.terminal-site .studio-create-button,
+.terminal-site .connect-button,
+.terminal-site .swap-submit-button,
+.terminal-site .vault-primary-button,
+.terminal-site .home-primary-link {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+  min-height: 40px !important;
+  padding: 0 18px !important;
+  border: 1px solid transparent !important;
+  border-radius: 999px !important;
+  background: linear-gradient(180deg, #e1ffa2 0%, #caff6b 48%, #aeea48 100%) !important;
+  background-color: #c9f76a !important;
+  color: #14200a !important;
+  font-weight: 800;
+  line-height: 1.25;
+  text-wrap: balance;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), inset 0 -2px 3px rgba(57, 89, 14, 0.16), 0 4px 14px rgba(158, 220, 55, 0.14);
+  transition: transform 0.16s ease, filter 0.16s ease, box-shadow 0.16s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.terminal-site .primary-action::before,
+.terminal-site .primary-button::before,
+.terminal-site .launchpad-primary::before,
+.terminal-site .studio-create-button::before,
+.terminal-site .connect-button::before,
+.terminal-site .swap-submit-button::before,
+.terminal-site .vault-primary-button::before,
+.terminal-site .home-primary-link::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 auto;
+  height: 58%;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.1) 38%, rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
+}
+.terminal-site .primary-action:hover:not(:disabled),
+.terminal-site .primary-button:hover:not(:disabled),
+.terminal-site .launchpad-primary:hover:not(:disabled),
+.terminal-site .studio-create-button:hover:not(:disabled),
+.terminal-site .connect-button:hover:not(:disabled),
+.terminal-site .swap-submit-button:hover:not(:disabled),
+.terminal-site .vault-primary-button:hover:not(:disabled),
+.terminal-site .home-primary-link:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: saturate(1.08) brightness(1.04);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -2px 3px rgba(57, 89, 14, 0.16), 0 7px 19px rgba(158, 220, 55, 0.22);
+}
+.terminal-site .primary-action:active:not(:disabled),
+.terminal-site .primary-button:active:not(:disabled),
+.terminal-site .launchpad-primary:active:not(:disabled),
+.terminal-site .studio-create-button:active:not(:disabled),
+.terminal-site .connect-button:active:not(:disabled),
+.terminal-site .swap-submit-button:active:not(:disabled),
+.terminal-site .vault-primary-button:active:not(:disabled),
+.terminal-site .home-primary-link:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
+  filter: brightness(0.97);
+}
+.terminal-site .primary-action:disabled,
+.terminal-site .primary-button:disabled,
+.terminal-site .launchpad-primary:disabled,
+.terminal-site .studio-create-button:disabled,
+.terminal-site .connect-button:disabled,
+.terminal-site .swap-submit-button:disabled,
+.terminal-site .vault-primary-button:disabled,
+.terminal-site .home-primary-link:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+  filter: saturate(0.55);
+}
+
+.terminal-site .outline-button,
+.terminal-site .desk-link,
+.terminal-site .vault-secondary-button,
+.terminal-site .leaderboard-cancel-button,
+.terminal-site .home-secondary-link,
+.terminal-site .home-text-link,
+.terminal-site .launchpad-text-link {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid rgba(185, 243, 109, 0.34);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(185, 243, 109, 0.14), rgba(185, 243, 109, 0.05));
+  color: #d5e8cc;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(0, 0, 0, 0.18), 0 3px 9px rgba(0, 0, 0, 0.2);
+  transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease, filter 0.16s ease;
+}
+.terminal-site .outline-button:hover:not(:disabled),
+.terminal-site .desk-link:hover:not(:disabled),
+.terminal-site .vault-secondary-button:hover:not(:disabled),
+.terminal-site .leaderboard-cancel-button:hover:not(:disabled),
+.terminal-site .home-secondary-link:hover:not(:disabled),
+.terminal-site .home-text-link:hover:not(:disabled),
+.terminal-site .launchpad-text-link:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(185, 243, 109, 0.6);
+  background: linear-gradient(180deg, rgba(185, 243, 109, 0.24), rgba(185, 243, 109, 0.1));
+  color: var(--terminal-accent);
+}
+.terminal-site .outline-button:disabled,
+.terminal-site .desk-link:disabled,
+.terminal-site .vault-secondary-button:disabled,
+.terminal-site .leaderboard-cancel-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.terminal-site .text-action { min-height: 30px; padding: 0 12px; font-size: 10px; }
+
+.terminal-site .direction-tabs { border: 0; border-radius: 999px; background: rgba(185, 243, 109, 0.06); padding: 3px; gap: 0; box-shadow: none; }
+.terminal-site .direction-tab { border: 0; border-radius: 999px; background: transparent; color: #9ba691; min-height: 31px; }
+.terminal-site .direction-tab.selected { border: 0; background: linear-gradient(180deg, #e1ffa2, #aeea48); color: #14200a; font-weight: 800; }
+.terminal-site .live-status, .terminal-site .status-pill { border-radius: 999px; }
+.terminal-site .watch-button { border-radius: 999px; }
+.terminal-site .icon-button { border-radius: 999px; }
+.terminal-site .sort-heading { border-radius: 999px; }
+.terminal-site .rules-explainer button { border-radius: 999px; }
+.terminal-site .site-nav-trigger { border-radius: 999px; }
+.terminal-site .mobile-nav-toggle { border-radius: 999px; }
+.terminal-site .studio-templates button { border-radius: 999px; }
+.terminal-site .studio-tick-list button { border-radius: 999px; }
+.terminal-site .studio-directions button { border-radius: 999px; }
+.terminal-site .studio-icon-action { border-radius: 999px; }
+.terminal-site .leaderboard-modal-close { border-radius: 999px; }
+.terminal-site .market-pagination button,
+.terminal-site .history-pagination button { border-radius: 999px; }
+.terminal-site button:not(.text-action):not(.sort-heading):not(.watch-button):not(.mobile-nav-toggle):not(.leaderboard-modal-close):not(.icon-button) { border-radius: 999px; }
+.terminal-site .stop-button { border: 1px solid transparent; border-radius: 999px; background: #d47460; color: #1a1310; min-height: 38px; padding: 0 16px; font-weight: 800; }
+.terminal-site .stop-button:hover:not(:disabled) { background: #e89d8c; }
