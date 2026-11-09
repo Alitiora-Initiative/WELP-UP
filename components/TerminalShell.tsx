@@ -136,17 +136,19 @@ function TickerStrip() {
     <div className="ticker-strip command-ticker">
       <div className="ticker-track">
         {assets.length ? (
-          <div className="ticker-group">
-            {assets.map((asset) => (
-              <span className="ticker-item" key={asset.mint}>
-                <strong>{asset.symbol}</strong>
-                <span>{price(asset.priceUsd)}</span>
-                <em className={asset.priceChange24h >= 0 ? 'positive' : 'negative'}>
-                  {asset.priceChange24h >= 0 ? '+' : ''}{asset.priceChange24h.toFixed(2)}%
-                </em>
-              </span>
-            ))}
-          </div>
+          [0, 1].map((copy) => (
+            <div className="ticker-group" key={copy} aria-hidden={copy === 1}>
+              {assets.map((asset) => (
+                <span className="ticker-item" key={copy + asset.mint}>
+                  <strong>{asset.symbol}</strong>
+                  <span>{price(asset.priceUsd)}</span>
+                  <em className={asset.priceChange24h >= 0 ? 'positive' : 'negative'}>
+                    {asset.priceChange24h >= 0 ? '+' : ''}{asset.priceChange24h.toFixed(2)}%
+                  </em>
+                </span>
+              ))}
+            </div>
+          ))
         ) : (
           <span className="ticker-status">
             {status === 'offline' ? 'Market feed unavailable' : 'Connecting to live Solana markets…'}
