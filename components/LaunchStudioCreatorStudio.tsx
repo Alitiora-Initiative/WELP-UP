@@ -82,7 +82,7 @@ type PreparedLaunch = {
 type LaunchResult = { mint: string; name: string; symbol: string; signature: string; rail: 'pump' | 'welp' };
 type ProgramStatus = { deployed: boolean; executable?: boolean; launchEnabled?: boolean; detail?: string; owner: string | null; checkedAt: string };
 
-export function LaunchpadCreatorStudio() {
+export function LaunchStudioCreatorStudio() {
   const connected = useConnectedWallet(client);
   const owner = connected?.account.address ?? '';
   const [name, setName] = useState('');

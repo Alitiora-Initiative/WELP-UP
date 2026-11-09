@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ArrowUpRight, CheckCircle2, CircleDashed, LockKeyhole } from 'lucide-react';
-import { LaunchpadCreatorStudio } from '@/components/LaunchpadCreatorStudio';
-import './launchpad.css';
+import { LaunchStudioCreatorStudio } from '@/components/LaunchStudioCreatorStudio';
+import './launch-studio.css';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,12 +23,12 @@ const launchStages = [
   },
 ];
 
-export default function LaunchpadPage() {
+export default function LaunchStudioPage() {
   return (
     <main className="launchpad-page-v2">
       <section className="lp-hero-v2">
         <div>
-          <p className="lp-kicker">WELP UP / SOLANA LAUNCHPAD</p>
+          <p className="lp-kicker">WELP UP / SOLANA LAUNCH STUDIO</p>
           <h1>Launch on your terms<span>.</span></h1>
           <p>
             Launch a token on the public pump.fun bonding curve through PumpPortal. The custom WELP rail remains disabled until its executable program is verified and the operator explicitly enables it. Your wallet signs every supported transaction.
@@ -63,7 +63,7 @@ export default function LaunchpadPage() {
         </p>
       </section>
 
-      <LaunchpadCreatorStudio />
+      <LaunchStudioCreatorStudio />
 
       <section className="lp-discovery-v2 glass-panel" aria-labelledby="lp-stages-title">
         <div className="lp-section-head-v2">
