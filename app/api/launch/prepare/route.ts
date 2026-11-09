@@ -14,6 +14,10 @@ export async function POST(request: NextRequest) {
   const name = brandLaunchName(typeof body.name === 'string' ? body.name : '');
   const symbol = brandLaunchSymbol(typeof body.symbol === 'string' ? body.symbol : '');
   const description = typeof body.description === 'string' ? body.description.trim().slice(0, 500) : '';
+  const logo = typeof body.logo === 'string' ? body.logo.trim().slice(0, 500) : '';
+  if (logo) {
+    try { if (new URL(logo).protocol !== 'https:') throw new Error(''); } catch { return NextResponse.json({ error: 'Logo URL must use HTTPS.' }, { status: 400 }); }
+  }
   const social = Object.fromEntries(['website', 'twitter', 'telegram'].flatMap((key) => {
     const value = typeof body[key] === 'string' ? body[key].trim() : '';
     if (!value) return [];
@@ -27,7 +31,7 @@ export async function POST(request: NextRequest) {
   try {
     const mintSigner = await generateKeyPairSigner();
     const origin = new URL(request.url).origin;
-    const uri = launchMetadataUri(origin, { mint: mintSigner.address, name, symbol, description, ...social });
+    const uri = launchMetadataUri(origin, { mint: mintSigner.address, name, symbol, description, logo, ...social });
     const upstream = await fetch('https://pumpportal.fun/api/trade-local', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
