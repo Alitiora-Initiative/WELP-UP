@@ -21,8 +21,6 @@ import { address, getTransactionDecoder, getTransactionEncoder } from '@solana/k
 import { useClient } from '@solana/react';
 import { useConnectedWallet } from '@solana/kit-plugin-wallet/react';
 import { type AppClient } from '@/components/Providers';
-import { AppSidebar } from '@/components/AppSidebar';
-import { WalletConnectionControl } from '@/components/WalletConnectionControl';
 import { SOL_MINT } from '@/lib/constants';
 import { addWalletEvent } from '@/lib/activity';
 import { currentTime } from '@/lib/time';
@@ -353,19 +351,8 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
   const countEligible = currentSignals.filter((signal) => signal.eligible).length;
 
   return (
-    <main className="app-shell">
-      <AppSidebar active={view === 'signals' ? 'signals' : view === 'autonomous' ? 'autonomous' : view === 'swap' ? 'swap' : 'console'} signalCount={currentSignals.length || '—'} status={signalsLoading ? 'Scanning live pools' : 'No auto-trading'} />
-
-      <section className="workspace" id="top">
-        <header className="topbar">
-          <div className="breadcrumb"><span>WORKSPACE</span><span className="crumb-slash">/</span><strong>{view === 'signals' ? 'Live signals' : view === 'swap' ? 'Swap' : 'Overview'}</strong></div>
-          <div className="topbar-right">
-            <span className="market-open"><span className="market-pip" /> LIVE MARKET</span>
-            <WalletConnectionControl />
-          </div>
-        </header>
-
-        <div className="page-content">
+    <main className="terminal-page trade-terminal-page">
+      <div className="trade-terminal-content">
           <section className="welcome-row">
             <div>
               <p className="eyebrow"><Sparkles size={14} /> {view === 'swap' ? 'USER-APPROVED EXECUTION' : 'AUTOMATED MARKET ANALYSIS · USER-APPROVED EXECUTION'}</p>
@@ -485,8 +472,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
             <div className="safety-rule safety-rule-last"><strong>Phantom</strong><span>You approve every swap<br /><small>No auto-trading or private-key access in this app.</small></span></div>
           </section> : null}
           <footer className="footer"><span>WELP UP · Solana mainnet</span><span>Trading is risky. A token can lose all value.</span><a href="/terms">Terms &amp; Conditions</a><a href="https://github.com/Alitiora-Initiative/WELP-UP" target="_blank" rel="noreferrer">Source <ExternalLink size={12} /></a></footer>
-        </div>
-      </section>
+      </div>
     </main>
   );
 }
