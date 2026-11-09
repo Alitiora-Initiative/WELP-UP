@@ -7,7 +7,10 @@
 //! Build and test against a local validator only. Do not deploy this scaffold.
 
 use anchor_lang::prelude::*;
-use anchor_spl::{associated_token::AssociatedToken, token::{Mint, Token, TokenAccount}};
+use anchor_spl::{
+    associated_token::AssociatedToken,
+    token::{Mint, Token, TokenAccount},
+};
 use welp_vault_checks::{
     check_withdraw, compute_redeem, compute_shares, CheckError, MIN_POSITION_LAMPORTS,
 };
