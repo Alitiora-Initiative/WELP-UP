@@ -2,6 +2,19 @@
 
 This roadmap distinguishes the product the user wants from features currently available in the browser app. A checked item describes implemented UI, agent hardening, or documentation, not a security audit of an on-chain vault.
 
+## Next planned milestone: launchpad and platform hardening
+
+The launchpad and protocol-security milestone is in progress but not production-ready. The current launchpad route is a configuration/status page; no production token mint, bonding curve, buy/sell, escrow, refund or graduation transaction is available. The complete task list, account model, acceptance gates, fee requirements, and security checklist are in [docs/LAUNCHPAD_AND_SECURITY_BACKLOG.md](docs/LAUNCHPAD_AND_SECURITY_BACKLOG.md).
+
+- [ ] Build the Anchor launch program for creator-selected supply from 1 to 1,000,000,000 whole tokens, with launch escrow, Active/Graduated/Refundable state, checked purchase math and owner/account validation.
+- [ ] Add the early-slot per-wallet 5% allocation cap (10,000,000 tokens at the specified supply) and refund protection.
+- [ ] Integrate an audited Raydium pool-creation CPI for graduation; verify and burn LP tokens only after independent validation.
+- [ ] Add a wallet-approved launchpad purchase/creator flow using the repository's current Solana Kit wallet stack and the existing `app/launchpad/page.tsx` route.
+- [ ] Keep Helius credentials and privileged RPC operations on the backend; add bounded priority-fee estimates, RPC fallback, retry, and connection cleanup.
+- [ ] Implement the target 1.00% protocol + 0.50% creator/developer split and 14-day 60/40 treasury release. Current Jupiter referral collection is a single 50–255 bps fee to the dev-wallet partner and does not implement this allocation; the configured treasury program address is not executable on mainnet. See [fee and treasury status](docs/FEES_AND_TREASURY.md).
+- [ ] Harden API boundaries, secrets handling, idempotency, replay protection, monitoring, dependency scanning, adversarial tests, and privacy controls.
+- [ ] Keep all deployments and user-facing transaction paths mainnet-only. Before mainnet use, complete source review, reproducible SBF builds, host/SBF-backed checks, independent audit, production key management, program verification and a separate release review. Do not deploy or test on Devnet.
+
 ## Current release
 
 - [x] Open new buys at 0.001 SOL while leaving the input adjustable.
@@ -49,18 +62,18 @@ The requested product is an AI agent that analyzes the market, selects suitable 
 - [ ] Every user has a separate vault and wallet-scoped history; one user's permissions, limits, and activity must never leak into another user's view.
 - [ ] The user receives a separate, versioned consent flow before vault funding and before any material change to its permissions.
 - [ ] The deployed program, upgrade authority, executor, Jupiter integration, cap enforcement, revocation, withdrawals, and emergency behavior receive independent review and adversarial testing before mainnet funds are enabled.
-- [ ] Validate all calculations and order rules against a deterministic replay/backtest harness before any on-chain execution.
+- [ ] Validate calculations with checked arithmetic/unit/property tests and verify the final live transaction using a wallet-signed mainnet transaction only after deployment and audit. Do not present simulations or replay data as live trading.
 
 ### Vault launch gates
 
 1. [x] Write and review a threat model and exact on-chain authority diagram. (`docs/vault/THREAT_MODEL.md`)
 2. [x] Choose the program or smart-account architecture and document how the agent is authorized without custody of the user's normal wallet key. (`docs/vault/ARCHITECTURE.md`, `programs/vault/`)
-3. [ ] Implement and test on **devnet** with explicit total-cap, per-position, token/program allowlist, pause, revoke, and withdraw checks.
-   - [x] Add a Devnet-only website console for owner PDA setup, SOL fund/withdraw, pause, and executor revoke; fail closed when the program isn't configured and executable.
-   - [ ] Deploy matching source and verify all actions on Devnet. `execute_swap` and SPL-token withdrawals remain disabled/unimplemented.
+3. [ ] Complete mainnet release prerequisites for total-cap, per-position, token/program allowlist, pause, revoke and withdrawal enforcement. No user funds are accepted until deployed source and program identity are verified and independently audited.
+   - [x] Keep the vault interface separated from the mainnet app wallet. No deployed production vault ID or fund-moving route is currently configured; the interface must stay fail-closed.
+   - [ ] Deploy the reviewed program to Solana Mainnet only after all audit/release gates pass; verify source, IDL, program account, upgrade authority and all enabled instructions. Current `execute_swap` and SPL-token withdrawals remain disabled/unimplemented.
 4. [ ] Publish verified source and program addresses; complete an independent audit and resolve critical/high findings.
 5. [ ] Implement durable, wallet-scoped vault configuration and consent records tied to the website wallet session.
-6. [ ] Complete Kenyan legal and privacy review, update the Terms, and obtain new user consent.
+6. [ ] Complete jurisdiction-appropriate legal and privacy review, update the Terms, and obtain any required user consent.
 7. [ ] Launch only after the user-facing limits match the deployed enforcement and withdrawals have been verified.
 
 **Mainnet autonomous vault remains disabled.** The `/automation`, `/agent`, and `/autonomous` pages are status and policy interfaces; they do not run bots, place orders, or simulate P&L. No executor is connected. Existing swaps run only after a wallet connects and explicitly signs the transaction.
@@ -75,19 +88,19 @@ This is a staged plan, not a promise that a provider, market, or trading product
 | P0 | Wallet connect clarity | Keep a clear connect control in the terminal; improve wallet choice and visible network guidance before live trading. Require a user click for wallet prompts; connection alone never starts a bot. | Shared control reused; further clarity pending |
 | P1 | Market catalog and price feed | Add curated Solana markets first; verify mint, pool, source, timestamp, quote asset, and stale-data behavior. Expand chain coverage only with maintained, deduplicated listings; do not claim “all crypto” without it. | Not started |
 | P1 | TradingView charts | Confirm library access and usage terms; implement a datafeed with symbol search, OHLC history, live updates, market hours/time zone, and stale/error states. The chart library itself does not provide market data; see the [Datafeed API](https://www.tradingview.com/charting-library-docs/latest/connecting_data/datafeed-api/). | Not started |
-| P1 | Vault Devnet gate 3 | Deploy matching source, run transaction-level and property tests for caps, executor permissions, pause/revoke, and owner recovery; implement and verify SPL-token withdrawals. | Partial scaffold only |
+| P1 | Mainnet vault release gate | Deploy only the reviewed source to Solana Mainnet after audit; verify caps, executor permissions, pause/revoke, owner recovery and SPL-token withdrawals with explicit wallet-signed mainnet checks. | Partial scaffold only |
 | P1 | User-controlled funding and recovery | Map deposits, token ownership, open positions, failed swaps, emergency pause, and withdrawal flows. Retain owner control; never treat losses or liquidations as protocol revenue. | Not started |
-| P2 | Fonbnk fiat on/off-ramp | Obtain a merchant account; confirm Kenya/KES and Solana/asset availability for this merchant; integrate the provider widget or signed server API, webhook verification, reconciliation, limits, KYC/AML, refunds, support, and disclosures. Keep provider credentials server-side. See [Fonbnk Widget docs](https://docs.fonbnk.com/widget-integration/getting-started) and [Server API docs](https://docs.fonbnk.com/server-to-server/getting-started). | Not started |
+| P2 | Fonbnk fiat on/off-ramp | Obtain a merchant account; confirm supported fiat currencies and Solana asset availability for this merchant; integrate the provider widget or signed server API, webhook verification, reconciliation, limits, KYC/AML, refunds, support, and disclosures. Keep provider credentials server-side. See [Fonbnk Widget docs](https://docs.fonbnk.com/widget-integration/getting-started) and [Server API docs](https://docs.fonbnk.com/server-to-server/getting-started). | Not started |
 | P2 | Perpetual futures | Separate product and risk review; define funding, margin, liquidation, mark price, outage handling, and explicit user consent. No leverage or live perpetual order is available in the current app. | Not started |
 | P2 | Affiliate program | Define transparent, opt-in referral attribution and a payout ledger funded from a separately disclosed operator budget or approved fees. Never pay affiliates from a user's losses, collateral, or liquidation proceeds. | Not started |
-| P2 | Legal, operations, and mainnet readiness | Kenyan counsel review, fee/custody and licensing analysis, updated terms/privacy, incident response, monitoring, audited immutable or governed program, and independent security assessment. | Not started |
+| P2 | Legal, operations, and mainnet readiness | Qualified legal review, fee/custody and licensing analysis, updated terms/privacy, incident response, monitoring, audited immutable or governed program, and independent security assessment. | Not started |
 
 **Treasury constraint:** Do not add code that redirects user funds, losses, liquidation proceeds, or collateral to an operator-controlled wallet. No treasury address is embedded in the app. Any future protocol fee requires a documented purpose, separate accounting, clear disclosure, and explicit user authorization before the transaction.
 
 ## Legal and publishing follow-up
 
-- [ ] Have Kenyan counsel review the Terms, privacy disclosure, operator/contact details, dispute language, regulatory treatment, and acceptance mechanism.
-- [x] Publish operator identity (Joseph Mushelle Nyingeh / Alitiora Initiative) and contact emails.
+- [ ] Have qualified counsel review the Terms, privacy disclosure, contact details, dispute language, regulatory treatment, and acceptance mechanism.
+- [ ] Publish any legally required operator disclosures after jurisdiction-specific legal review.
 - [ ] Implement a durable record of the exact Terms version and affirmative user acceptance before relying on it as a contract.
 - [x] Publish a separate privacy notice.
 - [ ] Keep this documentation aligned with the code actually running on Vercel.

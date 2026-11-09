@@ -1,80 +1,88 @@
 # WELP UP! — Technical Whitepaper
 
-**Version:** 1.0  
-**Date:** 6 November 2026  
-**Status:** Product and architecture description; not an investment offer, audit report, or promise of future functionality.
+**Version:** 1.1  
+**Date:** 7 November 2026  
+**Status:** Describes the current application and gated protocol design. It is not an investment offer, audit report, or promise of future functionality.
 
 ## 1. Abstract
 
-WELP UP! is a Solana market-analysis and wallet-approved trading interface. Its current product combines live token/market data, a deterministic rule-based signal scanner, wallet balance and transaction reads, and Jupiter Swap API v2 order preparation and execution after the user signs the transaction.
+WELP UP! is a Solana market-analysis and wallet-approved trading interface. The current web application provides live token/market reads, deterministic rule-based signal analysis, Wallet Standard connection, wallet balance and transaction reads, a policy-based automation watcher, and Jupiter Swap API v2 order preparation and execution after the user signs. Jupiter referral fee collection is separately configurable and is not the WELP treasury waterfall.
 
-The project is exploring a future non-custodial vault and constrained strategy-agent architecture. Those components are not production services today. The vault program ID in source is a placeholder, the program is not deployed and audited on Solana mainnet, and unattended agent execution is not enabled. This paper separates the current product from the proposed roadmap.
+The app has a Launchpad route for reviewing token parameters and release status. It does not currently mint tokens, run a bonding curve, accept launch purchases, manage buyer escrow/refunds, graduate a pool, or collect a live protocol fee. These features are not described as live until verified mainnet instructions and on-chain records exist.
 
 ## 2. Design principles
 
-1. **User-controlled signing.** The current swap flow requires the connected wallet to review and sign each order. WELP UP does not request or store a seed phrase.
-2. **Observable inputs.** Market signals are derived from retrieved data and published rules. Scores are rankings from those rules, not probabilities, forecasts, or guarantees.
-3. **Fail closed.** Missing, stale, invalid, or unverified infrastructure must block the affected action rather than silently substitute a demo, simulation, or fallback balance.
-4. **Verifiable history.** On-chain transaction signatures are the source of truth for executed transactions. Browser-local activity is supplemental and must not be described as a complete ledger.
-5. **Least authority.** Any future agent should receive narrowly scoped authority over a user-created vault, never the user's primary wallet.
-6. **Transparent economics.** Fees, profit shares, risks, and limitations must be disclosed before user consent and independently reconciled.
+1. **User-controlled signing.** The current external-wallet flow requires the user to review and sign each transaction. WELP does not request or store seed phrases or private keys.
+2. **Observable inputs.** Market signals and automation policies are evaluated against retrieved market data and explicit rules. Scores are rankings, not probabilities or profit forecasts.
+3. **Fail closed.** Missing, stale, invalid or unverified infrastructure blocks the affected transaction. The application must not substitute a demo, simulated trade, sample mint or fabricated balance.
+4. **Verifiable history.** Confirmed on-chain signatures are the source of truth for executed transactions. Browser-local activity is supplemental, can be cleared and is not a complete ledger.
+5. **Least authority.** Any future executor must receive only narrowly scoped, revocable authority. It must never receive the user's primary wallet secret.
+6. **Transparent economics.** Fees, treasury release rules, risks and limitations must be disclosed before consent and reconciled against on-chain state.
 
 ## 3. Current system
 
 ### 3.1 Market data and signals
 
-The web app reads live Solana token/market information from Jupiter Token API v2. The recovered WELP scoring model maps six inputs into an 80–98 ranking band: organic activity 32%, liquidity depth 20%, turnover 15%, holder count 13%, buy pressure 12%, and one-hour momentum 8%. Hard blockers are live freeze authority, liquidity below US$100,000, 24-hour volume below US$100,000, top-holder concentration above 60%, and Jupiter's explicit suspicious-token flag. Warnings include active mint authority, small holder base, liquidity below US$250,000, top holders above 40%, low organic score, sharp drawdown, unverified status, and missing risk fields. Missing market cap or one-hour change contributes no score and is surfaced as a warning. A score is a rule-based ranking, not a statistical probability of profit.
+The web application reads Solana token and market information from Jupiter Token API v2. Signal eligibility is calculated from source fields and explicit risk rules. Missing or stale data must be surfaced as unavailable or a blocker, not replaced with a fabricated price, volume, holder count or score.
 
 ### 3.2 Wallet and swap flow
 
-The application connects to a compatible Solana wallet through Wallet Standard/Solana Kit. It requests an order from Jupiter Swap API v2, presents the order to the wallet for signature, and submits the signed transaction through Jupiter's execution endpoint. The user remains responsible for reviewing token, amount, route, slippage, network, and wallet prompts. A quote is not a fill; only a confirmed transaction signature establishes execution.
+The application discovers installed Solana Wallet Standard providers that advertise the Solana mainnet chain. It requests an order from Jupiter Swap API v2, presents the transaction to the connected wallet for review/signature, and submits the signed order through the Jupiter execution API. A quote is not a fill; only a confirmed transaction signature establishes execution.
 
-### 3.3 Portfolio and activity
+**Current trading and fee state:** wallet-approved Jupiter swaps are available. With referral collection unconfigured, a swap has no WELP fee. With referral collection configured, the order API verifies Jupiter's referral account and the canonical token account for the quote's fee mint before returning the signable order. Jupiter referral fees accrue to the referral partner; they do not flow directly into a WELP treasury. The on-chain treasury program is not executable on mainnet, so its epoch split is inactive. See [fees and treasury](docs/FEES_AND_TREASURY.md).
+
+### 3.3 Automation and AI research
+
+The Automation page can save browser-local watch policies, scan the live Jupiter market feed while the page is open, and request a read-only AI review of a new policy match when a server-side model is configured. AI reviews do not sign, submit, or modify transactions. Monitoring stops when the page is closed and is not a persistent background service.
+
+The current Vercel project has no configured environment variables for the AI analyst. The UI must report the analyst unavailable until a real server-side API credential and model setting are configured. It must not claim that AI is connected or running when the provider is not configured.
+
+### 3.4 Portfolio and activity
 
 Public wallet balances and transaction signatures are fetched from Solana RPC. Some activity snapshots and preferences are stored in browser localStorage. Local browser data can be cleared, is not synchronized across devices, and is not a complete accounting record. Profit and loss must not be inferred from partial snapshots.
 
 ## 4. Proposed vault architecture
 
-The repository contains an Anchor/Rust vault scaffold intended to use a per-user program-derived address (PDA). The intended model is:
+The repository contains an Anchor/Rust vault scaffold intended to use per-user program-derived addresses. The intended model is user-signed funding, on-chain allocation limits, narrowly scoped authority, owner pause/revocation and owner-controlled recovery.
 
-- The user creates and funds a vault through explicit wallet-signed instructions.
-- A narrowly scoped executor may act only within user-approved on-chain constraints.
-- The vault owner retains pause, executor revocation, and withdrawal authority.
-- Vault accounting and token balances are controlled by the program, not by browser state.
-- All actions emit events that an independent indexer can reconcile against confirmed transactions.
+This is not an available mainnet custody service. The checked-in vault program ID is not a verified production deployment. Automated swaps, SPL-token position accounting, executor settlement and some recovery paths remain disabled or unimplemented. No funds should be sent to a PDA derived from an unverified program ID.
 
-This is a proposed design, not an available mainnet service. The current program ID is a placeholder. In the current rebuild branch, vault funding, swap execution, position settlement, creator-fee accrual/claims, and creation-fee collection return explicit disabled errors. Token-account accounting, owner recovery, deployment verification, independent audit, and mainnet launch gates remain incomplete. Do not send assets to an address derived from the placeholder.
+## 5. Launchpad and protocol-fee design
 
-## 5. Proposed agent and copy-trading model
+### 5.1 Launchpad status
 
-A future agent should run as an isolated service with no access to user seed phrases. Each follower would explicitly authorize a constrained executor for a specific vault and strategy. Users must be able to pause or revoke the executor and recover assets without cooperation from the strategy owner.
+The current Launchpad page validates token name, ticker, whole-token supply and mint precision, and displays the actual program/indexer release gate. It is a configuration and status page only. The current Anchor launchpad crate implements a local treasury state and distribution core plus pure target fee arithmetic. It does not implement mint creation, supply authority revocation, launch state, bonding-curve buy/sell, quote escrow, refunds, graduation, Raydium CPMM pool creation or LP burn. No production launch ID, deployer keypair, deployed bytecode or live launch indexer is configured.
 
-A future marketplace may allow strategy owners to publish configurations and followers to subscribe. Performance must be calculated from confirmed on-chain executions, net of fees and slippage. Backtests and paper results must be clearly distinguished from live results. A strategy owner may configure a separate creator share of 0% to 30% of realized positive net profit; the final amount and settlement method must be disclosed and enforced by reviewed program logic. The bot activation fee is charged per bot creation, not per strategy-owner subscription, and the two fee types must never be double charged.
+### 5.2 Protocol swap fee
 
-## 6. Proposed fee policy
+The target fee calculations in the codebase are **1.00% protocol + 0.50% creator/developer** of gross input, plus a separate 0.02% genesis allocation. They are not active collection and do not map directly onto Jupiter's referral rail, which accepts one configurable 50–255 bps rate and pays one referral partner after Jupiter's share.
 
-The proposed setup fee is **US$0.10 per successful personal or public bot creation/activation**, charged once per bot activation nonce. It is not a per-trade, per-deposit, per-withdrawal, or per-strategy-owner subscription fee.
+The target treasury calculation releases 60% of eligible new inflows after a 14-day epoch and retains 40% as reserve. No mainnet program or treasury PDA is currently enforcing this split. A math helper or an RPC account address is not proof of collection or payout.
 
-The staged design converts US$0.10 to SOL using a valid, fresh, confidence-checked Mainnet Pyth SOL/USD update, rounds the lamport amount upward to a multiple of five lamports, then atomically allocates **40% to a verified, explicitly configured recipient and 60% to the Treasury PDA** derived from `b"website-treasury"`. The recipient candidate supplied in the build specification (`EDZjEbRAtqyC8z6ta6PYHX161Xynt13tWpd7orKERkbz`) is unverified and must not be used until independently validated and explicitly approved. It is not an on-chain constant.
+The configured launch/treasury program address is currently a non-executable System Program account. No WELP treasury PDA is active there. The Rust and TypeScript helpers calculate target amounts only; they do not collect funds.
 
-Separately, a bot creator may receive **0–30% of realized positive net profit**, calculated from verified on-chain settlement after costs. This performance share is not the bot creation fee. Both terms must be disclosed and settled without double charging.
+WELP cannot intercept arbitrary wallet transfers or direct trades routed outside its app. A Jupiter referral fee can only be included in WELP-created Jupiter orders when the referral account and exact fee-mint token account are ready. Current mainnet referral collection remains incomplete until those accounts and production environment settings are verified.
 
-**No fee is active.** The current Anchor creation-fee instruction returns a disabled error. Oracle configuration, recipient validation, idempotent activation, atomic split, receipts, rounding tests, reconciliation, and refund behavior must be reviewed and tested before collection. Failed or reverted bot activation must not incur a fee.
+## 6. Mainnet-only release gates
 
-## 7. Security model and launch gates
+The project does not use Devnet, Testnet or Localnet as a product deployment or transaction-testing target. Before any mainnet fund-moving instruction is enabled:
 
-The primary threats include compromised executor keys, malicious or stale quotes, token mint controls, incorrect CPI account validation, accounting/rounding errors, upgrade-authority compromise, RPC/indexer outages, browser tampering, and misleading performance displays.
+1. Generate a production program keypair securely outside the web application; never commit or disclose its secret key.
+2. Complete the mint, launch state, curve, escrow, refund, swap, fee accounting, event and recovery instructions.
+3. Build the reviewed source reproducibly with the pinned Anchor/SBF toolchain and generate the matching IDL.
+4. Complete unit, property, arithmetic, account-validation and SBF-backed program checks.
+5. Complete an independent Solana/Anchor security audit and remediate critical/high findings.
+6. Deploy only to Solana Mainnet after the separate release decision.
+7. Verify deployed program identity, bytecode/source, IDL, upgrade authority, treasury accounts and configuration directly from mainnet.
+8. Run controlled mainnet checks only after the deployed program is audited and verified; every transaction must be explicitly reviewed and signed by the user.
+9. Keep UI actions disabled when any required program, account, fee or verification state is missing.
 
-The vault requires independent review, property and adversarial tests, verified mainnet deployment, secure upgrade governance, monitoring, incident response, and recovery testing before any public deposits. See [docs/vault/THREAT_MODEL.md](docs/vault/THREAT_MODEL.md), [docs/vault/ARCHITECTURE.md](docs/vault/ARCHITECTURE.md), and [docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md).
+A green frontend build, a calculation test, a local validator or a documentation change is not evidence that a production launchpad or fee path is live.
 
-## 8. Risks
+## 7. Risks and disclosures
 
-Solana transactions can fail, be delayed, or become irreversible once confirmed. Token liquidity can disappear; prices can move sharply; tokens may have freeze, transfer-fee, or other restrictive authorities; smart contracts, wallets, RPC providers, and aggregators can fail or be compromised. Users may lose some or all assets. WELP UP does not guarantee execution price, liquidity, returns, or capital protection.
+Solana transactions can fail, be delayed or be irreversible once confirmed. Token liquidity can disappear; prices can move sharply; token mints may have freeze, transfer-fee or other restrictive authorities; smart contracts, wallets, RPC providers and aggregators can fail or be compromised. Users may lose some or all assets. WELP does not guarantee execution price, liquidity, returns or capital protection.
 
-## 9. Roadmap
+## 8. Disclosures
 
-The order of work is: (1) secure and verify the existing user-signed swap flow; (2) complete vault accounting and token support; (3) independently audit and verify deployment; (4) add durable transaction indexing and reconciled accounting; (5) build constrained agent execution and copy-trading settlement; (6) implement governance, referrals, API credentials, and operational monitoring only when their backing services exist.
-
-## 10. Disclosures
-
-This document describes the current application and proposed architecture. It is not financial, investment, legal, tax, or security advice. Nothing here is an offer to sell securities or a promise of profit. Features described as proposed are not available unless the live application and verified on-chain records demonstrate otherwise.
+This document describes current functionality and gated protocol work. It is not financial, investment, legal, tax or security advice. It is not an offer to sell securities and does not promise profit. Features described as planned or gated are not available unless the live application and verified mainnet records demonstrate otherwise.

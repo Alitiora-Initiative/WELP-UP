@@ -1,0 +1,180 @@
+name: Anchor SBF Build
+
+on:
+  pull_request:
+    paths:
+      - 'programs/**'
+      - 'Anchor.toml'
+      - 'scripts/pin-sbf-compatible-locks.sh'
+      - '.github/workflows/anchor-sbf.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'programs/**'
+      - 'Anchor.toml'
+      - '.github/workflows/anchor-sbf.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: anchor-sbf-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Anchor 0.30.1 / Solana 1.18.26 SBF build
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libudev-dev
+
+      - name: Install stable Rust host toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install IDL-compatible nightly host toolchain
+        run: rustup toolchain install nightly-2025-04-15 --profile minimal
+
+      - name: Verify host Rust and Cargo
+        run: |
+          rustc --version
+          cargo --version
+
+      - name: Cache Rust and Solana build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cache/solana
+          key: ${{ runner.os }}-anchor-0.30.1-solana-1.18.26-${{ hashFiles('programs/vault/Cargo.toml', 'programs/vault-checks/Cargo.toml', 'programs/launchpad/Cargo.toml', 'programs/program-tests/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-anchor-0.30.1-solana-1.18.26-
+
+      - name: Install Solana CLI 1.18.26
+        run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/v1.18.26/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
+
+      - name: Verify Solana CLI
+        run: solana --version
+
+      - name: Install Anchor CLI 0.30.1
+        run: |
+          git clone --depth 1 --branch v0.30.1 https://github.com/coral-xyz/anchor.git "$RUNNER_TEMP/anchor"
+          # Anchor 0.30.1's lockfile pins time 0.3.29, which fails to compile on
+          # modern Rust because of a compiler inference change in Rust 1.80.
+          # Update only that transitive dependency while keeping Anchor itself pinned.
+          cargo update --manifest-path "$RUNNER_TEMP/anchor/cli/Cargo.toml" -p time --precise 0.3.36
+          cargo install --path "$RUNNER_TEMP/anchor/cli" --locked
+
+      - name: Verify Anchor CLI
+        run: anchor --version
+
+      - name: Normalize Cargo lockfiles for Solana 1.18
+        run: |
+          # Solana 1.18's bundled Cargo cannot parse lockfile v4. Keep the
+          # committed program dependency graph, but normalize its format immediately
+          # before invoking the SBF toolchain if host metadata upgraded it.
+          for lockfile in programs/vault/Cargo.lock programs/launchpad/Cargo.lock; do
+            if [[ -f "$lockfile" ]]; then
+              sed -i 's/^version = 4$/version = 3/' "$lockfile"
+              grep -qx 'version = 3' "$lockfile"
+            fi
+          done
+
+      - name: Refresh Cargo metadata and normalize the SBF lockfile
+        run: |
+          # Resolve only deployable program dependencies here. ProgramTest lives in
+          # programs/program-tests and must not contaminate either SBF lockfile.
+          # Normalize the program lockfile format for Solana 1.18's bundled Cargo.
+          # Anchor invokes cargo metadata before cargo-build-sbf; this wrapper handles
+          # that one metadata call and leaves the later SBF invocation locked.
+          mkdir -p "$RUNNER_TEMP/cargo-wrapper"
+          REAL_CARGO="$(command -v cargo)"
+          cat > "$RUNNER_TEMP/cargo-wrapper/cargo" <<EOF
+          #!/usr/bin/env bash
+          if [[ "\${1:-}" == "metadata" ]]; then
+            "$REAL_CARGO" "\$@"
+            status=\$?
+            if [[ \$status -ne 0 ]]; then exit "\$status"; fi
+            for lockfile in programs/vault/Cargo.lock programs/launchpad/Cargo.lock; do
+              if [[ -f "\$lockfile" ]]; then
+                sed -i 's/^version = 4$/version = 3/' "\$lockfile"
+                grep -qx 'version = 3' "\$lockfile"
+              fi
+            done
+            exit 0
+          fi
+          exec "$REAL_CARGO" "\$@"
+          EOF
+          chmod +x "$RUNNER_TEMP/cargo-wrapper/cargo"
+          # Resolve production program dependency graphs independently.
+          "$RUNNER_TEMP/cargo-wrapper/cargo" metadata --manifest-path programs/vault/Cargo.toml --format-version 1 >/dev/null
+          sed -i 's/^version = 4$/version = 3/' programs/vault/Cargo.lock
+          grep -qx 'version = 3' programs/vault/Cargo.lock
+          "$RUNNER_TEMP/cargo-wrapper/cargo" metadata --manifest-path programs/launchpad/Cargo.toml --format-version 1 >/dev/null
+          sed -i 's/^version = 4$/version = 3/' programs/launchpad/Cargo.lock
+          grep -qx 'version = 3' programs/launchpad/Cargo.lock
+          echo "$RUNNER_TEMP/cargo-wrapper" >> "$GITHUB_PATH"
+
+      - name: Pin Solana 1.18-compatible transitive crate versions
+        run: |
+          bash scripts/pin-sbf-compatible-locks.sh \
+            programs/vault/Cargo.toml \
+            programs/launchpad/Cargo.toml
+
+      - name: Build Solana BPF/SBF program and IDL
+        run: |
+          for lockfile in programs/vault/Cargo.lock programs/launchpad/Cargo.lock; do
+            sed -i 's/^version = 4$/version = 3/' "$lockfile"
+            grep -qx 'version = 3' "$lockfile"
+          done
+          anchor build -- -- --locked
+          for lockfile in programs/vault/Cargo.lock programs/launchpad/Cargo.lock; do
+            grep -qx 'version = 3' "$lockfile"
+          done
+        env:
+          # Anchor resolves Cargo through this variable before invoking metadata.
+          CARGO: ${{ runner.temp }}/cargo-wrapper/cargo
+          # Anchor 0.30.1 IDL generation uses proc_macro2's removed source_file API.
+          RUSTUP_TOOLCHAIN: nightly-2025-04-15
+
+      - name: Run vault ProgramTest against the built SBF binary
+        run: cargo test --manifest-path programs/program-tests/Cargo.toml --test vault_program_test
+        env:
+          BPF_OUT_DIR: ${{ github.workspace }}/target/deploy
+
+      - name: Run launchpad treasury ProgramTest against the built SBF binary
+        run: cargo test --manifest-path programs/program-tests/Cargo.toml --test treasury_program_test
+        env:
+          BPF_OUT_DIR: ${{ github.workspace }}/target/deploy
+
+      - name: Verify build outputs
+        run: |
+          test -s target/deploy/welp_vault.so
+          test -s target/idl/welp_vault.json
+          test -s target/deploy/welp_launchpad.so
+          test -s target/idl/welp_launchpad.json
+
+      - name: Upload review artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: welp-vault-and-launchpad-anchor-0.30.1-sbf
+          path: |
+            target/deploy/welp_vault.so
+            target/idl/welp_vault.json
+            target/deploy/welp_launchpad.so
+            target/idl/welp_launchpad.json
+            programs/vault/Cargo.lock
+            programs/launchpad/Cargo.lock
+          if-no-files-found: error
+          retention-days: 7

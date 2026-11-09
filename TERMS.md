@@ -1,208 +1,97 @@
-# WELP UP! Terms and Conditions
+# WELP UP — Terms and Conditions
 
-**Effective date:** 21 October 2026  
-**Version:** 1.0
+**Effective date:** 7 November 2026  
+**Version:** 2.0
 
-These Terms and Conditions (“**Terms**”) govern access to and use of the WELP UP! website and software interface at [https://welpup.fun](https://welpup.fun) (the “**Service**” or “**Website**”).
+These Terms govern access to and use of the WELP UP website and software at https://welpup.fun (the “Service”).
 
-**Operator.** The Service is operated by **Joseph Mushelle Nyingeh** (“**Operator**,” “**we**,” “**us**,” or “**our**”), an individual based in Kenya, under the public software studio **Alitiora Initiative** ([github.com/Alitiora-Initiative](https://github.com/Alitiora-Initiative)). Alitiora Initiative is a free-tier GitHub organization used to publish open-source software and product documentation. No separate limited company has been formed for this Service as of the effective date.
+## 1. What the Service is
 
-**Contact.**  
-- Email: [jaymnyon@gmail.com](mailto:jaymnyon@gmail.com) · [jaymn2006@gmail.com](mailto:jaymn2006@gmail.com)  
-- Postal: House 1 Mtwapa Creek, Nairobi, coastal 80109, Kenya  
-- Studio site: [alitiora-initiative.vercel.app](https://alitiora-initiative.vercel.app)
+WELP UP is software and protocol infrastructure for Solana market discovery, wallet-approved transactions, user-created on-chain safes, token launches and portfolio information. It is not a bank, broker, investment manager or centralized exchange.
 
-**Related documents.** These Terms should be read with the [Privacy Policy](PRIVACY.md), [LIMITS.md](LIMITS.md), [ROADMAP.md](ROADMAP.md), and the repository [README](README.md). Source code is available at [github.com/Alitiora-Initiative/WELP-UP](https://github.com/Alitiora-Initiative/WELP-UP) under the MIT License.
+The Service does not ask for or require a seed phrase, private key, wallet export or custody credential. Users connect an external wallet and must review and sign each transaction. A signal or AI-generated analysis is information, not an instruction to trade.
 
-By accessing the Website, connecting a wallet, requesting a quote, or using any feature, you agree to these Terms. If you do not agree, do not use the Service.
+## 2. User-created safes and control of assets
 
----
+Each safe is intended to be created by its own user through an on-chain program instruction signed by that user's wallet. The user chooses whether to create a safe, what assets to deposit, which permissions to enable and when to withdraw, subject to the deployed program's rules.
 
-## 1. What WELP UP! is
+A safe is a program-derived on-chain account. Assets deposited into it are held by that on-chain account and controlled by the deployed program logic; they are not held in a WELP operator wallet. The Service operator does not receive the user's private key and must not have an undisclosed unilateral withdrawal or signing authority. Users must inspect the deployed program, its source, upgrade authority, account constraints and permissions before funding.
 
-WELP UP! is a **non-custodial** Solana market-analysis and wallet trading interface. It:
+**Current release status:** the vault program has not yet been approved for mainnet use. Do not deposit assets into any address presented as a WELP safe until the exact mainnet program and its instructions have been deployed, independently verified, security-reviewed and explicitly enabled in the application.
 
-- reviews selected live token pools and displays rule-based signals and limits;
-- lets you prepare a Jupiter swap for **individual approval** in Phantom or another compatible self-custody wallet;
-- does **not** trade unattended in the current release;
-- signs only through the wallet session on the website;
-- does **not** hold, custody, or control your digital assets.
+## 3. Wallet signatures and user responsibility
 
-A signal is analysis, not an order. Every current swap must be reviewed and signed in your wallet. The Operator does not match orders for third parties, hold client assets, or operate a licensed virtual-asset exchange or broker under Kenya’s Virtual Asset Service Providers Act, 2025, or the Virtual Asset Service Providers Regulations, 2026.
+A wallet signature authorizes the transaction displayed by the wallet. Before signing, verify the network, program IDs, token mints, amounts, recipients, fees, slippage, account permissions and any delegated authority. Never sign a transaction you do not understand. WELP cannot reverse finalized blockchain transactions or recover assets sent to an incorrect address.
 
-## 2. Operator identity and open-source studio
+The user is responsible for wallet security, device security, transaction review, tax reporting and determining whether use of the Service is lawful where they reside.
 
-| Item | Detail |
-|------|--------|
-| Legal operator | Joseph Mushelle Nyingeh, individual |
-| Country | Kenya |
-| Public studio | Alitiora Initiative (GitHub free-tier organization) |
-| Product repository | [Alitiora-Initiative/WELP-UP](https://github.com/Alitiora-Initiative/WELP-UP) |
-| Studio principles | Free tiers first; on-chain receipts over marketing claims; say what is not built |
+## 4. Trading and third-party protocols
 
-References to “Alitiora Initiative” identify the public software studio and GitHub organization. They do not by themselves create a company, partnership, or regulated entity. Third-party hosts (for example Vercel), RPC providers, Jupiter, Phantom, and Solana network participants operate under their own terms.
+The Service may prepare swaps through third-party Solana protocols and market data providers. Such providers operate independently. Quotes can expire, routes can fail, liquidity can change and execution can differ from estimates. A transaction's finalized on-chain outcome is authoritative.
 
-## 3. Definitions
+Wallet-approved Jupiter swaps are available through the site's order and execution routes. When WELP referral collection is not configured, swaps do not charge a WELP referral fee; third-party route fees may still apply. When collection is configured, WELP checks the referral account and the exact fee-mint token account before returning a signable order. Every swap still requires the user's wallet signature. No AI service or server may silently sign transactions on a user's behalf.
 
-- **Wallet** — a self-custody Solana wallet; **public address** is its on-chain identifier.  
-- **Private key / seed** — any secret that authorizes a wallet signature.  
-- **Digital asset** — SOL or any token on a blockchain.  
-- **Signal** — software analysis output, not a transaction instruction.  
-- **Swap** — an exchange routed through a third-party protocol (currently Jupiter).  
-- **Vault** — a proposed future on-chain account; **not available** under these Terms.
+## 5. Fees
 
-## 4. Eligibility
+The codebase contains a target fee policy calculation that is not active collection:
 
-You may use the Service only if you:
+- **Protocol allocation:** 1.00% of gross swap input.
+- **Creator/developer allocation:** 0.50% of gross swap input.
+- **Genesis allocation:** 0.02% of supply, for a launch path that is not currently live.
+- **Treasury epoch target:** after 14 days, 60% of eligible treasury inflows to the developer/operator and 40% retained as reserve.
 
-1. are at least 18 years of age and legally able to enter a binding contract where you live;  
-2. are not prohibited by applicable law or sanctions from using Solana, Jupiter, or similar interfaces;  
-3. will not use the Service for any prohibited purpose in Section 17.
+The live Jupiter referral rail accepts one configured rate (50–255 basis points) and sends referral proceeds to the referral partner's token account after Jupiter's share. It does not implement the 1.00% + 0.50% split or the treasury epoch. The current referral partner is the dev wallet, not a separate treasury. The WELP treasury program is not deployed as an executable mainnet program.
 
-You are solely responsible for determining whether use of the Service or any digital asset is lawful in your location. The Operator does not offer the Service as a regulated brokerage, exchange, investment manager, or custodian. Reachability of the Website from your location does not mean the Service is licensed or offered to you under local virtual-asset rules.
+No fee is charged merely by these Terms or by a policy calculation. The quote must show the referral state and fee mint, and the resulting transaction must be confirmed on-chain to establish collection. Network fees, rent, Jupiter's share, and DEX/pool fees are separate. See the [current fee and treasury status](docs/FEES_AND_TREASURY.md).
 
-## 5. Acceptance of these Terms
+## 6. Launchpad
 
-Accessing the Website, connecting a wallet, or using a feature constitutes acceptance of these Terms to the extent recognized by applicable law. The Operator may later implement an explicit click-wrap or wallet-signed acknowledgment; until then, continued use after notice of updated Terms is acceptance of the updated version.
+Token creators may be able to configure a token's name, symbol, metadata, supply and decimals. Token creation, pool initialization and trading are separate on-chain steps. A mint alone does not prove that a market or liquidity pool exists.
 
-## 6. Description of the current Service
+Creators are responsible for the accuracy and legality of token metadata and for disclosing their token's risks, authorities, supply, liquidity and reward arrangements. WELP does not guarantee liquidity, price, buyers, listing, returns or successful trading. Creator rewards are not guaranteed and may only be paid from verified, available reward allocations.
 
-The browser application may:
+The launchpad must not display a token as live until the mint and any claimed pool have been verified on Solana mainnet.
 
-- display selected Solana pool information and rule scores;  
-- show public wallet balance estimates for a connected address;  
-- request Jupiter swap quotes;  
-- present transaction data for your wallet to review and sign.
+## 7. Portfolio, charts and P&L
 
-**Current interface limits (software checks, not safety guarantees):**
-
-- starting buy amount 0.001 SOL (editable);  
-- minimum buy 0.001 SOL; maximum buy 0.02 SOL per transaction;  
-- entry score band 80–98 inclusive (not a probability of profit);  
-- minimum estimated wallet equity about USD 0.50 and residual SOL for fees;  
-- blocks quoted price impact above 2.5%.
-
-These limits are described further in [LIMITS.md](LIMITS.md). They may change with documentation updates. The current interface does **not** autonomously submit trades, manage positions, or take profits without a separate wallet signature for each swap.
-
-## 7. No investment, legal, tax, or accounting advice
-
-The Service is software. It is not an investment adviser, broker, dealer, exchange, bank, custodian, tax adviser, accountant, or law firm. Signals, scores, charts, and estimates are general outputs, not personalized advice. You make and own every decision. Seek qualified professional advice where appropriate.
+Portfolio balances and transaction history are derived from public blockchain data and may be incomplete because of RPC limits, missing historical records, unsupported transaction versions, account closures or unavailable price data. Allocation charts must omit or clearly mark unpriced assets. Realized and unrealized P&L must not be represented as complete when cost basis or history is incomplete. These displays are informational and are not tax statements or audited financial records.
 
 ## 8. Digital-asset risks
 
-Digital assets are volatile and can lose all value. Prices, liquidity, pool data, and charts may be wrong, delayed, manipulated, or incomplete. Tokens may be fraudulent, frozen, or unsellable. Solana transactions are generally irreversible after finalization. Failed routes, congestion, slippage, exploits, and wallet compromise can cause permanent loss. Only risk amounts you can afford to lose entirely. Past performance or a model score does not predict future results.
+Digital assets are volatile and can lose all value. Tokens may be illiquid, malicious, frozen, or impossible to sell. Smart contracts, wallets, third-party programs, oracles, RPC providers and bridges can fail or be exploited. Transactions are generally irreversible after finalization. Users should only transact with assets they can afford to lose.
 
-## 9. Website wallet session
+## 9. No investment, legal, tax or accounting advice
 
-The browser may read the public address and public balances of the wallet session on the website. Quotes, history, and swaps stay unavailable until that session is active. **Never** paste wallet secrets into WELP, support messages, or forms.
+The Service provides software and general information. It does not provide individualized investment, legal, tax or accounting advice. Users make their own decisions and should obtain qualified advice when appropriate.
 
-You are responsible for wallet choice, device security, reviewing every transaction prompt, and network selection. Ending the session does not erase blockchain records.
+## 10. Privacy and wallet information
 
-Command-line code under `welp/` cannot sign swaps. Live swaps run only on the website after the wallet session is active.
+The Service may process public wallet addresses, public transaction data, basic service telemetry and information users voluntarily send to support. Public blockchain data is visible independently of WELP. The Service will never request a seed phrase or private key. See the Privacy Policy for further information.
 
-## 10. Your responsibility for each swap
+## 11. Prohibited use
 
-Before signing, verify mint, amounts, route, slippage, fees, and recipient in your wallet. Quotes are estimates and can expire. Signing authorizes only that transaction, not future trades. Keep SOL for network fees. Verify status before retrying.
+Users must not use the Service to defraud, manipulate markets, launder funds, evade sanctions, exploit the application, attack third-party systems or solicit wallet secrets. Users must not misrepresent token supply, liquidity, trading activity, audit status or rewards.
 
-## 11. Market data, quotes, and routing
+## 12. Service availability and changes
 
-Data and quotes may come from third parties and public RPCs. They may be incomplete or unavailable. Jupiter and similar providers prepare or relay routes; the Operator does not control liquidity, validators, or third-party contracts. The on-chain outcome controls what executed.
+The Service may be changed, suspended or discontinued for security, maintenance, legal or operational reasons. Third-party outages and Solana network conditions may affect functionality. A feature shown in the interface is not necessarily enabled; the published system status and on-chain evidence determine availability.
 
-## 12. Fees and taxes
+## 13. Disclaimers and limitation
 
-You pay network fees, protocol fees, and any third-party charges. The Operator does not reimburse fees unless expressly stated in writing. You are responsible for taxes and reporting arising from your activity. Keep your own records.
+The Service is provided “as is” and “as available”, to the maximum extent permitted by applicable law. No guarantee is made that the Service will be uninterrupted, error-free, secure or profitable. To the maximum extent permitted by applicable law, WELP is not liable for indirect or consequential losses, lost profits, lost data or digital-asset losses arising from user transactions, third-party services, network conditions or wallet compromise.
 
-## 13. Portfolio and activity displays
+Nothing in these Terms excludes liability that cannot lawfully be excluded.
 
-Activity and portfolio views may show local browser snapshots and public RPC history for the connected address. They are convenience displays only—not official statements, tax reports, or complete ledgers. Local data does not sync across devices and can be cleared. Use explorers and your wallet for authoritative records.
+## 14. Governing law and disputes
 
-## 14. No custody
+These Terms are interpreted under the laws that apply to the relevant parties and transaction, including any mandatory consumer protections. The current Support Centre at https://welpup.fun/support provides self-service guidance only; it does not accept formal legal notices or privacy requests. A dedicated secure contact channel must be published before account-level personal-data features are enabled.
 
-In the current product you retain control of your wallet and sign each swap on the website. The Operator does not take custody of assets. Do not send assets to addresses merely because they appear in an imitation of the Service. The Operator cannot reverse finalized transactions or recover assets sent to the wrong address.
+## 15. Support and contact status
 
-## 15. Autonomous vault — not available
-
-Autonomous trading and any on-chain vault are **planned only** and are **not enabled**. Do not send SOL or tokens to the Website expecting automated management. Any future vault must:
-
-- be funded only with amounts you explicitly confirm;  
-- enforce total and per-position caps on-chain (design target includes 0.02 SOL per position);  
-- allow you to revoke authority and withdraw available funds without the agent’s cooperation;  
-- publish program addresses, source, audit status, fees, and separate assent terms before activation.
-
-No current signature or these Terms activates unattended trading. See [ROADMAP.md](ROADMAP.md).
-
-## 16. Open-source software and MIT license
-
-Repository source is under the MIT License in `LICENSE`. That license governs copyright in the code. It does not replace these Terms, the Privacy Policy, third-party terms, or on-chain permissions. Open-source availability is not an audit, warranty, or promise of support.
-
-## 17. Prohibited use
-
-You must not:
-
-- violate law, sanctions, or third-party terms;  
-- use the Service to defraud, manipulate markets, launder funds, or facilitate prohibited activity;  
-- exploit, overload, or gain unauthorized access to the Service, wallets, or RPCs;  
-- solicit wallet secrets or credentials;  
-- reverse-engineer or bypass security except as mandatory law allows;  
-- misrepresent assets, the Operator, or Alitiora Initiative.
-
-The Operator may restrict or terminate access for prohibited use or for security and operational reasons.
-
-## 18. Intellectual property
-
-The Service’s branding, interface design, and original content are owned by the Operator or licensors. You receive a limited, revocable license to use the Service as offered. You do not acquire ownership of software or trademarks by using the Service. Third-party marks (Phantom, Jupiter, Solana, etc.) belong to their owners.
-
-## 19. Third-party services
-
-The Service depends on independent providers (wallets, RPCs, Jupiter, hosting, data sources). Their outages, terms, and failures are outside the Operator’s control. Links to third parties are for convenience and do not imply endorsement.
-
-## 20. Disclaimers
-
-THE SERVICE IS PROVIDED “AS IS” AND “AS AVAILABLE.” TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE OPERATOR DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. THE OPERATOR DOES NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, ERROR-FREE, OR FREE OF HARMFUL COMPONENTS, OR THAT SIGNALS OR QUOTES WILL BE ACCURATE OR PROFITABLE.
-
-## 21. Limitation of liability
-
-TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE OPERATOR SHALL NOT BE LIABLE FOR INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR FOR LOSS OF PROFITS, DATA, OR DIGITAL ASSETS, ARISING FROM USE OF THE SERVICE OR INABILITY TO USE IT, EVEN IF ADVISED OF THE POSSIBILITY. THE OPERATOR’S TOTAL LIABILITY FOR ANY CLAIM ARISING OUT OF THESE TERMS OR THE SERVICE SHALL NOT EXCEED ONE HUNDRED UNITED STATES DOLLARS (USD 100) OR THE AMOUNT YOU PAID THE OPERATOR FOR THE SERVICE IN THE TWELVE MONTHS BEFORE THE CLAIM (CURRENTLY ZERO FOR THE FREE INTERFACE), WHICHEVER IS GREATER.
-
-Nothing in these Terms excludes liability that cannot be excluded under the law of Kenya or other mandatory rules that apply to you.
-
-## 22. Indemnity
-
-You agree to indemnify and hold harmless the Operator from claims, losses, and expenses (including reasonable legal fees) arising from your use of the Service, your violation of these Terms, or your violation of any law or third-party right, except to the extent caused by the Operator’s willful misconduct where such exclusion is not permitted by law.
-
-## 23. Suspension and changes
-
-The Operator may modify, suspend, or discontinue the Service or any feature at any time. Material changes to these Terms will be indicated by an updated effective date. Continued use after the effective date of changes constitutes acceptance of the revised Terms where permitted by law.
-
-## 24. Privacy
-
-Personal information is handled as described in the [Privacy Policy](PRIVACY.md). The current product does not create a traditional authenticated account; wallet connection uses public addresses and local browser storage for convenience features.
-
-## 25. Governing law and disputes
-
-These Terms are governed by the laws of **Kenya**, without regard to conflict-of-law rules. Courts in Kenya have non-exclusive jurisdiction, subject to mandatory consumer protections that may apply where you live. Before formal proceedings, contact the Operator at the emails above to attempt informal resolution.
-
-**Regulatory note.** Under Kenya’s Virtual Asset Service Providers Act, 2025, only companies limited by shares (or registered foreign companies) may be licensed as virtual asset service providers. The Operator is an individual. The current Service is offered as a non-custodial software interface: you sign every swap in your own wallet; the Operator does not hold client assets or operate a matching exchange on behalf of clients. If the product changes in a way that requires licensing, the Operator will address legal structure and authorization before offering those features.
-
-## 26. Severability and entire agreement
-
-If any provision is unenforceable, the remainder stays in effect. These Terms, together with the Privacy Policy and documents expressly incorporated by reference, are the entire agreement between you and the Operator regarding the Service and supersede prior informal statements about the Service.
-
-## 27. Contact
-
-Questions about these Terms: [jaymnyon@gmail.com](mailto:jaymnyon@gmail.com) or [jaymn2006@gmail.com](mailto:jaymn2006@gmail.com).
+General product guidance is available through the self-service Support Centre at https://welpup.fun/support. This release does not publish a direct personal contact address or accept formal legal notices through that page. A secure contact and privacy-request channel must be established before account-level personal-data features are enabled.
 
 ---
 
-**Document control**
+**Document control:** WELP UP Terms and Conditions · Version 2.0 · Effective 7 November 2026.
 
-| Field | Value |
-|-------|--------|
-| Title | WELP UP! Terms and Conditions |
-| Version | 1.0 |
-| Effective date | 21 October 2026 |
-| Operator | Joseph Mushelle Nyingeh (Alitiora Initiative) |
-| Product | Non-custodial Solana browser interface at welpup.fun |
-| Source | github.com/Alitiora-Initiative/WELP-UP |
-
-*These Terms are published by the Operator for the live Service. They are not a substitute for advice from a lawyer admitted in Kenya. Users who need formal legal certainty for their own jurisdiction should obtain independent counsel.*
+These Terms are a product disclosure, not a substitute for advice from a qualified lawyer in the user's jurisdiction.

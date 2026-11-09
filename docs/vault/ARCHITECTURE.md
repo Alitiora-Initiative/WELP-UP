@@ -1,140 +1,100 @@
-# WELP vault architecture (Gate 2)
+# WELP UP! vault architecture
 
-**Status:** Anchor source implementation in progress; not deployed to Devnet or Mainnet and not independently audited. The program now implements owner-signed SOL deposits and share-based SOL withdrawals. The web vault UI remains fail-closed and does not accept deposits.
+**Status:** Anchor source implementation in progress. The source includes owner-controlled SOL share accounting and a per-vault executor policy PDA. It is not deployed to Devnet or Mainnet, has not received an independent audit, and does not execute swaps. The website must not accept vault deposits.
 
-**Effective:** 2026-10-21  
-**Operator:** Alitiora Initiative / Joseph Mushelle Nyingeh (Kenya)
+## Design
 
-## Decision
+WELP uses an Anchor program with one vault PDA per owner. The owner keeps their primary wallet key and explicitly signs vault funding, share withdrawals, policy configuration and executor revocation. A separate public executor key is stored in a per-vault policy account; the program never stores the executor's private key.
 
-We use a **custom Anchor program** with **per-user PDA vaults**, not a generic smart wallet (Squads, etc.).
+## Program-derived accounts
 
-### Why this shape
+| Account | Seeds | Purpose |
+|---|---|---|
+| `Vault` | `[b"vault-v1", owner]` | SOL accounting and share supply |
+| `ExecutorPolicy` | `[b"executor-policy-v1", vault]` | Delegated executor key and limits |
+| `UserSlot` | `[b"user-slot-v1", owner, bot_account]` | Owner-approved per-bot state and immutable strategy/risk snapshot |
+| `BotRegistry` | `[b"bot-registry-v1", creator, bot_account]` | Bot metadata; registration does not authorize swaps |
+| `GlobalConfig` | `[b"global-config-v1"]` | Reserved singleton; initialization is currently disabled |
 
-| Requirement | How it is met |
-|-------------|----------------|
-| User never gives the agent their Phantom seed | Vault is a separate PDA. Funding is an explicit SOL transfer the user signs. |
-| Total allocation cap on-chain | `Vault.total_cap_lamports` and `Vault.spent_lamports` checked in every trade instruction. |
-| Per-position ceiling ≤ 0.02 SOL | `Vault.per_position_max_lamports` enforced before any swap CPI. |
-| Narrow executor authority | Only a designated `executor` pubkey may call `execute_swap`. User can revoke it. |
-| User can stop and recover funds without the bot | `pause`, `revoke_executor`, and `withdraw` are callable by the vault owner alone. |
-| No cross-user leakage | PDA seeds: `[b"vault", owner_pubkey]`. One vault account per user. |
-| Program allowlist | Optional CPI allowlist (Jupiter V6 route programs) to limit what the executor can touch. |
+## Vault accounting
 
-This matches the Phase-1 threat model in `THREAT_MODEL.md`.
+The vault records:
+- `owner`: the wallet that controls the vault.
+- `available_lamports`: accounted SOL assets available to share holders.
+- `total_shares`: outstanding share supply.
+- `total_deposited_lamports`: lifetime deposit counter for reporting only.
+- `state`: Funded, Active, Paused, Stopping or Closed.
+- `bump` and `created_at`.
 
-## On-chain accounts
+A deposit is an explicit owner-signed System Program transfer. Shares are priced against current accounted assets and outstanding shares, not lifetime deposits. Arithmetic uses checked operations; inconsistent zero/nonzero asset/share state is rejected. A withdrawal burns shares and returns their pro-rata share of accounted SOL while preserving the vault account's rent reserve. Direct SOL donations are not automatically counted as share-bearing assets.
 
-### Vault (PDA)
+## Executor policy
 
-```
-seeds = [b"vault", owner.key().as_ref()]
-bump stored in account
-```
+The `ExecutorPolicy` PDA stores:
+- owner and vault public keys, both bound to the PDA.
+- one executor public key.
+- maximum SOL per trade.
+- maximum aggregate SOL spend per UTC day.
+- current daily spend and day index.
+- maximum slippage in basis points.
+- enabled flag, policy version and PDA bump.
 
-Fields (conceptual):
+The owner may configure or rotate the executor only when the vault is Active or Paused. The configured executor cannot equal the owner or the zero key. The maximum trade must be at least 0.001 SOL, cannot exceed the daily cap, and the daily cap cannot exceed currently accounted vault assets. Maximum slippage is capped at 1,000 bps (10%). Reconfiguration increments the policy version. The owner can revoke the executor immediately; revocation clears the executor and limits and increments the version.
 
-- `owner: Pubkey` — user’s main wallet
-- `executor: Pubkey` — agent key authorized to trade (can be `Pubkey::default()` after revoke)
-- `total_cap_lamports: u64` — max SOL the vault may ever spend on positions
-- `spent_lamports: u64` — cumulative SOL used for entries
-- `per_position_max_lamports: u64` — hard ceiling, design default 20_000_000 (0.02 SOL)
-- `paused: bool`
-- `bump: u8`
-- `created_at: i64`
+A pure Rust authorization helper validates executor identity, enabled state, per-trade size, daily cap and UTC-day rollover. It deliberately refuses to reset spend when the observed clock moves backwards.
 
-The target design stores token balances in associated token accounts **owned by the vault PDA**, not by the user’s main wallet. The current scaffold does not create those token accounts or implement token withdrawals.
+## Bot registry and user-slot consent
 
-### Authority flow
+Bot registration rejects a zero strategy hash, zero or greater-than-100% position allocation, slippage above 10%, invalid fee basis points, and a bot identity equal to the creator. Creating a `UserSlot` requires an existing enabled `BotRegistry` PDA. The owner-signed creation snapshots the registry's strategy hash, version, maximum position allocation and slippage into the slot. A future swap instruction must compare and enforce that snapshot; current `execute_swap` remains disabled.
 
-```
-User wallet
-  │ fund (transfer SOL)
-  │ set_executor / revoke_executor
-  │ pause / unpause
-  │ withdraw
-  ▼
-Vault PDA  ──execute_swap (size-checked)──►  Jupiter / Token programs
-  ▲
-  │ only if executor == signer and !paused
-Executor key (bot)
-```
+**Important:** The helper and policy account are not yet consumed by a swap instruction. No daily spend is currently recorded on-chain because `execute_swap` is deliberately fail-closed. The policy is configuration groundwork, not live trading authorization.
 
-The executor **never** becomes the owner of the vault and cannot change the owner, the total cap, or the per-position max after initialization (except via future audited upgrade paths, which remain multi-sig / immutable preference for mainnet).
+## Instruction status
 
-## Instructions (v0 surface)
+| Instruction | Status |
+|---|---|
+| `create_vault` | Implemented in source |
+| `fund_vault` | Owner-signed SOL deposit and proportional share minting implemented in source |
+| `withdraw_vault` | Owner-only share redemption implemented in source |
+| `pause_vault` / `resume_vault` | Owner-only state transitions implemented in source |
+| `configure_executor_policy` | Owner-only per-vault executor and spending policy implemented in source |
+| `revoke_executor_policy` | Owner-only immediate executor revocation implemented in source |
+| `register_bot` | Validates strategy hash, allocation, slippage and fee metadata in source |
+| `create_user_slot` | Requires an enabled bot registry and snapshots the owner's approved strategy/risk settings |
+| `execute_swap` | Returns `TradingDisabled`; no CPI or token movement |
+| `settle_exit` | Returns `TradingDisabled`; no caller-supplied P&L accepted |
+| Creator-fee settlement/claim | Returns `FeeSettlementDisabled` |
+| Bot-creation fee collection | Returns `FeeSettlementDisabled` |
+| Legacy `withdraw` | Returns `LegacyWithdrawDisabled` to prevent bypassing share accounting |
+| Legacy `set_executor` / `revoke_executor` | Return `ExecutorPolicyRequired`; use versioned policy instructions |
+| `initialize_global_config` | Disabled until a deployment-specific bootstrap authority is pinned |
+| Legacy `initialize` | Disabled because its cap arguments were never persisted or enforced |
 
-1. **`initialize`** — User creates their vault PDA, sets `total_cap_lamports` and `per_position_max_lamports`. Executor may be set later.
-2. **`fund`** — User transfers SOL into the vault system account. Increases available balance; does not raise the *cap*.
-3. **`set_executor`** — Owner sets or rotates the executor pubkey.
-4. **`revoke_executor`** — Owner clears executor (sets to default). Immediate.
-5. **`pause` / `unpause`** — Owner only.
-6. **`execute_swap`** — Reserved for the future executor path. The current
-   scaffold returns `TradingDisabled` and does not change vault state. Jupiter
-   CPI, swap-account validation, and token-position accounting are not
-   implemented. Do not set an executor or describe this instruction as trading.
-7. **`withdraw`** — Owner withdraws SOL held by the vault PDA. No executor involvement is required. SPL token withdrawals are not implemented in the current scaffold.
+## What remains before delegated trading
 
-## Agent authorization model
+1. Pin a deployment-specific bootstrap authority and define upgrade/emergency authority.
+2. Enforce the user-slot strategy hash/version snapshot and registry risk limits in the future swap path; creation-time binding is now implemented.
+3. Implement a narrow Jupiter CPI path with strict program, account-meta, token-account owner/mint, mint allowlist, and pre/post balance checks.
+4. Consume the executor policy atomically: exact-next nonce, per-trade cap, daily cap, current available balance, slippage ceiling and policy version.
+5. Derive realized P&L from reconciled on-chain fills; never trust caller-supplied profit.
+6. Add Anchor local-validator tests, fuzz/property/invariant tests and adversarial account-composition tests.
+7. Complete an independent Solana/Anchor audit and remediate findings.
 
-- No process in this repository loads a wallet secret.
-- The Python CLI agent (`welp`) can analyze and record decisions, but it cannot sign.
-- Swaps, funding, revoke, and withdraw run only after a wallet connects on the website.
-- The `/autonomous` page stays UI-only until gates 3–7 complete.
+## Build and release
 
-## Devnet vs mainnet
+The checked-in `Anchor.toml` targets localnet. The program ID in source is a placeholder. No Devnet or Mainnet deployment is approved. Do not derive a fundable address or send SOL to this source build. The website's vault funding UI remains disabled.
 
-| Environment | Status |
-|-------------|--------|
-| Unit tests + local agent | Active |
-| Devnet program deploy | Gate 3 (next) |
-| Independent audit | Gate 4 |
-| Mainnet funds enabled | Disabled until gates 4–7 |
+Host-side pure checks:
 
-The program ID in `programs/vault/src/lib.rs` is an undeployed placeholder. No
-vault PDA derived from it is ready to receive funds. After a Devnet deployment
-uses a final program ID, the website can derive each user's PDA from that ID and
-the connected public wallet address; a separate address does not need to be
-copied into source code.
-
-**Do not send real mainnet SOL into any vault address until the roadmap explicitly opens that gate.**
-
-## Relationship to the existing Python agent
-
-The CLI agent already implements off-chain controls that the vault will eventually enforce on-chain:
-
-- Per-trade size floor/ceiling (`LIMITS.md` / `config.py`)
-- Mint risk (freeze authority, transfer fee) — `welp/safety.py`
-- Orphan adoption — `welp/reconcile.py`
-- Dynamic priority fee — `welp/rpc.py`
-- Signer membership check before signing — `welp/wallet.py`
-
-Vault work does **not** replace those checks; it moves the hard spending limits on-chain so a compromised executor still cannot exceed the user’s allocation.
-
-## Source layout (this repository)
-
-```
-programs/vault/          # Anchor program (scaffold)
-docs/vault/
-  THREAT_MODEL.md        # Gate 1
-  ARCHITECTURE.md        # this file (Gate 2)
+```bash
+cargo test --manifest-path programs/vault-checks/Cargo.toml
 ```
 
-## Next step (Gate 3)
+Anchor build and SBF-backed ProgramTest, using the pinned Anchor 0.30.1 / Solana 1.18.26 toolchain:
 
-The previous Devnet-only vault console has been removed from the user-facing app.
-The current `/vault` page is a status and safety disclosure only. The checked-in
-Anchor configuration targets a local validator; no Devnet or Mainnet provider
-is configured. Executable-account checks, if reintroduced, would not verify
-source or establish an audit.
+```bash
+anchor build
+BPF_OUT_DIR="$PWD/target/deploy" cargo test --manifest-path programs/vault/Cargo.toml --test anchor_program_test
+```
 
-The program remains undeployed, `execute_swap` still fails closed, SPL-token
-withdrawals are absent, and no independent audit has been completed.
-
-Before any deployment, complete local validator tests, independent review, and
-an explicit release decision. Staging validation must never be represented as
-mainnet availability.
-
-- Initialize, fund, set_executor, execute_swap (mock or real Jupiter devnet route), pause, revoke, withdraw.
-- Property tests for cap and per-position enforcement.
-- Publish program id and verified source after successful devnet runs.
+The ProgramTest suite loads the built SBF binary; it does not substitute a native mock processor.

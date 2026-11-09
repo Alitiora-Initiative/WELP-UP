@@ -10,7 +10,7 @@ This Privacy Notice for WELP UP! ("**we**," "**us**," or "**our**") describes ho
   The deployed browser app does not trade unattended. A signal is analysis, not an order. Every current swap must be reviewed and signed by the wallet session on the website. Quotes and swaps stay locked until that session is active.
 - Engage with us in other related ways, including any marketing or events
 
-**Questions or concerns?** Reading this Privacy Notice will help you understand your privacy rights and choices. We are responsible for making decisions about how your personal information is processed. If you do not agree with our policies and practices, please do not use our Services. If you still have any questions or concerns, please contact us at [jaymnyon@gmail.com](mailto:jaymnyon@gmail.com).
+**Questions or concerns?** This notice explains how WELP UP processes information. The [Support Centre](https://welpup.fun/support) currently provides self-service product guidance only; it does not accept privacy requests or attachments. Do not post personal information or wallet secrets in public channels. A secure privacy-request channel must be published before account-level personal-data features are enabled.
 
 ## SUMMARY OF KEY POINTS
 
@@ -30,7 +30,7 @@ This summary provides key points from our Privacy Notice, but you can find out m
 
 **What are your rights?** Depending on where you are located geographically, the applicable privacy law may mean you have certain rights regarding your personal information. Learn more about your privacy rights.
 
-**How do you exercise your rights?** The easiest way to exercise your rights is by contacting us at [jaymnyon@gmail.com](mailto:jaymnyon@gmail.com) or [jaymn2006@gmail.com](mailto:jaymn2006@gmail.com). We will consider and act upon any request in accordance with applicable data protection laws.
+**How do you exercise your rights?** This website does not currently provide a secure privacy-request submission channel. A dedicated channel must be published before WELP enables account-level personal-data features. Do not submit personal information through public wallet fields, transaction memos, or issue trackers.
 
 Want to learn more about what we do with any information we collect? Review the Privacy Notice in full.
 
@@ -117,7 +117,7 @@ We have implemented appropriate and reasonable technical and organizational secu
 
 **In Short:** We do not knowingly collect data from or market to children under 18 years of age.
 
-We do not knowingly collect, solicit data from, or market to children under 18 years of age, nor do we knowingly sell such personal information. By using the Services, you represent that you are at least 18 or that you are the parent or guardian of such a minor and consent to such minor dependent’s use of the Services. If we learn that personal information from users less than 18 years of age has been collected, we will deactivate the account and take reasonable measures to promptly delete such data from our records. If you become aware of any data we may have collected from children under age 18, please contact us at [jaymn2006@gmail.com](mailto:jaymn2006@gmail.com).
+We do not knowingly collect, solicit data from, or market to children under 18 years of age, nor do we knowingly sell such personal information. By using the Services, you represent that you are at least 18 or that you are the parent or guardian of such a minor and consent to such minor dependent’s use of the Services. If we learn that personal information from users less than 18 years of age has been collected, we will deactivate the account and take reasonable measures to promptly delete such data from our records. Do not post a child's personal information in a public channel; a secure request channel must be available before account-level personal-data features are enabled.
 
 ## 8. WHAT ARE YOUR PRIVACY RIGHTS?
 
@@ -135,7 +135,7 @@ If you would at any time like to review or change the information in your accoun
 
 Upon your request to terminate your account, we will deactivate or delete your account and information from our active databases. However, we may retain some information in our files to prevent fraud, troubleshoot problems, assist with any investigations, enforce our legal terms and/or comply with applicable legal requirements.
 
-If you have questions or comments about your privacy rights, you may email us at [jaymnyon@gmail.com](mailto:jaymnyon@gmail.com).
+The current website does not provide a secure channel for privacy-rights requests. Do not include personal information in public support posts or on-chain transaction data.
 
 ## 9. CONTROLS FOR DO-NOT-TRACK FEATURES
 
@@ -147,17 +147,14 @@ Most web browsers and some mobile operating systems and mobile applications incl
 
 We may update this Privacy Notice from time to time. The updated version will be indicated by an updated "Revised" date at the top of this Privacy Notice. If we make material changes to this Privacy Notice, we may notify you either by prominently posting a notice of such changes or by directly sending you a notification. We encourage you to review this Privacy Notice frequently to be informed of how we are protecting your information.
 
-## 11. HOW CAN YOU CONTACT US ABOUT THIS NOTICE?
+## 11. SUPPORT AND PRIVACY REQUESTS
 
-If you have questions or comments about this notice, you may email us at [jaymn2006@gmail.com](mailto:jaymn2006@gmail.com) or contact us by post at:
+The [Support Centre](https://welpup.fun/support) currently provides self-service product guidance only and does not accept privacy requests, attachments, or formal legal notices. A dedicated secure privacy-request channel must be published before account-level personal-data features are enabled.
 
-House 1 Mtwapa Creek  
-Nairobi, coastal 80109  
-Kenya
 
 ## 12. HOW CAN YOU REVIEW, UPDATE, OR DELETE THE DATA WE COLLECT FROM YOU?
 
-Based on the applicable laws of your country, you may have the right to request access to the personal information we collect from you, details about how we have processed it, correct inaccuracies, or delete your personal information. You may also have the right to withdraw your consent to our processing of your personal information. These rights may be limited in some circumstances by applicable law. To request to review, update, or delete your personal information, please contact us at [jaymnyon@gmail.com](mailto:jaymnyon@gmail.com) or [jaymn2006@gmail.com](mailto:jaymn2006@gmail.com).
+Based on the applicable laws of your country, you may have the right to request access to personal information, details about processing, correction, deletion, or withdrawal of consent. These rights may be limited in some circumstances by applicable law. A secure privacy-request channel is not currently available on the website. Do not submit personal data through public wallet fields, blockchain transactions, social channels, or issue trackers.
 
 ---
 

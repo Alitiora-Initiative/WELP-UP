@@ -6,7 +6,7 @@
 
 **Release rule:** keep autonomous real-fund trading disabled until every on-chain, integration, test, and release gate below is complete.
 
-This is the staged implementation plan for user-created Solana trading bots, their vault accounting, creator fees, performance history, and supporting UI. It preserves the current app while replacing the vault only through a tested migration. A source-code checklist or successful web build is not a security audit or evidence that a program is safe to receive mainnet funds.
+This is the staged implementation plan for user-created Solana trading bots, their vault accounting, creator fees, performance history, and supporting UI. Its bot-creation and creator-fee examples are proposals, not live charges; the current swap/referral/treasury source of truth is [FEES_AND_TREASURY.md](FEES_AND_TREASURY.md). It preserves the current app while replacing the vault only through a tested migration. A source-code checklist or successful web build is not a security audit or evidence that a program is safe to receive mainnet funds.
 
 ## Binding product requirements from the supplied specification
 

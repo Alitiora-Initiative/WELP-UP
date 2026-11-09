@@ -14,16 +14,21 @@ This checklist distinguishes working public-data and wallet-approved features fr
 - [ ] Server-side account identity and durable per-user data.
 - [ ] Verified end-to-end transaction reconciliation for every trade and vault event.
 
-## Current branch hardening (source-driven-product-port)
+## Current Anchor program source status (executor-policy-foundation)
 
 - [x] Added a server-side read-only market analyst route. It consumes the live Jupiter snapshot and requires a server-only OpenAI API key; it has no wallet, transaction, or bot tools.
 - [x] Added bounded snapshot sanitization and response parsing tests for the analyst.
 - [x] Implemented owner-signed SOL deposits through the System Program CPI, proportional share minting, and overflow-safe accounting in the Anchor source.
 - [x] Implemented owner-only share redemption, including rent-exemption checks; owner pause/resume remains available.
-- [x] Added source-level regression tests for the deposit path and retained fail-closed swap execution, position settlement, creator-fee accrual/claim, and bot-creation fee collection.
+- [x] Added source-level regression tests for deposits, owner-controlled executor policy, legacy withdrawal protection, and fail-closed instructions.
+- [x] Added a per-vault ExecutorPolicy PDA with owner-only configure/rotate/revoke instructions, max trade, daily cap, slippage ceiling, and policy versioning.
+- [x] Added pure Rust daily-spend authorization checks and UTC-day rollover tests. These checks are not yet wired into a swap instruction; no executor can trade.
+- [x] Disabled the unsafe legacy amount-based withdrawal, no-op executor setters, and first-caller global configuration initializer.
+- [x] Validated bot registry strategy hash, position allocation, slippage and fee parameters.
+- [x] Bound user-slot creation to an enabled bot registry and snapshot the owner-approved strategy hash, registry version and risk limits.
 - [ ] Add Anchor local-validator integration tests for deposit, partial/full withdrawal, paused-vault recovery, repeated deposits after withdrawals, direct SOL donations, and rent preservation.
 - [ ] Run all GitHub CI checks for the latest branch commit and resolve any failures.
-- [ ] Run Anchor 0.30.1 SBF build, IDL validation, local-validator transaction tests, and independent security audit. These remain unavailable/unverified in the current CI baseline.
+- [ ] Run Anchor 0.30.1 SBF build, IDL validation, local-validator transaction tests for deposit/withdraw/policy configure/revoke, and independent security audit. These remain outstanding.
 - [ ] Add a durable shared rate limiter and provider spend controls before enabling the public AI endpoint broadly.
 - [ ] Configure `OPENAI_API_KEY` and `WELP_AI_MODEL` in Vercel Preview and test a real response. No provider credential was available during implementation.
 
@@ -37,8 +42,8 @@ See [AI_AGENT_RUNTIME.md](AI_AGENT_RUNTIME.md) and [VAULT_PROGRAM_SECURITY_REVIE
 - [ ] Property, fuzz, invariant, and adversarial tests for share accounting, rounding, rent, token accounts, CPI account validation, re-entrancy-like composition risks, and emergency paths.
 - [ ] SPL-token deposits and withdrawals implemented and tested, not just SOL.
 - [ ] Jupiter CPI route validation and token accounting implemented. The current scaffold intentionally disables swap execution.
-- [ ] User-authorized caps and per-position limits enforced on-chain. UI limits alone are not security controls.
-- [ ] Owner pause, executor revocation, and withdrawal recovery verified under failure conditions.
+- [ ] Wire executor policy and each user-slot strategy/risk snapshot into an audited swap instruction so per-trade, daily spend, slippage, policy version, nonce, and available-balance limits are enforced atomically. UI limits alone are not security controls.
+- [ ] Verify owner pause, implemented executor-policy revocation, and share-withdrawal recovery under local-validator failure conditions.
 - [ ] Upgrade authority policy selected, documented, and secured (prefer a reviewed multisig or immutable deployment after upgrade window).
 - [ ] Monitoring, incident response, pause authority, recovery runbook, and independent RPC/indexer redundancy.
 - [ ] Mainnet integration tests and independent transaction-level verification.
@@ -63,15 +68,11 @@ No live bot performance, ROI, TVL, active-agent count, or copier count may be sh
 
 ## Fees and treasury
 
-**Fee policy from the staged build specification (not enabled):**
+**Target economics (not active collection):** the source calculates a 1.00% protocol allocation plus 0.50% creator/developer allocation, a separate 0.02% genesis allocation, and a 14-day 60/40 treasury epoch. These helpers do not collect or distribute funds.
 
-- Bot creation/activation fee: **US$0.10 per personal or public bot**, once per successful creation/activation.
-- Allocation: **40% to a verified, explicitly configured recipient and 60% to the platform Treasury PDA** derived from `b"website-treasury"`.
-- Creator performance share: separately configurable from **0–30% of realized positive net profit**, only after trusted on-chain accounting and settlement exist.
-- The setup fee and creator share are separate; prevent double charging.
-- The payout address in the planning specification (`EDZjEbRAtqyC8z6ta6PYHX161Xynt13tWpd7orKERkbz`) is an **unverified candidate**, not an approved recipient or on-chain constant. Validate it and confirm configuration before use.
-- Fee collection, treasury routing, and creator payouts are **disabled**. No fee may be collected until the Pyth SOL/USD feed ID, owner, freshness and confidence checks, SOL conversion and rounding, recipient, treasury PDA, atomic settlement, receipts, reconciliation, duplicate prevention, and refund behavior are reviewed and tested.
-- Do not implement a per-trade, per-deposit, or per-withdrawal charge unless the product specification is explicitly revised and approved. Existing documents previously described a conflicting fee model; this section supersedes that obsolete wording.
+**Live fee rail:** user-approved Jupiter v2 swaps remain available when WELP referral collection is unconfigured. Jupiter supports keyless Swap API access; a server-side `JUPITER_API_KEY` is optional and provides a higher rate tier. A configured Jupiter referral fee is one 50–255 bps fee, not the separate target allocations. Jupiter takes 20% of the integrator fee and referral proceeds are claimable by the referral partner wallet. `/api/order` verifies the configured referral account and canonical token account for the actual quote fee mint; if verification fails, it requests a fresh quote without WELP referral parameters and labels the returned quote as fee-free to WELP. `/api/status` independently checks the token feed and a quote-only order request.
+
+**Treasury deployment:** the configured launch/treasury program address is not executable on mainnet. No WELP treasury PDA, fee deposit instruction or 14-day payout is active. The referral partner is the dev wallet, not a treasury address. Establishing active treasury proceeds requires a verified treasury authority and either an audited on-chain settlement program or an explicitly operator-managed claim/sweep process. See [fees and treasury](FEES_AND_TREASURY.md).
 
 ## Production operations
 

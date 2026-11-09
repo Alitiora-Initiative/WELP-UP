@@ -16,7 +16,11 @@
     "test:agent": "node --experimental-strip-types --test tests/agent.test.mjs",
     "test:program-gates": "node --experimental-strip-types --test tests/program-gates.test.mjs",
     "test:market-scoring": "node --experimental-strip-types --test tests/market-scoring.test.mjs",
-    "test:vercel-deploy-gate": "node --experimental-strip-types --test tests/vercel-ignore-build.test.mjs"
+    "test:fees": "node --experimental-strip-types --test tests/fee-policy.test.mjs tests/referral-readiness.test.mjs",
+    "test:vercel-deploy-gate": "node --experimental-strip-types --test tests/vercel-ignore-build.test.mjs",
+    "test:launchpad-config": "node --experimental-strip-types --test tests/launchpad-config.test.mjs",
+    "prepare": "node scripts/install-git-hooks.mjs",
+    "test:git-hooks": "node --experimental-strip-types --test tests/git-hooks.test.mjs"
   },
   "dependencies": {
     "@solana/kit": "8.5.0",
@@ -38,5 +42,10 @@
     "eslint": "^9.0.0",
     "eslint-config-next": "16.4.2",
     "typescript": "^5.9.0"
+  },
+  "overrides": {
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "11.0.1"
+    }
   }
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { GET as getMarketFeed } from '@/app/api/markets/route';
-import { buildAnalystSnapshot, extractResponsesText, normalizeAnalystQuestion } from '@/lib/market-analyst';
+import { buildAnalystSnapshot, buildDeterministicAnalystAnswer, extractResponsesText, normalizeAnalystQuestion } from '@/lib/market-analyst';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,10 +26,11 @@ function isSameOrigin(request: Request) {
 
 export async function GET() {
   const model = process.env.WELP_AI_MODEL?.trim() || null;
-  const configured = Boolean(process.env.OPENAI_API_KEY && model);
+  const modelConfigured = Boolean(process.env.OPENAI_API_KEY && model);
   return NextResponse.json({
-    configured,
-    model: configured ? model : null,
+    configured: true,
+    provider: modelConfigured ? 'openai' : 'welp-rules',
+    model: modelConfigured ? model : 'welp-analyst-v1',
     mode: 'market-analysis-only',
     walletAccess: false,
     transactionAccess: false,
@@ -61,12 +62,6 @@ export async function POST(request: Request) {
 
   const apiKey = process.env.OPENAI_API_KEY;
   const configuredModel = process.env.WELP_AI_MODEL?.trim();
-  if (!apiKey || !configuredModel) {
-    return NextResponse.json({
-      error: 'The market analyst is not configured yet. Add OPENAI_API_KEY and WELP_AI_MODEL as server-only environment variables.',
-      configured: false,
-    }, { status: 503 });
-  }
 
   const contentLength = Number(request.headers.get('content-length') || 0);
   if (contentLength > 4096) {
@@ -95,6 +90,17 @@ export async function POST(request: Request) {
     const snapshot = buildAnalystSnapshot(feed);
     if (!snapshot.assets.length || !snapshot.updatedAt) {
       return NextResponse.json({ error: 'The live market snapshot is incomplete. No analysis was generated.' }, { status: 502 });
+    }
+
+    if (!apiKey || !configuredModel) {
+      return NextResponse.json({
+        answer: buildDeterministicAnalystAnswer(snapshot, question),
+        model: 'welp-analyst-v1',
+        provider: 'welp-rules',
+        marketUpdatedAt: snapshot.updatedAt,
+        assetsAnalyzed: snapshot.assets.length,
+        mode: 'analysis-only',
+      }, { headers: { 'Cache-Control': 'no-store' } });
     }
 
     const model = configuredModel;

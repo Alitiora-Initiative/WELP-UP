@@ -2,6 +2,8 @@ name: CI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
 
 jobs:
@@ -34,14 +36,21 @@ jobs:
 
   node-check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
       - run: npm ci
       - run: npm run lint
+      - run: npm run test:git-hooks
       - run: npm run typecheck
       - run: npm run test:notifications
       - run: npm run test:vault-client
@@ -50,13 +59,18 @@ jobs:
       - run: npm run test:agent
       - run: npm run test:program-gates
       - run: npm run test:market-scoring
+      - run: npm run test:launchpad-config
       - run: npm run test:vercel-deploy-gate
       - run: npm run build
-      - name: Audit for high/critical vulnerabilities
-        run: npm audit --audit-level=high
+      - name: Report dependency audit findings
+        run: |
+          npm audit --json > "$RUNNER_TEMP/npm-audit.json" || true
+          node -e 'const r=require(process.env.RUNNER_TEMP+"/npm-audit.json"); console.log("Dependency audit summary:", JSON.stringify(r.metadata?.vulnerabilities ?? {})); for (const [name,v] of Object.entries(r.vulnerabilities ?? {})) console.log(name, "|", v.severity, "| range:", v.range, "| fix:", JSON.stringify(v.fixAvailable), "| advisories:", (v.via ?? []).map(x => typeof x === "string" ? x : x.title).join("; "));'
+      - name: Audit for moderate or higher vulnerabilities
+        run: npm audit --audit-level=moderate
 
   rust-checks:
-    name: Rust checks (vault crates)
+    name: Rust checks (Anchor crates)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -75,7 +89,9 @@ jobs:
       - name: Cache build artifacts
         uses: actions/cache@v4
         with:
-          path: target
+          path: |
+            target
+            programs/vault/target
           key: ${{runner.os}}-cargo-target-${{hashFiles('**/Cargo.lock')}}
           restore-keys: |
             ${{runner.os}}-cargo-target-
@@ -89,3 +105,13 @@ jobs:
         run: cargo clippy --manifest-path programs/vault/Cargo.toml -- -D warnings
       - name: Unit tests — vault-checks
         run: cargo test --manifest-path programs/vault-checks/Cargo.toml
+      - name: Check formatting — launchpad treasury
+        run: cargo fmt --check --manifest-path programs/launchpad/Cargo.toml
+      - name: Clippy — launchpad treasury
+        run: cargo clippy --manifest-path programs/launchpad/Cargo.toml -- -D warnings
+      - name: Unit tests — launchpad treasury core
+        run: cargo test --lib --manifest-path programs/launchpad/Cargo.toml
+      - name: Format host-only Solana integration tests
+        run: cargo fmt --check --manifest-path programs/program-tests/Cargo.toml
+      - name: Compile host-only Solana integration tests
+        run: cargo check --manifest-path programs/program-tests/Cargo.toml --tests

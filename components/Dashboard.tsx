@@ -36,9 +36,14 @@ type Order = {
   requestId: string;
   inAmount: string;
   outAmount: string;
-  priceImpact?: number | string;
+  priceImpact?: number | string | null;
   feeBps?: number;
   feeMint?: string;
+  platformFee?: { feeBps?: number; amount?: string; feeMint?: string } | null;
+  welpReferral?:
+    | { state: 'included'; feeBps: number; feeMint: string; tokenAccount: string }
+    | { state: 'not_configured' }
+    | { state: 'not_collected'; reason: string };
   slippageBps?: number;
   taker: string;
 };
@@ -184,10 +189,17 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
     fetch(`/api/tokens?q=${encodeURIComponent(mint)}`, { signal: controller.signal })
       .then(async (response) => {
         const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Could not load the selected market token.');
         const match = (data.tokens as Token[] | undefined)?.find((candidate) => candidate.mint === mint);
-        if (!controller.signal.aborted && match) setToken(match);
+        if (!match) throw new Error('The selected token was not found in Jupiter’s searchable token list.');
+        if (!controller.signal.aborted) {
+          setToken(match);
+          setTradeError('');
+        }
       })
-      .catch(() => undefined);
+      .catch((error) => {
+        if (!controller.signal.aborted) setTradeError(errorMessage(error));
+      });
     return () => controller.abort();
   }, [view]);
 
@@ -250,10 +262,6 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
       setTradeError('Keep at least 0.003 SOL in the wallet for fees.');
       return;
     }
-    if (direction === 'buy' && (!selectedSignal || !selectedSignal.eligible)) {
-      setTradeError(selectedSignal ? `This signal is not in the entry window: ${selectedSignal.reason.toLowerCase()}.` : 'WELP only buys tokens with a live eligible signal.');
-      return;
-    }
     setPending('quote');
     setOrder(null);
     try {
@@ -293,8 +301,12 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
       return;
     }
     if (direction === 'buy') {
-      const impact = order.priceImpact !== undefined ? Number(order.priceImpact) : selectedSignal?.priceImpactPct;
-      if (impact === null || impact === undefined || !Number.isFinite(impact) || impact > 2.5) {
+      const impact = order.priceImpact === undefined || order.priceImpact === null ? Number.NaN : Number(order.priceImpact);
+      if (!Number.isFinite(impact)) {
+        setTradeError('Jupiter did not return verifiable price impact, so this order cannot be signed.');
+        return;
+      }
+      if (impact > 2.5) {
         setTradeError('This quote is above WELP’s 2.5% price-impact limit. Request a smaller quote or skip this token.');
         return;
       }
@@ -342,7 +354,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
   const amountOutDecimals = direction === 'buy' ? activeToken?.decimals ?? 0 : 9;
   const formToken = direction === 'buy' ? 'SOL' : activeToken?.symbol ?? 'TOKEN';
   const receiveToken = direction === 'buy' ? activeToken?.symbol ?? 'TOKEN' : 'SOL';
-  const orderImpact = order ? Number(order.priceImpact ?? selectedSignal?.priceImpactPct ?? 0) : 0;
+  const orderImpact = order && order.priceImpact !== undefined && order.priceImpact !== null ? Number(order.priceImpact) : null;
   const countEligible = currentSignals.filter((signal) => signal.eligible).length;
 
   return (
@@ -370,7 +382,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
 
           <div className="mainnet-banner" role="note">
             <ShieldCheck size={19} />
-            <div><strong>Mainnet trading is on.</strong><span>Swaps move real assets. Check the amount, recipient and fees in Phantom before every approval.</span></div>
+            <div><strong>Wallet-approved swaps are live.</strong><span>Quotes show whether a verified WELP referral fee is included and report Jupiter’s quoted fee rate. Jupiter or other route providers may also charge fees. You approve every swap in your own wallet; no unattended trading is active.</span></div>
             <a href="https://docs.jup.ag/user-docs/trade/swap" target="_blank" rel="noreferrer" aria-label="Read swap documentation"><CircleHelp size={17} /></a>
           </div>
 
@@ -449,10 +461,13 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
                   <div className="quote-title"><span><ShieldCheck size={15} /> Review quote</span><small>Fresh for 45 seconds</small></div>
                   <div className="quote-line"><span>You pay</span><strong>{formatUnits(order.inAmount, amountInDecimals)} {formToken}</strong></div>
                   <div className="quote-line"><span>Estimated receive</span><strong>{formatUnits(order.outAmount, amountOutDecimals)} {receiveToken}</strong></div>
-                  <div className="quote-line"><span>Price impact</span><strong>{orderImpact.toFixed(3)}%</strong></div>
+                  <div className="quote-line"><span>Price impact</span><strong>{orderImpact !== null && Number.isFinite(orderImpact) ? `${orderImpact.toFixed(3)}%` : 'Unavailable'}</strong></div>
                   <div className="quote-line"><span>Max slippage</span><strong>{((order.slippageBps ?? 150) / 100).toFixed(2)}%</strong></div>
-                  {typeof order.feeBps === 'number' ? <div className="quote-line"><span>Jupiter route fee</span><strong>{(order.feeBps / 100).toFixed(2)}%</strong></div> : null}
-                  <p className="quote-note">Your wallet will show the exact transaction. Only approve if the details match this quote.</p>
+                  {typeof order.feeBps === 'number' ? <div className="quote-line"><span>Total quoted fee rate</span><strong>{(order.feeBps / 100).toFixed(2)}%{order.feeMint ? ` · ${shortAddress(order.feeMint)}` : ''}</strong></div> : null}
+                  {typeof order.platformFee?.feeBps === 'number' ? <div className="quote-line"><span>Jupiter platform fee rate</span><strong>{(order.platformFee.feeBps / 100).toFixed(2)}%</strong></div> : null}
+                  <div className="quote-line"><span>WELP referral fee</span><strong>{order.welpReferral?.state === 'included' ? `${(order.welpReferral.feeBps / 100).toFixed(2)}% · ${shortAddress(order.welpReferral.feeMint)}` : order.welpReferral?.state === 'not_collected' ? 'Not collected' : 'Not configured'}</strong></div>
+                  {order.welpReferral?.state === 'not_collected' ? <p className="quote-note">This quote does not include a WELP referral fee: {order.welpReferral.reason}</p> : null}
+                  <p className="quote-note">Your wallet will show the exact transaction. Review all provider fees and amounts before approving.</p>
                 </div>
               ) : null}
               {tradeError ? <div className="inline-error" role="alert">{tradeError}</div> : null}

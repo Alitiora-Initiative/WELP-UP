@@ -9,6 +9,7 @@ type Asset = {
   liquidityUsd: number; volume24hUsd: number; organicScore: number; score: number; verified: boolean; eligible: boolean;
 };
 type Feed = { assets: Asset[]; total: number; eligible: number; blocked: number; liquidityUsd: number; volume24hUsd: number; updatedAt: string; error?: string };
+type DevelopmentFund = { recipient: string; goalLamports: number; balanceLamports: number | null; progressBps: number | null; checkedAt?: string; error?: string };
 const money = (value: number) => value >= 1e9 ? '$' + (value / 1e9).toFixed(1) + 'B' : value >= 1e6 ? '$' + (value / 1e6).toFixed(1) + 'M' : value >= 1e3 ? '$' + (value / 1e3).toFixed(1) + 'K' : '$' + value.toFixed(2);
 const price = (value: number) => value >= 1000 ? '$' + value.toLocaleString('en-US', { maximumFractionDigits: 2 }) : value >= 1 ? '$' + value.toFixed(2) : value >= .01 ? '$' + value.toFixed(4) : '$' + value.toPrecision(4);
 const links = [
@@ -23,6 +24,7 @@ const links = [
 export function TerminalHome() {
   const [feed, setFeed] = useState<Feed | null>(null);
   const [error, setError] = useState('');
+  const [fund, setFund] = useState<DevelopmentFund | null>(null);
   const refresh = useCallback(async () => {
     try {
       const response = await fetch('/api/markets', { cache: 'no-store' });
@@ -32,6 +34,7 @@ export function TerminalHome() {
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Market feed unavailable.'); }
   }, []);
   useEffect(() => { const timer = window.setTimeout(() => void refresh(), 0); const interval = window.setInterval(() => void refresh(), 60_000); return () => { window.clearTimeout(timer); window.clearInterval(interval); }; }, [refresh]);
+  useEffect(() => { let alive = true; const load = () => fetch('/api/development-fund', { cache: 'no-store' }).then(async (r) => { const d = await r.json() as DevelopmentFund; if (alive) setFund(d); }).catch(() => { if (alive) setFund(null); }); void load(); const id = window.setInterval(() => void load(), 60_000); return () => { alive = false; window.clearInterval(id); }; }, []);
   const featured = (feed?.assets || []).filter((asset) => asset.eligible).slice(0, 5);
   const sol = feed?.assets?.find((asset) => asset.symbol === 'SOL');
   const updated = feed?.updatedAt ? new Date(feed.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
@@ -69,13 +72,50 @@ export function TerminalHome() {
       <div><span>TRACKED LIQUIDITY</span><strong>{feed ? money(feed.liquidityUsd) : '—'}</strong><small>Sum across the tracked set</small></div>
       <div><span>24H VOLUME</span><strong>{feed ? money(feed.volume24hUsd) : '—'}</strong><small>Live feed · {updated}</small></div>
     </section>
+    <section className="home-section-terminal development-fund" aria-labelledby="dev-fund-title">
+      <div className="home-section-heading"><div><div className="eyebrow">COMMUNITY DEVELOPMENT FUND</div><h2 id="dev-fund-title">Help fund launch program review and deployment.</h2><p className="home-section-copy">Goal: 4 SOL for program deployment costs. Contributions go directly to the published development wallet; WELP software cannot move them.</p></div></div>
+      <div className="development-fund-card">
+        <div className="development-fund-amount"><strong>{fund?.balanceLamports === null || fund?.balanceLamports === undefined ? 'Unavailable' : `${(fund.balanceLamports / 1e9).toFixed(4)} SOL`}</strong><span>of 4.0000 SOL goal</span></div>
+        <progress max="10000" value={fund?.progressBps ?? 0} aria-label="Verified development fund progress" />
+        <div className="development-fund-meta"><span>{fund?.progressBps == null ? "Balance unavailable" : (fund.progressBps / 100).toFixed(2) + "% funded"}</span><a href={"https://solscan.io/account/" + (fund?.recipient ?? "ETuGxX6Znxr9q59THJtcYDJKt6RvCfN7wp79tRnbG1xG")} target="_blank" rel="noreferrer">Verify wallet</a></div>
+        <code>{fund?.recipient ?? 'ETuGxX6Znxr9q59THJtcYDJKt6RvCfN7wp79tRnbG1xG'}</code>
+        <p>Only send SOL if you choose to contribute. Reaching the goal does not itself deploy software; the program must first pass its build, security review and mainnet verification.</p>
+      </div>
+    </section>
     <section className="home-section-terminal">
       <div className="home-section-heading"><div><div className="eyebrow">THE WORKSPACE</div><h2>Every tool has its own page.</h2></div><Link href="/markets" className="text-action">Open market board <ArrowUpRight size={13} /></Link></div>
-      <div className="home-tools-grid">{links.map((item) => <Link className="home-tool-card" href={item.href} key={item.href}><div className="home-tool-top"><span>{item.number}</span><item.icon size={18} /></div><h3>{item.title}</h3><p>{item.description}</p><small>{item.tag}</small><ArrowUpRight className="home-tool-arrow" size={14} /></Link>)}</div>
+      <div className="home-link-rail">{links.map((item) => <Link className="primary-action" href={item.href} key={item.href}>{item.title}</Link>)}</div>
     </section>
     <section className="home-section-terminal">
       <div className="home-section-heading"><div><div className="eyebrow">CURRENT MARKET READ</div><h2>Live candidates. Published rules.</h2><p className="home-section-copy">The strongest eligible entries in the current feed. A score is a filter result, not a forecast or recommendation.</p></div><Link href="/signals" className="text-action">View all signals <ArrowUpRight size={13} /></Link></div>
       <div className="home-candidate-list">{featured.map((asset) => <div className="home-candidate" key={asset.mint}><div><strong>{asset.symbol}</strong><small>{asset.name}</small></div><span>{price(asset.priceUsd)}</span><span className={asset.priceChange24h >= 0 ? 'positive' : 'negative'}>{asset.priceChange24h >= 0 ? '+' : ''}{asset.priceChange24h.toFixed(2)}%</span><b>{asset.score}</b><Link href={'/swap?mint=' + encodeURIComponent(asset.mint)}>Route <ArrowUpRight size={12} /></Link></div>)}{!featured.length ? <div className="empty-panel">{error || 'Loading current market snapshot…'}</div> : null}</div>
+    </section>
+    <section className="home-section">
+      <div className="home-section-heading">
+        <div>
+          <div className="eyebrow">THE PIPELINE</div>
+          <h2>From signal to signed move.</h2>
+          <p>Three boundaries. Read, score, sign.</p>
+        </div>
+        <Link href="/swap" className="text-action">Open trade desk <ArrowUpRight size={13} /></Link>
+      </div>
+      <div className="home-steps">
+        <div className="home-step">
+          <div className="home-step-top"><span className="home-step-number">01</span><span className="home-step-icon"><ChartNoAxesCombined size={16} /></span></div>
+          <h3>Read the market</h3>
+          <p>Live tracked Solana pools and prices from the Jupiter Token API feed.</p>
+        </div>
+        <div className="home-step">
+          <div className="home-step-top"><span className="home-step-number">02</span><span className="home-step-icon"><CircleGauge size={16} /></span></div>
+          <h3>Score the setup</h3>
+          <p>Deterministic signals from 80 to 98 with every blocker shown.</p>
+        </div>
+        <div className="home-step">
+          <div className="home-step-top"><span className="home-step-number">03</span><span className="home-step-icon"><ArrowDownUp size={16} /></span></div>
+          <h3>Sign the swap</h3>
+          <p>A Jupiter route is prepared and your wallet approves the transaction.</p>
+        </div>
+      </div>
     </section>
     <section className="home-safety-banner"><div><ShieldCheck size={20} /><div><strong>Your wallet. Your approval.</strong><p>WELP never asks for a seed phrase. Every available swap is reviewed and signed by your connected wallet. Vault funding and autonomous execution remain disabled.</p></div></div><Link href="/safety">Read safety limits <ArrowUpRight size={13} /></Link></section>
   </main>;

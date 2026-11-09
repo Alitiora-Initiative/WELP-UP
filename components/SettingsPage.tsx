@@ -20,6 +20,8 @@ function applyTheme(theme: Theme) {
     // system: follow prefers-color-scheme
     if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
       html.classList.add('dark');
+    } else {
+      html.classList.add('light');
     }
   }
 }
@@ -34,16 +36,18 @@ function scaleValue(scale: TextScale): string {
 }
 
 function readTheme(): Theme {
+  if (typeof window === 'undefined') return 'dark';
   try {
-    const v = localStorage.getItem(THEME_KEY) as Theme | null;
+    const v = window.localStorage.getItem(THEME_KEY) as Theme | null;
     if (v && (['system', 'light', 'dark'] as string[]).includes(v)) return v;
   } catch { /* ignore */ }
-  return 'system';
+  return 'dark';
 }
 
 function readScale(): TextScale {
+  if (typeof window === 'undefined') return 'normal';
   try {
-    const v = localStorage.getItem(SCALE_KEY) as TextScale | null;
+    const v = window.localStorage.getItem(SCALE_KEY) as TextScale | null;
     if (v && (['compact', 'normal', 'large'] as string[]).includes(v)) return v;
   } catch { /* ignore */ }
   return 'normal';

@@ -10,6 +10,7 @@ import { WalletConnectionControl } from '@/components/WalletConnectionControl';
 import { TransactionHistory } from '@/components/TransactionHistory';
 import { getWalletHistory, type WalletHistory } from '@/lib/activity';
 import { MarketAnalyst } from '@/components/MarketAnalyst';
+import { AiAutomationWatch } from '@/components/AiAutomationWatch';
 
 export type FeatureKind = 'automation' | 'agent' | 'autonomous' | 'vault' | 'portfolio' | 'history' | 'activity' | 'marketplace' | 'support' | 'status' | 'governance' | 'risk' | 'apiKeys' | 'referral' | 'explorer';
 
@@ -35,7 +36,7 @@ const emptyHistory: WalletHistory = { events: [], points: [] };
 
 function AutomationPage() {
   const [policies, setPolicies] = useState<Policy[]>([]);
-  const [name, setName] = useState('Momentum watch');
+  const [name, setName] = useState('');
   const [preset, setPreset] = useState('Momentum');
   const [liquidity, setLiquidity] = useState('250000');
   const [organic, setOrganic] = useState('65');
@@ -114,17 +115,25 @@ function AutomationPage() {
     if (value === 'Organic only') { setLiquidity('100000'); setOrganic('85'); setDrawdown('25'); setVerified(true); }
   }
   function savePolicy() {
-    const policy: Policy = { id: Date.now().toString(), name: name.trim() || 'Untitled policy', liquidity: Number(liquidity), organic: Number(organic), drawdown: Number(drawdown), verified, preset };
+    const policyName = name.trim();
+    if (!policyName || policyName.length > 48) {
+      setMessage('Enter a policy name of 1–48 characters.');
+      return;
+    }
+    const policy: Policy = { id: crypto.randomUUID(), name: policyName, liquidity: Number(liquidity), organic: Number(organic), drawdown: Number(drawdown), verified, preset };
     const next = [policy, ...policies].slice(0, 30);
     setPolicies(next);
     setResults(null);
-    setMessage('Saved to this browser only. This policy never trades.');
+    setName('');
+    setMessage('Saved to this browser only. This policy never signs or submits trades.');
     try { localStorage.setItem('welp-watch-policies', JSON.stringify(next)); } catch {}
+    window.dispatchEvent(new Event('welp-watch-policies-updated'));
   }
   function removePolicy(id: string) {
     const next = policies.filter((policy) => policy.id !== id);
     setPolicies(next);
     try { localStorage.setItem('welp-watch-policies', JSON.stringify(next)); } catch {}
+    window.dispatchEvent(new Event('welp-watch-policies-updated'));
   }
   async function evaluate(policy: Policy) {
     setWorking(true); setMessage(''); setResults(null);
@@ -153,15 +162,16 @@ function AutomationPage() {
         {policies.length ? <div className="policy-list">{policies.map((policy) => <article key={policy.id}><div><strong>{policy.name}</strong><small>{policy.preset} · Liquidity {policy.liquidity.toLocaleString()} · Organic {policy.organic}+ · Drawdown {policy.drawdown}%</small></div><div className="inline-actions"><button className="outline-button small" onClick={() => void evaluate(policy)} disabled={working}>{working ? <LoaderCircle className="spin" size={13} /> : 'Evaluate'}</button><button className="text-action" onClick={() => removePolicy(policy.id)}>Remove</button></div></article>)}</div> : <div className="empty-panel">No policies yet. Build one on the right.</div>}
       </Panel>
       <Panel title="New policy" eyebrow="POLICY COMPOSER">
-        <label className="field-label">NAME<input value={name} onChange={(event) => setName(event.target.value)} maxLength={48} /></label>
+        <label className="field-label">NAME<input value={name} onChange={(event) => setName(event.target.value)} maxLength={48} required /></label>
         <label className="field-label">PRESET<select value={preset} onChange={(event) => choosePreset(event.target.value)}><option>Momentum</option><option>Depth first</option><option>Organic only</option><option>Custom</option></select></label>
         <div className="form-grid"><label className="field-label">MIN LIQUIDITY ($)<input type="number" min="0" value={liquidity} onChange={(event) => setLiquidity(event.target.value)} /></label><label className="field-label">MIN ORGANIC SCORE<input type="number" min="0" max="100" value={organic} onChange={(event) => setOrganic(event.target.value)} /></label></div>
         <label className="field-label">MAXIMUM 24H DRAWDOWN (%)<input type="number" min="0" max="100" value={drawdown} onChange={(event) => setDrawdown(event.target.value)} /></label>
         <label className="checkbox-field"><input type="checkbox" checked={verified} onChange={(event) => setVerified(event.target.checked)} /> Verified assets only</label>
-        <button className="primary-action" onClick={savePolicy}>Save policy</button>
+        <button className="primary-action" onClick={savePolicy} disabled={!name.trim()}>Save policy</button>
         {message ? <p className="inline-message">{message}</p> : null}
       </Panel>
     </div>
+    <AiAutomationWatch />
     {results ? <Panel title="Evaluation results" eyebrow="LIVE FEED · NO ORDERS"><div className="compact-asset-list">{results.map((asset) => <div key={asset.mint}><strong>{asset.symbol}</strong><span>{asset.name}</span><b>{asset.score}</b><Link href={'/swap?mint=' + encodeURIComponent(asset.mint)}>Route →</Link></div>)}</div>{!results.length ? <p className="muted-copy">No assets currently satisfy all of this policy’s filters.</p> : null}</Panel> : null}
     <section style={{ marginTop: 28 }}>
       <div className="page-heading"><div><div className="eyebrow"><i className="eyebrow-dot" /> AI ANALYST · READ ONLY</div><h2>Ask the desk about this market.</h2><p>The model reviews a fresh public snapshot. It cannot execute a policy or submit a trade.</p></div></div>
@@ -172,20 +182,45 @@ function AutomationPage() {
 
 function VaultPage() {
   const gates = [
-    ['Deployed program verified executable', 'OPEN', 'No mainnet program address is configured.'],
-    ['Independent security audit', 'OPEN', 'Critical and high findings must be closed and published.'],
-    ['Adversarial cap and allowlist tests', 'OPEN', 'Spending-cap, pause, revoke and withdrawal paths need tests.'],
-    ['SOL and SPL withdrawal paths', 'OPEN', 'Owner-controlled withdrawal must be verified against the deployed program.'],
-    ['Wallet-signed consent record', 'PARTIAL', 'A future policy acknowledgement must bind the owner and exact policy hash.'],
+    ['Owner-signed SOL deposits and share accounting', 'PARTIAL', 'Implemented in Anchor source; not deployed or enabled by this website.'],
+    ['Share-based SOL withdrawal and rent protection', 'PARTIAL', 'Owner-only redemption is implemented in source; validator coverage is still required.'],
+    ['Executor policy PDA and owner revocation', 'PARTIAL', 'Owner can configure, rotate and revoke a public executor key in source. No bot can trade yet.'],
+    ['Program deployed and executable verified', 'OPEN', 'The checked-in program ID is a placeholder; no Devnet or Mainnet deployment is approved.'],
+    ['Independent security audit', 'OPEN', 'An independent Solana/Anchor audit and remediation are mandatory.'],
+    ['Jupiter CPI and token-account reconciliation', 'OPEN', 'Swap execution, SPL-token custody, settlement and P&L remain disabled.'],
   ];
   return <main className="terminal-page feature-page">
-    <Heading eyebrow="VAULT · PER-WALLET PDA · FAIL-CLOSED" title={<>Authority you can <span>revoke.</span></>} detail="The planned vault uses an isolated per-wallet address and narrow owner-controlled authority. It is not deployed or audited for mainnet use." action={<span className="status-pill warning"><i /> FUNDING DISABLED</span>} />
-    <div className="feature-stats"><Stat label="PROGRAM ADDRESS" value="UNCONFIGURED" detail="No PDA is derived" /><Stat label="MAINNET STATE" value="NOT DEPLOYED" detail="Funding disabled" /><Stat label="EXECUTOR" value="NONE" detail="No delegated authority" /><Stat label="OWNER CONTROLS" value="PLANNED" detail="Pause · revoke · rotate · withdraw" /></div>
-    <div className="feature-grid two">
-      <Panel title="Launch gates" eyebrow="SECURITY CHECKLIST">{gates.map((gate) => <div className="gate-row" key={gate[0]}><span className={'gate-state ' + (gate[1] === 'PARTIAL' ? 'partial' : '')}>{gate[1]}</span><div><strong>{gate[0]}</strong><small>{gate[2]}</small></div></div>)}</Panel>
-      <Panel title="Funding remains closed" eyebrow="PROTECT YOUR ASSETS"><div className="notice-block danger"><ShieldAlert size={18} /><div><strong>Do not send SOL or tokens to a PDA derived from the placeholder program ID.</strong><p>No mainnet vault address is published and no deposits or withdrawals are accepted by this interface.</p></div></div><p className="muted-copy">An interface setting is not an on-chain security boundary. The contract must be deployed, verified, audited, tested and published before a funding path is considered.</p><Link className="text-link" href="/docs">Read the architecture and production checklist <ArrowUpRight size={13} /></Link></Panel>
+    <Heading eyebrow="VAULT · ANCHOR / SOLANA · NOT DEPLOYED" title={<>Authority you can <span>revoke.</span></>} detail="The Anchor source now includes owner-controlled SOL share accounting and a per-vault executor policy. These are source implementations—not a deployed or audited custody service." action={<span className="status-pill warning"><i /> FUNDING DISABLED</span>} />
+    <div className="feature-stats">
+      <Stat label="PROGRAM ADDRESS" value="UNCONFIGURED" detail="Placeholder ID is not fundable" />
+      <Stat label="NETWORK STATUS" value="NOT DEPLOYED" detail="No Devnet or Mainnet release" />
+      <Stat label="EXECUTOR POLICY" value="SOURCE ONLY" detail="No executor is configured" />
+      <Stat label="OWNER RECOVERY" value="SOURCE ONLY" detail="Share redemption · pause · policy revoke" />
     </div>
-    <Panel title="Authority model" eyebrow="DESIGNED, NOT ACTIVE"><div className="authority-flow"><span>OWNER WALLET</span><b>fund · pause · revoke · withdraw</b><span className="authority-arrow">↓</span><span>PER-WALLET VAULT PDA</span><b>only a reviewed executor instruction could spend within an on-chain cap</b><span className="authority-arrow">↓</span><span>APPROVED ROUTE PROGRAMS</span></div></Panel>
+    <div className="feature-grid two">
+      <Panel title="Launch gates" eyebrow="SOURCE VS RELEASE">{gates.map((gate) => <div className="gate-row" key={gate[0]}><span className={'gate-state ' + (gate[1] === 'PARTIAL' ? 'partial' : '')}>{gate[1]}</span><div><strong>{gate[0]}</strong><small>{gate[2]}</small></div></div>)}</Panel>
+      <Panel title="Funding remains closed" eyebrow="PROTECT YOUR ASSETS">
+        <div className="notice-block danger"><ShieldAlert size={18} /><div><strong>Do not send SOL or tokens to a PDA derived from the placeholder program ID.</strong><p>No mainnet vault address is published. This interface does not accept deposits or withdrawals.</p></div></div>
+        <p className="muted-copy">A source implementation or successful frontend build is not proof of deployment, transaction safety or an independent audit. Funding stays disabled until the full release checklist is verified.</p>
+        <Link className="text-link" href="/docs">Read the architecture and production checklist <ArrowUpRight size={13} /></Link>
+      </Panel>
+    </div>
+    <div className="feature-grid two">
+      <Panel title="Implemented in Anchor source" eyebrow="NOT LIVE">
+        <div className="gate-row"><span className="gate-state partial">SOURCE</span><div><strong>Owner-signed SOL deposits</strong><small>System Program transfer with proportional shares priced against current accounted assets.</small></div></div>
+        <div className="gate-row"><span className="gate-state partial">SOURCE</span><div><strong>Share-based SOL withdrawals</strong><small>Owner-only redemption with checked accounting and rent reserve protection.</small></div></div>
+        <div className="gate-row"><span className="gate-state partial">SOURCE</span><div><strong>Executor configuration and revocation</strong><small>Per-vault policy PDA; owner signs configuration and can revoke without executor cooperation.</small></div></div>
+        <div className="gate-row"><span className="gate-state partial">SOURCE</span><div><strong>Bot strategy consent snapshot</strong><small>Creating a user slot requires an enabled bot registry and snapshots its strategy hash, version and risk limits.</small></div></div>
+      </Panel>
+      <Panel title="Stored executor guardrails" eyebrow="NOT YET USED BY TRADING">
+        <div className="gate-row"><span className="gate-state">LIMIT</span><div><strong>Per-trade minimum and maximum</strong><small>At least 0.001 SOL; owner-selected maximum cannot exceed the daily allowance.</small></div></div>
+        <div className="gate-row"><span className="gate-state">LIMIT</span><div><strong>Daily allowance</strong><small>Configured daily cap cannot exceed current accounted vault assets. Pure Rust rollover checks are tested but not wired to swaps.</small></div></div>
+        <div className="gate-row"><span className="gate-state">LIMIT</span><div><strong>Slippage ceiling</strong><small>Maximum configured slippage is capped at 10%. Jupiter execution remains disabled.</small></div></div>
+      </Panel>
+    </div>
+    <Panel title="Authority model" eyebrow="DESIGNED, NOT ACTIVE">
+      <div className="authority-flow"><span>OWNER WALLET</span><b>sign deposit · redeem shares · pause · configure/revoke executor</b><span className="authority-arrow">↓</span><span>PER-WALLET VAULT PDA</span><b>records accounted SOL and outstanding shares</b><span className="authority-arrow">↓</span><span>EXECUTOR POLICY PDA</span><b>stores a public key and spending policy; cannot trade until audited CPI is implemented</b></div>
+    </Panel>
   </main>;
 }
 
@@ -284,7 +319,7 @@ function SupportPage() {
   ];
   const [open, setOpen] = useState(0);
   return <main className="terminal-page feature-page"><Heading eyebrow="SUPPORT CENTRE" title={<>Help for your <span>console.</span></>} detail="Troubleshooting and product questions. Support cannot move funds, sign transactions or recover a wallet seed phrase." />
-    <div className="feature-grid two"><Panel title="Frequently asked" eyebrow="HELP CENTRE">{faqs.map((faq, index) => <div className="faq-item" key={faq[0]}><button onClick={() => setOpen(open === index ? -1 : index)}>{faq[0]}<span>{open === index ? '−' : '+'}</span></button>{open === index ? <p>{faq[1]}</p> : null}</div>)}</Panel><Panel title="Reach the operator" eyebrow="CONTACT"><p className="muted-copy">For product issues, include the exact error and avoid sharing secrets.</p><a className="contact-address" href="mailto:cryptany@gmail.com">cryptany@gmail.com</a><div className="notice-block"><LockKeyhole size={17} /><div><strong>Self-custody reminder</strong><p>Support will never ask you to share your seed phrase or private key. Only you can approve wallet actions.</p></div></div></Panel></div>
+    <div className="feature-grid two"><Panel title="Frequently asked" eyebrow="HELP CENTRE">{faqs.map((faq, index) => <div className="faq-item" key={faq[0]}><button onClick={() => setOpen(open === index ? -1 : index)}>{faq[0]}<span>{open === index ? '−' : '+'}</span></button>{open === index ? <p>{faq[1]}</p> : null}</div>)}</Panel><Panel title="Support channel" eyebrow="SELF-SERVICE"><p className="muted-copy">This release provides self-service help only. Direct contact submissions and secure privacy requests are not yet available.</p><div className="notice-block"><LockKeyhole size={17} /><div><strong>Protect your information</strong><p>Do not post personal details, seed phrases, private keys, wallet exports or provider credentials. Only you can approve wallet actions.</p></div></div></Panel></div>
   </main>;
 }
 

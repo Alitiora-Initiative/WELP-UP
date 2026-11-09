@@ -32,11 +32,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body>
         <script
           dangerouslySetInnerHTML={{
-            __html: "(function(){try{var t=localStorage.getItem('welp-theme');if(t==='dark'){document.documentElement.classList.add('dark');}else if(t==='light'){document.documentElement.classList.add('light');}else if(window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.classList.add('dark');}var s=localStorage.getItem('welp-text-scale');if(s==='compact'){document.documentElement.style.setProperty('--text-scale','0.875');}else if(s==='large'){document.documentElement.style.setProperty('--text-scale','1.125');}else{document.documentElement.style.setProperty('--text-scale','1');}}catch(e){}})();",
+            __html: "(function(){try{var t=localStorage.getItem('welp-theme');if(t==='dark'){document.documentElement.classList.add('dark');}else if(t==='light'){document.documentElement.classList.add('light');}else if(window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.classList.add('dark');}else{document.documentElement.classList.add('light');}var s=localStorage.getItem('welp-text-scale');if(s==='compact'){document.documentElement.style.setProperty('--text-scale','0.875');}else if(s==='large'){document.documentElement.style.setProperty('--text-scale','1.125');}else{document.documentElement.style.setProperty('--text-scale','1');}}catch(e){}})();",
           }}
         />
         <Providers><TerminalShell>{children}</TerminalShell></Providers>

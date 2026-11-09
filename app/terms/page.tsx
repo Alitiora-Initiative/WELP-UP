@@ -87,7 +87,7 @@ const blocks = parseTerms(terms);
 export default function TermsPage() {
   return (
     <main className="app-shell">
-      <AppSidebar active="terms" status="Terms v1.0 · effective 21 Oct 2026" />
+      <AppSidebar active="terms" status="Terms v2.0 · effective 7 Nov 2026" />
       <section className="workspace" id="top">
         <header className="topbar">
           <div className="breadcrumb">
@@ -105,17 +105,17 @@ export default function TermsPage() {
                 Terms &amp; <em>Conditions.</em>
               </h1>
               <p className="welcome-copy">
-                Official terms for the non-custodial WELP UP! Solana interface operated by Joseph Mushelle Nyingeh under Alitiora Initiative.
+                Terms for the WELP UP Solana software and protocol interface.
               </p>
             </div>
             <div className="date-pill">
-              <span className="date-dot" /> EFFECTIVE 21 OCT 2026
+              <span className="date-dot" /> EFFECTIVE 7 NOV 2026
             </div>
           </section>
           <div className="terms-draft-banner">
             <strong>Version 1.0 — published terms.</strong>
             <span>
-              Operator: Joseph Mushelle Nyingeh (Alitiora Initiative), Kenya. Non-custodial wallet interface only. Autonomous vault is not enabled. Independent Kenyan legal advice remains recommended for formal reliance.
+              Users create and control their own safes through wallet-signed on-chain instructions. WELP does not receive wallet secrets. Safes remain unavailable until the mainnet program and security gates are verified.
             </span>
           </div>
           <article className="panel terms-document">
@@ -141,8 +141,8 @@ export default function TermsPage() {
             })}
           </article>
           <footer className="footer">
-            <span>WELP UP · Terms v1.0 · effective 21 October 2026</span>
-            <span>Contact: jaymnyon@gmail.com · jaymn2006@gmail.com</span>
+            <span>WELP UP · Terms v2.0 · effective 7 November 2026</span>
+            <span>Support Centre: self-service only; no direct contact address is published</span>
             <Link href="/">Back to home</Link>
           </footer>
         </div>
