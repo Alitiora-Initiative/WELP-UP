@@ -3,8 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Activity, ArrowDownLeft, ArrowUpRight, ExternalLink, LoaderCircle, RefreshCw, ShieldCheck, Sparkles, Wallet } from 'lucide-react';
 import { useConnectedWallet } from '@solana/kit-plugin-wallet/react';
-import { AppSidebar } from '@/components/AppSidebar';
-import { WalletConnectionControl } from '@/components/WalletConnectionControl';
 import { client } from '@/components/Providers';
 import { getWalletHistory, recordEquityPoint, recordSignalScan, type EquityPoint, type WalletHistory } from '@/lib/activity';
 import { currentTime } from '@/lib/time';
@@ -104,18 +102,7 @@ export function ActivityPage() {
   const changeUsd = earliestPoint && latestPoint ? latestPoint.equityUsd - earliestPoint.equityUsd : null;
 
   return (
-    <main className="app-shell">
-      <AppSidebar active="activity" status={loading ? 'Refreshing wallet activity' : 'Strategy scan · no auto-trading'} />
-      <section className="workspace" id="top">
-        <header className="topbar">
-          <div className="breadcrumb"><span>PORTFOLIO</span><span className="crumb-slash">/</span><strong>Activity</strong></div>
-          <div className="topbar-right">
-            <span className="market-open"><span className="market-pip" /> WALLET ACTIVITY</span>
-            <WalletConnectionControl />
-          </div>
-        </header>
-
-        <div className="page-content">
+    <main className="terminal-page feature-page activity-page-rebuild">
           <section className="welcome-row">
             <div>
               <p className="eyebrow"><Activity size={14} /> WALLET-SCOPED PORTFOLIO</p>
@@ -204,9 +191,6 @@ export function ActivityPage() {
             </>
           )}
 
-          <footer className="footer"><span>WELP UP · Solana mainnet</span><span>Wallet history is a local estimate; trading can lose all value.</span><a href="/terms">Terms &amp; Conditions</a></footer>
-        </div>
-      </section>
     </main>
   );
 }
