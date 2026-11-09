@@ -61,11 +61,11 @@ export default function WhitepaperPage() {
           <span className="editorial-section-number">02 / DESIGN PRINCIPLES</span>
           <h2>Boundaries are part of the product.</h2>
           <div className="editorial-principle-grid">
-            <article><strong>User-controlled signing</strong><p>Every supported transaction is reviewed and signed by the user's wallet.</p></article>
+            <article><strong>User-controlled signing</strong><p>Every supported transaction is reviewed and signed by the user&apos;s wallet.</p></article>
             <article><strong>Observable inputs</strong><p>Signals rely on retrieved market fields and explicit deterministic rules.</p></article>
             <article><strong>Fail-closed behavior</strong><p>Missing or unverified infrastructure blocks the affected action rather than falling back to a simulation.</p></article>
             <article><strong>Verifiable history</strong><p>Confirmed on-chain signatures establish execution; local browser records are supplemental.</p></article>
-            <article><strong>Least authority</strong><p>Any future executor must have narrow, revocable permissions and never receive the user's primary wallet secret.</p></article>
+            <article><strong>Least authority</strong><p>Any future executor must have narrow, revocable permissions and never receive the user&apos;s primary wallet secret.</p></article>
             <article><strong>Transparent economics</strong><p>Fees, recipients, release rules and limitations must be disclosed and reconciled against on-chain state.</p></article>
           </div>
         </section>
@@ -94,7 +94,7 @@ export default function WhitepaperPage() {
         <section className="editorial-section" id="chapter-05">
           <span className="editorial-section-number">05 / AGENTS AND COPY TRADING</span>
           <h2>Research and execution remain separate.</h2>
-          <p>The current market analyst is intended to provide read-only commentary over retrieved market context. The proposed executor architecture is separate and must not gain access to a user's primary wallet secret. No unattended trading or verified copy-trading performance is currently available.</p>
+          <p>The current market analyst is intended to provide read-only commentary over retrieved market context. The proposed executor architecture is separate and must not gain access to a user&apos;s primary wallet secret. No unattended trading or verified copy-trading performance is currently available.</p>
         </section>
 
         <section className="editorial-section" id="chapter-06">
