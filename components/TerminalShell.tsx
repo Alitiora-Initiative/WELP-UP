@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   Activity,
@@ -170,26 +170,13 @@ export function TerminalShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
 
-  const currentPage = useMemo(
-    () => navGroups.flatMap((group) => group.items).find((item) => isActivePath(pathname, item.href)),
-    [pathname],
-  );
+  const currentPage = navGroups.flatMap((group) => group.items).find((item) => isActivePath(pathname, item.href));
+  const activeGroup = navGroups.find((group) =>
+    group.items.some((item) => isActivePath(pathname, item.href)),
+  )?.label;
   const pageTitle = currentPage?.label ?? 'WELP UP';
-
-  useEffect(() => {
-    const media = window.matchMedia('(max-width: 900px)');
-    const sync = () => setIsMobile(media.matches);
-    sync();
-    media.addEventListener('change', sync);
-    return () => media.removeEventListener('change', sync);
-  }, []);
-
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -199,17 +186,8 @@ export function TerminalShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  useEffect(() => {
-    const activeGroup = navGroups.find((group) =>
-      group.items.some((item) => isActivePath(pathname, item.href)),
-    );
-    if (activeGroup && activeGroup.label !== 'WORKSPACE') {
-      setExpandedGroups((current) => current.includes(activeGroup.label) ? current : [...current, activeGroup.label]);
-    }
-  }, [pathname]);
-
   function toggleSidebar() {
-    if (isMobile) {
+    if (window.matchMedia('(max-width: 900px)').matches) {
       setMobileOpen((value) => !value);
       return;
     }
@@ -235,7 +213,7 @@ export function TerminalShell({ children }: { children: ReactNode }) {
 
         <nav className="command-nav" aria-label="Application navigation">
           {navGroups.map((group, groupIndex) => {
-            const expanded = group.label === 'WORKSPACE' || expandedGroups.includes(group.label);
+            const expanded = group.label === 'WORKSPACE' || expandedGroups.includes(group.label) || group.label === activeGroup;
             const groupActive = group.items.some((item) => isActivePath(pathname, item.href));
             return (
               <section className={'command-nav-group' + (groupIndex === 0 ? ' command-nav-primary' : '')} key={group.label}>
@@ -262,6 +240,7 @@ export function TerminalShell({ children }: { children: ReactNode }) {
                           href={item.href}
                           key={item.href}
                           className={'command-nav-link' + (active ? ' is-active' : '')}
+                          onClick={() => setMobileOpen(false)}
                           aria-current={active ? 'page' : undefined}
                           title={collapsed ? item.label : undefined}
                         >
@@ -300,8 +279,8 @@ export function TerminalShell({ children }: { children: ReactNode }) {
               type="button"
               className="command-menu-button"
               onClick={toggleSidebar}
-              aria-label={isMobile ? (mobileOpen ? 'Close navigation' : 'Open navigation') : (collapsed ? 'Expand sidebar' : 'Collapse sidebar')}
-              aria-expanded={isMobile ? mobileOpen : !collapsed}
+              aria-label={window.matchMedia('(max-width: 900px)').matches ? (mobileOpen ? 'Close navigation' : 'Open navigation') : (collapsed ? 'Expand sidebar' : 'Collapse sidebar')}
+              aria-expanded={window.matchMedia('(max-width: 900px)').matches ? mobileOpen : !collapsed}
               aria-controls="welp-app-navigation"
             >
               {isMobile ? (mobileOpen ? <X size={18} /> : <Menu size={18} />) : <Menu size={18} />}
