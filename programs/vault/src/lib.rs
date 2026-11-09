@@ -7,6 +7,7 @@
 //! Build and test against a local validator only. Do not deploy this scaffold.
 
 use anchor_lang::prelude::*;
+use anchor_spl::{associated_token::AssociatedToken, token::{Mint, Token, TokenAccount}};
 use welp_vault_checks::{
     check_withdraw, compute_redeem, compute_shares, CheckError, MIN_POSITION_LAMPORTS,
 };
@@ -999,16 +1000,16 @@ pub struct ExecuteSwap<'info> {
     )]
     pub user_slot: Account<'info, UserSlot>,
     #[account(mut)]
-    pub source_token_account: Account<'info, anchor_spl::token::TokenAccount>,
+    pub source_token_account: Account<'info, TokenAccount>,
     #[account(mut)]
-    pub destination_token_account: Account<'info, anchor_spl::token::TokenAccount>,
-    pub input_mint: Account<'info, anchor_spl::token::Mint>,
-    pub output_mint: Account<'info, anchor_spl::token::Mint>,
+    pub destination_token_account: Account<'info, TokenAccount>,
+    pub input_mint: Account<'info, Mint>,
+    pub output_mint: Account<'info, Mint>,
     /// CHECK: validated by address constraint
     #[account(address = JUPITER_V6_ID @ VaultError::InvalidJupiterProgram)]
     pub jupiter_program: AccountInfo<'info>,
-    pub token_program: Program<'info, anchor_spl::token::Token>,
-    pub associated_token_program: Program<'info, anchor_spl::associated_token::AssociatedToken>,
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }
 
