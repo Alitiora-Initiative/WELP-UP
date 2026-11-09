@@ -655,14 +655,10 @@ html, body {
   border-radius: 12px;
   background: linear-gradient(145deg, rgba(255,255,255,.12), rgba(255,255,255,.035) 52%, rgba(131,217,255,.045)), rgba(255,255,255,.055);
   color: #edf5ff;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.40),
-    inset 0 -1px 0 rgba(0,0,0,.24),
-    0 5px 16px rgba(0,0,0,.25),
-    0 2px 16px rgba(131,217,255,.055);
-  backdrop-filter: blur(14px) saturate(155%);
-  -webkit-backdrop-filter: blur(14px) saturate(155%);
-  transition: transform .3s ease-out, background .3s ease-out, border-color .3s ease-out, box-shadow .3s ease-out, filter .3s ease-out, backdrop-filter .3s ease-out;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transition: background-color .12s ease, border-color .12s ease, color .12s ease;
   -webkit-tap-highlight-color: transparent;
 }
 :where(
@@ -681,7 +677,7 @@ html, body {
   inset: 0 0 auto;
   height: 58%;
   border-radius: inherit;
-  background: linear-gradient(165deg, rgba(255,255,255,.26), rgba(255,255,255,.09) 42%, transparent 100%);
+  display: none;
   pointer-events: none;
 }
 :where(
@@ -704,12 +700,10 @@ html, body {
   .terminal-site .market-disclosures a,
   .terminal-site .home-actions a
 ):hover:not(:disabled) {
-  transform: translateY(-2px);
-  border-color: rgba(192, 224, 255, .43);
-  background-color: rgba(255,255,255,.10);
-  filter: brightness(1.08);
-  box-shadow: 0 0 15px rgba(131,217,255,.17), inset 0 1px 0 rgba(255,255,255,.48), 0 9px 24px rgba(0,0,0,.32);
-  backdrop-filter: blur(19px) saturate(175%);
+  border-color: #7e9b52;
+  background: #182316;
+  filter: none;
+  box-shadow: none;
 }
 :where(
   .terminal-site button:not(.text-action):not(.sort-heading):not(.watch-button):not(.mobile-nav-toggle):not(.leaderboard-modal-close):not(.icon-button),
@@ -760,12 +754,12 @@ html, body {
   .vault-secondary-button, .vault-danger-button, .studio-create-button,
   .leaderboard-copy-button, .leaderboard-cancel-button
 ) {
-  border-color: rgba(215, 232, 255, .24);
-  background: linear-gradient(145deg, rgba(255,255,255,.12), rgba(255,255,255,.035) 52%, rgba(131,217,255,.045)), rgba(255,255,255,.055);
-  color: #edf5ff;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.40), inset 0 -1px 0 rgba(0,0,0,.24), 0 5px 16px rgba(0,0,0,.25), 0 2px 16px rgba(131,217,255,.055);
-  backdrop-filter: blur(14px) saturate(155%);
-  -webkit-backdrop-filter: blur(14px) saturate(155%);
+  border-color: #344135;
+  background: #101810;
+  color: #e6efe0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 .terminal-site :is(
   button:not(.text-action):not(.sort-heading):not(.watch-button):not(.mobile-nav-toggle):not(.leaderboard-modal-close):not(.icon-button),
@@ -781,12 +775,21 @@ html, body {
   .vault-secondary-button, .vault-danger-button, .studio-create-button,
   .leaderboard-copy-button, .leaderboard-cancel-button
 ):hover:not(:disabled) {
-  border-color: rgba(192,224,255,.46);
-  background-color: rgba(255,255,255,.11);
-  color: #f5f9ff;
-  transform: translateY(-2px);
-  box-shadow: 0 0 15px rgba(131,217,255,.18), inset 0 1px 0 rgba(255,255,255,.48), 0 9px 24px rgba(0,0,0,.32);
-  backdrop-filter: blur(19px) saturate(175%);
+  border-color: #7e9b52;
+  background: #182316;
+  color: #f4f8ed;
+  box-shadow: none;
+}
+.terminal-site :is(.primary-action, .connect-button, .studio-create-button, .primary-button) {
+  border-color: #c6ff3e;
+  background: #c6ff3e;
+  color: #11150a;
+  box-shadow: none;
+}
+.terminal-site :is(.primary-action, .connect-button, .studio-create-button, .primary-button):hover:not(:disabled) {
+  border-color: #d8ff7b;
+  background: #d8ff7b;
+  color: #11150a;
 }
 .terminal-site :is(
   button:not(.text-action):not(.sort-heading):not(.watch-button):not(.mobile-nav-toggle):not(.leaderboard-modal-close):not(.icon-button),
@@ -795,9 +798,9 @@ html, body {
   .vault-secondary-button, .vault-danger-button, .studio-create-button,
   .leaderboard-copy-button, .leaderboard-cancel-button
 ):active:not(:disabled) {
-  transform: scale(.97);
-  filter: brightness(.94);
-  box-shadow: inset 0 2px 6px rgba(0,0,0,.22), 0 1px 4px rgba(0,0,0,.2);
+  background: #202d1e;
+  filter: none;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.18);
 }
 
 
