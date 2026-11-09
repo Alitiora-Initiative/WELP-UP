@@ -283,7 +283,7 @@ export function TerminalShell({ children }: { children: ReactNode }) {
               aria-expanded={mobileOpen || !collapsed}
               aria-controls="welp-app-navigation"
             >
-              {isMobile ? (mobileOpen ? <X size={18} /> : <Menu size={18} />) : <Menu size={18} />}
+              {mobileOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
             <div className="command-breadcrumb">
               <span>WELP UP</span><i>/</i><strong>{pageTitle}</strong>
