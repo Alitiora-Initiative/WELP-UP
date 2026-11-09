@@ -1,5 +1,8 @@
 'use client';
 
+/* Runtime token logos use arbitrary Jupiter/CDN hosts, so next/image optimization is not applicable here. */
+/* eslint-disable @next/next/no-img-element */
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity,
@@ -45,6 +48,16 @@ const EMPTY_SIGNALS: Signal[] = [];
 
 function shortAddress(value: string) {
   return `${value.slice(0, 4)}…${value.slice(-4)}`;
+}
+
+function TokenLogo({ symbol, logo, size = 30 }: { symbol: string; logo?: string | null; size?: number }) {
+  const [failed, setFailed] = useState(false);
+  const initial = symbol.trim().slice(0, 1).toUpperCase() || '?';
+  return logo && !failed ? (
+    <img className="token-logo" src={logo} alt={`${symbol} logo`} width={size} height={size} onError={() => setFailed(true)} />
+  ) : (
+    <span className="token-logo token-logo-fallback" style={{ width: size, height: size }} aria-label={`${symbol} logo fallback`}>{initial}</span>
+  );
 }
 
 function decodeBase64(value: string) {
@@ -131,6 +144,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
     symbol: defaultSignal.symbol,
     name: defaultSignal.name,
     decimals: defaultSignal.decimals,
+    logo: undefined,
   } : null);
   const selectedSignal = useMemo(() => currentSignals.find((signal) => signal.mint === activeToken?.mint), [currentSignals, activeToken?.mint]);
 
@@ -364,7 +378,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
 
           <div className="mainnet-banner" role="note">
             <ShieldCheck size={19} />
-            <div><strong>Wallet-approved swaps are live.</strong><span>Live market data is flowing and swaps route through Jupiter with no WELP referral fee while its account is unconfigured; Jupiter or route providers may still charge fees. You approve every swap in your own wallet; no unattended trading is active.</span></div>
+            <div><strong>Swaps are paused for fee verification.</strong><span>Live market data is flowing, but WELP will not quote or submit swaps until its treasury referral destination is configured and verified. This prevents real funds from moving without the disclosed WELP fee. You approve every supported transaction in your own wallet; no unattended trading is active.</span></div>
             <a href="https://docs.jup.ag/user-docs/trade/swap" target="_blank" rel="noreferrer" aria-label="Read swap documentation"><CircleHelp size={17} /></a>
           </div>
 
@@ -424,17 +438,17 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
               </div>
               <div className="swap-box">
                 <div className="swap-box-top"><span>You {direction === 'buy' ? 'pay' : 'sell'}</span><span>{direction === 'buy' && activeSolBalance !== null ? `Balance ${activeSolBalance.toFixed(4)} SOL` : 'Mainnet'}</span></div>
-                <div className="amount-row"><input type="number" min={direction === 'buy' ? '0.001' : '0'} max={direction === 'buy' ? '0.02' : undefined} step={direction === 'buy' ? '0.001' : 'any'} aria-label={`Amount in ${formToken}`} inputMode="decimal" value={amount} onChange={(event) => { setAmount(event.target.value); setOrder(null); }} /><span className="asset-pill">{direction === 'buy' ? <span className="sol-symbol">◎</span> : <span className="token-mini">{activeToken?.symbol.slice(0, 1) ?? '?'}</span>}{formToken}</span></div>
+                <div className="amount-row"><input type="number" min={direction === 'buy' ? '0.001' : '0'} max={direction === 'buy' ? '0.02' : undefined} step={direction === 'buy' ? '0.001' : 'any'} aria-label={`Amount in ${formToken}`} inputMode="decimal" value={amount} onChange={(event) => { setAmount(event.target.value); setOrder(null); }} /><span className="asset-pill"><TokenLogo symbol={formToken} logo={direction === 'buy' ? 'https://img.jup.ag/tokens/So11111111111111111111111111111111111111112.png' : activeToken?.logo} size={18} />{formToken}</span></div>
                 {direction === 'buy' ? <p className="amount-hint">Minimum 0.001 SOL · editable up to 0.02 SOL</p> : null}
               </div>
               <div className="swap-connector"><span><ArrowDownUp size={14} /></span></div>
               <div className="swap-box receive-box">
                 <div className="swap-box-top"><span>You receive</span><span>{direction === 'buy' && activeToken?.price ? `Price $${activeToken.price.toPrecision(4)}` : 'Best route'}</span></div>
-                <div className="amount-row"><input aria-label={`Token to ${direction === 'buy' ? 'buy' : 'sell'}`} value={activeToken ? `${activeToken.symbol} · ${shortAddress(activeToken.mint)}` : 'Search for a token'} readOnly /><span className="asset-pill asset-pill-selected"><span className="token-mini">{direction === 'buy' ? activeToken?.symbol.slice(0, 1) ?? '?' : '◎'}</span>{receiveToken}</span></div>
+                <div className="amount-row"><input aria-label={`Token to ${direction === 'buy' ? 'buy' : 'sell'}`} value={activeToken ? `${activeToken.symbol} · ${shortAddress(activeToken.mint)}` : 'Search for a token'} readOnly /><span className="asset-pill asset-pill-selected"><TokenLogo symbol={receiveToken} logo={direction === 'buy' ? activeToken?.logo : 'https://img.jup.ag/tokens/So11111111111111111111111111111111111111112.png'} size={18} />{receiveToken}</span></div>
               </div>
               <div className="token-search-wrap">
                 <label className="token-search"><Search size={15} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name, symbol or mint" aria-label="Search for a token" /><span>{searching ? <LoaderCircle className="spin" size={15} /> : 'JUPITER'}</span></label>
-                {query.trim().length >= 2 && searchResults.length > 0 ? <div className="search-results">{searchResults.map((result) => <button key={result.mint} className="search-result" onClick={() => selectToken(result)}><span className="token-badge token-badge-search">{result.symbol.slice(0, 1)}</span><span><strong>{result.symbol}</strong><small>{result.name} · {shortAddress(result.mint)}</small></span><CirclePlus size={17} /></button>)}</div> : null}
+                {query.trim().length >= 2 && searchResults.length > 0 ? <div className="search-results" role="listbox" aria-label="Token results">{searchResults.map((result) => <button key={result.mint} type="button" className="search-result" onClick={() => selectToken(result)} role="option" aria-selected={activeToken?.mint === result.mint}><TokenLogo symbol={result.symbol} logo={result.logo} size={32} /><span><strong>{result.symbol}</strong><small>{result.name} · {shortAddress(result.mint)}</small></span><CirclePlus size={17} /></button>)}</div> : null}
               </div>
               {activeToken ? <div className="token-meta"><span>Selected token</span><span title={activeToken.mint}>{activeToken.name} · {shortAddress(activeToken.mint)}</span></div> : null}
               {direction === 'buy' && selectedSignal && !selectedSignal.eligible ? <div className="trade-warning"><CircleHelp size={15} /><span>Signal outside entry range: {selectedSignal.reason}.</span></div> : null}

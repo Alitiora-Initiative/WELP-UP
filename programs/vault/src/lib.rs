@@ -139,14 +139,32 @@ pub mod welp_vault {
 
     // ── Global config ──────────────────────────────────────────────────
 
-    /// Global initialization stays disabled until a deployment-specific
-    /// bootstrap authority is selected and pinned in the reviewed source.
+    /// Global configuration is disabled until a reviewed bootstrap authority is
+    /// pinned in deployment configuration. A first-caller initializer is unsafe.
     pub fn initialize_global_config(
         _ctx: Context<InitializeGlobalConfig>,
         _treasury_recipient: Pubkey,
         _fee_recipient: Pubkey,
     ) -> Result<()> {
         err!(VaultError::GlobalConfigInitDisabled)
+    }
+
+    /// Collects a user-signed SOL protocol fee into the configured fee
+    /// recipient. The recipient is constrained by the initialized config, so
+    /// callers cannot redirect funds to an arbitrary account.
+    pub fn collect_protocol_fee(ctx: Context<CollectProtocolFee>, amount: u64) -> Result<()> {
+        require!(amount > 0, VaultError::ZeroAmount);
+        require!(!ctx.accounts.global_config.pause_all, VaultError::Paused);
+
+        let transfer_accounts = anchor_lang::system_program::Transfer {
+            from: ctx.accounts.payer.to_account_info(),
+            to: ctx.accounts.fee_recipient.to_account_info(),
+        };
+        anchor_lang::system_program::transfer(
+            CpiContext::new(ctx.accounts.system_program.to_account_info(), transfer_accounts),
+            amount,
+        )?;
+        Ok(())
     }
 
     // ── Vault lifecycle ────────────────────────────────────────────────
@@ -731,6 +749,24 @@ pub struct InitializeGlobalConfig<'info> {
 }
 
 #[derive(Accounts)]
+pub struct CollectProtocolFee<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    #[account(
+        seeds = [b"global-config-v1"],
+        bump = global_config.bump,
+    )]
+    pub global_config: Account<'info, GlobalConfig>,
+    /// CHECK: constrained to the recipient pinned in GlobalConfig.
+    #[account(
+        mut,
+        address = global_config.fee_recipient @ VaultError::InvalidRecipient,
+    )]
+    pub fee_recipient: UncheckedAccount<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
 pub struct CreateVault<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
@@ -1124,6 +1160,8 @@ pub enum VaultError {
     MintNotAllowed,
     #[msg("Vault does not have enough available balance")]
     InsufficientVaultBalance,
+    #[msg("The fee recipient is invalid")]
+    InvalidRecipient,
     #[msg("Global config initialization is disabled until a bootstrap authority is pinned")]
     GlobalConfigInitDisabled,
     #[msg("Use the versioned executor policy instructions")]

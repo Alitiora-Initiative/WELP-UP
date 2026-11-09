@@ -40,6 +40,9 @@ type Feed = {
   liquidityUsd: number;
   volume24hUsd: number;
   updatedAt: string;
+  solPriceUsd: number | null;
+  provider?: { name: string; state: string; error?: string };
+  priceProvider?: { name: string; state: string; error?: string };
   error?: string;
 };
 type DevelopmentFund = {
@@ -162,7 +165,7 @@ export function TerminalHome() {
     () => (feed?.assets ?? []).filter((asset) => asset.eligible).sort((a, b) => b.score - a.score).slice(0, 5),
     [feed],
   );
-  const sol = feed?.assets.find((asset) => asset.symbol.toUpperCase() === 'SOL');
+  const solPriceUsd = feed?.solPriceUsd ?? feed?.assets.find((asset) => asset.symbol.toUpperCase() === 'SOL')?.priceUsd ?? null;
   const updated = feed?.updatedAt
     ? new Date(feed.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : '—';
@@ -194,19 +197,17 @@ export function TerminalHome() {
           <div className="home-sol-overview">
             <div>
               <span className="home-data-label">SOL / USD</span>
-              <strong>{sol ? price(sol.priceUsd) : '—'}</strong>
-              {sol ? (
-                <em className={sol.priceChange24h >= 0 ? 'positive' : 'negative'}>
-                  {sol.priceChange24h >= 0 ? '+' : ''}{sol.priceChange24h.toFixed(2)}% <small>24H</small>
-                </em>
+              <strong>{solPriceUsd !== null ? price(solPriceUsd) : '—'}</strong>
+              {feed?.priceProvider?.state === 'Operational' ? (
+                <small className="home-muted-note">SOL mark verified by {feed.priceProvider.name}</small>
               ) : (
-                <small className="home-muted-note">{feedError || 'Waiting for live price data'}</small>
+                <small className="home-muted-note">{feed?.priceProvider?.error || feedError || 'Waiting for live price data'}</small>
               )}
             </div>
             <div className="home-market-source">
               <span>DATA SOURCE</span>
               <strong>Jupiter Token API v2</strong>
-              <small><Clock3 size={12} /> Updated {updated}</small>
+              <small><Clock3 size={12} /> Updated {updated} · {feed?.provider?.state ?? 'PENDING'}</small>
             </div>
           </div>
           <div className="home-market-metrics">
