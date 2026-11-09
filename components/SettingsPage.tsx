@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppSidebar } from '@/components/AppSidebar';
 
 type Theme = 'system' | 'light' | 'dark';
 type TextScale = 'compact' | 'normal' | 'large';
@@ -126,19 +125,8 @@ export function SettingsPage() {
   }, [changeTheme, changeScale, announce]);
 
   return (
-    <main className="app-shell">
-      <AppSidebar active="settings" />
-
-      <section className="workspace" id="top">
-        <header className="topbar">
-          <div className="breadcrumb">
-            <span>WORKSPACE</span>
-            <span className="crumb-slash">/</span>
-            <strong>Settings</strong>
-          </div>
-        </header>
-
-        <div className="page-content">
+    <main className="terminal-page feature-page settings-page-rebuild">
+      <div className="settings-content">
           <section className="welcome-row">
             <div>
               <p className="eyebrow">PREFERENCES</p>
@@ -282,8 +270,7 @@ export function SettingsPage() {
             <span>Trading is risky. A token can lose all value.</span>
             <a href="/terms">Terms &amp; Conditions</a>
           </footer>
-        </div>
-      </section>
+      </div>
     </main>
   );
 }
