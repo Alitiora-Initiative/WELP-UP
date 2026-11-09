@@ -13,7 +13,6 @@ import {
   Clock3,
   LockKeyhole,
   Rocket,
-  ShieldCheck,
   Sparkles,
   Vault,
   Wallet,
