@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     catch { return []; }
   })) as { website?: string; twitter?: string; telegram?: string };
   const initialBuySol = Number(body.initialBuySol ?? 0.01);
-  if (!BASE58.test(owner) || !name || !symbol) return NextResponse.json({ error: 'Connect a wallet and enter a valid token name and ticker.' }, { status: 400 });
+  if (!BASE58.test(owner) || !name || !symbol || !logo) return NextResponse.json({ error: 'Connect a wallet and provide a token name, ticker, and HTTPS logo URL.' }, { status: 400 });
   if (!Number.isFinite(initialBuySol) || initialBuySol < 0.001 || initialBuySol > 1) return NextResponse.json({ error: 'Initial buy must be between 0.001 and 1 SOL.' }, { status: 400 });
 
   try {

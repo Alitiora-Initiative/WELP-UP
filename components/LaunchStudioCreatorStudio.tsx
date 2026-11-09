@@ -104,11 +104,12 @@ export function LaunchStudioCreatorStudio() {
   const brandedName = brandLaunchName(name);
   const brandedSymbol = brandLaunchSymbol(symbol);
   const welpRailReady = programStatus?.deployed === true;
-  const canLaunchPump = Boolean(owner && brandedName && brandedSymbol && !pending);
+  const canLaunchPump = Boolean(owner && brandedName && brandedSymbol && logo.trim() && !pending);
   const canLaunchWelp = Boolean(
     owner &&
       brandedName &&
       brandedSymbol &&
+      logo.trim() &&
       supply &&
       welpRailReady &&
       !pending &&

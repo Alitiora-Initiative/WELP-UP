@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   }
   const signedTransaction = typeof body.signedTransaction === 'string' ? body.signedTransaction : '';
   const requestId = typeof body.requestId === 'string' ? body.requestId : '';
-  if (!signedTransaction || signedTransaction.length > 100_000 || !/^[A-Za-z0-9_-]{8,256}$/.test(requestId)) {
+  if (!signedTransaction || signedTransaction.length > 200_000 || !/^[A-Za-z0-9+/=_-]+$/.test(signedTransaction) || !/^[A-Za-z0-9_-]{8,256}$/.test(requestId)) {
     return NextResponse.json({ error: 'Signed order or order ID is invalid.' }, { status: 400 });
   }
 

@@ -364,7 +364,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
 
           <div className="mainnet-banner" role="note">
             <ShieldCheck size={19} />
-            <div><strong>Wallet-approved swaps are live.</strong><span>Live market data is flowing and swaps route through Jupiter with no WELP referral fee while its account is unconfigured; Jupiter or route providers may still charge fees. You approve every swap in your own wallet; no unattended trading is active.</span></div>
+            <div><strong>Swaps are paused for fee verification.</strong><span>Live market data is flowing, but WELP will not quote or submit swaps until its treasury referral destination is configured and verified. This prevents real funds from moving without the disclosed WELP fee. You approve every supported transaction in your own wallet; no unattended trading is active.</span></div>
             <a href="https://docs.jup.ag/user-docs/trade/swap" target="_blank" rel="noreferrer" aria-label="Read swap documentation"><CircleHelp size={17} /></a>
           </div>
 
