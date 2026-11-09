@@ -279,8 +279,8 @@ export function TerminalShell({ children }: { children: ReactNode }) {
               type="button"
               className="command-menu-button"
               onClick={toggleSidebar}
-              aria-label={window.matchMedia('(max-width: 900px)').matches ? (mobileOpen ? 'Close navigation' : 'Open navigation') : (collapsed ? 'Expand sidebar' : 'Collapse sidebar')}
-              aria-expanded={window.matchMedia('(max-width: 900px)').matches ? mobileOpen : !collapsed}
+              aria-label="Toggle application navigation"
+              aria-expanded={mobileOpen || !collapsed}
               aria-controls="welp-app-navigation"
             >
               {isMobile ? (mobileOpen ? <X size={18} /> : <Menu size={18} />) : <Menu size={18} />}
