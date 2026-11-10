@@ -69,9 +69,9 @@ export function ChartPanel({ mint, name, symbol }: Props) {
       const url = `/api/chart?mint=${encodeURIComponent(mint)}&provider=dexscreener&interval=${interval}`;
       const response = await fetch(url, { cache: 'no-store', signal: controller.signal });
       const data = await response.json() as ChartData & { error?: string };
-      if (!response.ok) throw new Error(data.error || 'Could not load genuine pool OHLCV data.');
+      if (!response.ok) throw new Error(data.error || 'Could not load verified pool market data.');
       if (!Array.isArray(data.candles) || data.candles.length === 0) {
-        throw new Error('The data provider returned no OHLCV candles for this pool.');
+        throw new Error('The data provider returned no verified market snapshot for this pool.');
       }
       setChartData(data);
       setActiveIndex(data.candles.length - 1);
@@ -147,7 +147,7 @@ export function ChartPanel({ mint, name, symbol }: Props) {
     <section className="chart-panel-live" aria-label={`Live candlestick chart for ${name} (${symbol})`}>
       <header className="chart-live-header">
         <div>
-          <p className="chart-live-kicker">LIVE ON-CHAIN POOL OHLCV</p>
+          <p className="chart-live-kicker">LIVE ON-CHAIN POOL SNAPSHOT</p>
           <h2>{name} <span>{symbol}</span></h2>
           <p className="chart-live-mint">{mint}</p>
         </div>
