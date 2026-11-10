@@ -4,15 +4,24 @@ import { scoreToken } from '@/lib/market-scoring';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const FEED = 'https://api.jup.ag/tokens/v2/toporganicscore/24h?limit=100';
+const FEED = 'https://lite-api.jup.ag/tokens/v2/toporganicscore/24h?limit=100';
 const SOL_MINT = 'So11111111111111111111111111111111111111112';
-const PRICE_FEED = `https://api.jup.ag/price/v2?ids=${SOL_MINT}`;
+const PRICE_FEED = `https://lite-api.jup.ag/price/v3?ids=${SOL_MINT}`;
+
+async function fetchWithRetry(url: string, headers: Record<string, string>, attempts = 2) {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const response = await fetch(url, { headers, cache: 'no-store', signal: AbortSignal.timeout(15_000) });
+    if (response.ok || response.status !== 429 || attempt === attempts - 1) return response;
+    await new Promise((resolve) => setTimeout(resolve, 450 * (attempt + 1)));
+  }
+  throw new Error('Jupiter market feed retry failed.');
+}
 
 function providerFailure(error: string, status = 502) {
   return NextResponse.json({
     error,
     updatedAt: new Date().toISOString(),
-    provider: { name: 'Jupiter Token API v2', state: 'Unavailable', error },
+    provider: { name: 'Jupiter Lite Token API v2', state: 'Unavailable', error },
     dataQuality: 'unavailable',
     total: 0,
     eligible: 0,
@@ -27,7 +36,7 @@ export async function GET() {
     const headers: Record<string, string> = { Accept: 'application/json' };
     if (process.env.JUPITER_API_KEY) headers['x-api-key'] = process.env.JUPITER_API_KEY;
     const [feedResponse, priceResponse] = await Promise.all([
-      fetch(FEED, { headers, cache: 'no-store', signal: AbortSignal.timeout(15_000) }),
+      fetchWithRetry(FEED, headers),
       fetch(PRICE_FEED, { headers, cache: 'no-store', signal: AbortSignal.timeout(10_000) }),
     ]);
     if (!feedResponse.ok) return providerFailure('Jupiter market feed returned ' + feedResponse.status + '.');
@@ -38,14 +47,14 @@ export async function GET() {
     assets.sort((a, b) => b.score - a.score || b.liquidityUsd - a.liquidityUsd);
     const eligible = assets.filter((asset) => asset.eligible).length;
     const pricePayload = priceResponse.ok ? await priceResponse.json().catch(() => null) : null;
-    const solPrice = Number(pricePayload?.data?.[SOL_MINT]?.price);
+    const solPrice = Number(pricePayload?.[SOL_MINT]?.usdPrice ?? pricePayload?.data?.[SOL_MINT]?.price);
     const solPriceUsd = Number.isFinite(solPrice) && solPrice > 0 ? solPrice : null;
     const priceState = solPriceUsd === null ? 'Unavailable' : 'Operational';
     return NextResponse.json({
-      source: 'Jupiter Token API v2',
+      source: 'Jupiter Lite Token API v2',
       updatedAt: fetchedAt,
-      provider: { name: 'Jupiter Token API v2', state: 'Operational', fetchedAt },
-      priceProvider: { name: 'Jupiter Price API v2', state: priceState, fetchedAt, error: solPriceUsd === null ? 'SOL price was not returned.' : undefined },
+      provider: { name: 'Jupiter Lite Token API v2', state: 'Operational', fetchedAt },
+      priceProvider: { name: 'Jupiter Price API v3', state: priceState, fetchedAt, error: solPriceUsd === null ? 'SOL price was not returned.' : undefined },
       dataQuality: priceState === 'Operational' ? 'complete' : 'partial',
       solPriceUsd,
       total: assets.length,

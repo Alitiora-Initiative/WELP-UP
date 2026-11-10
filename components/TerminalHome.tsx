@@ -1,6 +1,9 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ChartPanel } from '@/components/ChartPanel';
 import Link from 'next/link';
 import {
   Activity,
@@ -8,6 +11,8 @@ import {
   ArrowRight,
   ArrowUpRight,
   Bot,
+  Check,
+  Copy,
   ChartNoAxesCombined,
   CircleGauge,
   Clock3,
@@ -22,6 +27,7 @@ type Asset = {
   mint: string;
   name: string;
   symbol: string;
+  logo?: string | null;
   priceUsd: number;
   priceChange24h: number;
   liquidityUsd: number;
@@ -95,12 +101,17 @@ export function TerminalHome() {
   const [feed, setFeed] = useState<Feed | null>(null);
   const [feedError, setFeedError] = useState('');
   const [fund, setFund] = useState<DevelopmentFund | null>(null);
+  const [copiedRecipient, setCopiedRecipient] = useState(false);
   const [status, setStatus] = useState<ServiceStatus | null>(null);
   const [statusError, setStatusError] = useState('');
 
   const refresh = useCallback(async () => {
     try {
-      const response = await fetch('/api/markets', { cache: 'no-store' });
+      let response = await fetch('/api/markets', { cache: 'no-store' });
+      if (response.status === 429) {
+        await new Promise((resolve) => window.setTimeout(resolve, 900));
+        response = await fetch('/api/markets', { cache: 'no-store' });
+      }
       const data = await response.json() as Feed;
       if (!response.ok) throw new Error(data.error || 'Market feed unavailable.');
       setFeed(data);
@@ -206,7 +217,7 @@ export function TerminalHome() {
             </div>
             <div className="home-market-source">
               <span>DATA SOURCE</span>
-              <strong>Jupiter Token API v2</strong>
+              <strong>Jupiter Lite Token API v2</strong>
               <small><Clock3 size={12} /> Updated {updated} · {feed?.provider?.state ?? 'PENDING'}</small>
             </div>
           </div>
@@ -259,6 +270,8 @@ export function TerminalHome() {
         <article className="home-kpi-card"><span>BLOCKED ASSETS</span><strong>{feed ? feed.blocked.toLocaleString() : '—'}</strong><small>Excluded by at least one rule</small></article>
       </section>
 
+      {feed?.assets[0] ? <ChartPanel mint={feed.assets[0].mint} name={feed.assets[0].name} symbol={feed.assets[0].symbol} /> : null}
+
       {feedError ? (
         <div className="feed-error home-feed-error" role="alert">
           {feedError} <Link href="/system-status">Inspect service status</Link>
@@ -278,7 +291,7 @@ export function TerminalHome() {
           <div className="home-candidate-table-head"><span>ASSET</span><span>PRICE</span><span>24H</span><span>LIQUIDITY</span><span>SCORE</span><span /></div>
           {featured.length ? featured.map((asset) => (
             <div className="home-candidate-table-row" key={asset.mint}>
-              <div className="home-candidate-asset"><span className="home-candidate-avatar">{asset.symbol.slice(0, 1).toUpperCase()}</span><span><strong>{asset.symbol}</strong><small>{asset.name}</small></span></div>
+              <div className="home-candidate-asset">{asset.logo ? <img className="home-candidate-avatar home-candidate-avatar-image" src={asset.logo} alt="" loading="lazy" /> : <span className="home-candidate-avatar">{asset.symbol.slice(0, 1).toUpperCase()}</span>}<span><strong>{asset.symbol}</strong><small>{asset.name}</small></span></div>
               <strong className="home-candidate-price">{price(asset.priceUsd)}</strong>
               <strong className={asset.priceChange24h >= 0 ? 'positive' : 'negative'}>{asset.priceChange24h >= 0 ? '+' : ''}{asset.priceChange24h.toFixed(2)}%</strong>
               <span className="home-candidate-liquidity">{money(asset.liquidityUsd)}</span>
@@ -318,7 +331,7 @@ export function TerminalHome() {
         <div className="home-development-copy">
           <div className="eyebrow">COMMUNITY DEVELOPMENT FUND</div>
           <h2>Help fund the program review and deployment.</h2>
-          <p>Contributions go directly to the published development wallet. The WELP application cannot move these funds; reaching the goal does not itself deploy a program.</p>
+          <p>Contributions go directly to the published development wallet. Copy the address below and send SOL from your wallet; WELP cannot move these funds.</p>
         </div>
         <div className="home-development-balance">
           <span>VERIFIED WALLET BALANCE</span>
@@ -328,7 +341,12 @@ export function TerminalHome() {
           <div className="home-fund-bottom">
             <span>{fund?.progressBps == null ? 'Balance unavailable' : (fund.progressBps / 100).toFixed(2) + '% funded'}</span>
             {fund?.recipient ? (
-              <a href={'https://solscan.io/account/' + encodeURIComponent(fund.recipient)} target="_blank" rel="noreferrer">Verify on Solscan <ArrowUpRight size={12} /></a>
+              <div className="home-fund-links">
+                <button type="button" className="home-copy-wallet" onClick={async () => { await navigator.clipboard.writeText(fund.recipient); setCopiedRecipient(true); window.setTimeout(() => setCopiedRecipient(false), 1800); }} aria-label="Copy development wallet address">
+                  {copiedRecipient ? <Check size={12} /> : <Copy size={12} />} {copiedRecipient ? 'Copied' : 'Copy wallet'}
+                </button>
+                <a href={'https://solscan.io/account/' + encodeURIComponent(fund.recipient)} target="_blank" rel="noreferrer">Verify on Solscan <ArrowUpRight size={12} /></a>
+              </div>
             ) : null}
           </div>
         </div>

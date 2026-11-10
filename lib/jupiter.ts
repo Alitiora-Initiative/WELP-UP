@@ -1,7 +1,7 @@
 import { SOL_MINT } from '@/lib/constants';
 
 export { SOL_MINT };
-const SWAP_BASE = 'https://api.jup.ag/swap/v2';
+const SWAP_BASE = 'https://lite-api.jup.ag/swap/v2';
 
 function headers(): HeadersInit {
   const result: Record<string, string> = { Accept: 'application/json' };

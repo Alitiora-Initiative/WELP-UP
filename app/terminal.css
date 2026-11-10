@@ -2598,6 +2598,7 @@ html, body { background: #080908 !important; color: #f0f3ec !important; }
   color: #d0ed9e;
   font: 700 12px var(--terminal-display);
 }
+.home-candidate-avatar-image { object-fit: cover; }
 .home-candidate-asset > span:last-child { display: grid; gap: 4px; min-width: 0; }
 .home-candidate-asset strong { color: #e9f1e2; font-size: 10px; }
 .home-candidate-asset small { overflow: hidden; color: #7d8976; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
@@ -2698,9 +2699,13 @@ html, body { background: #080908 !important; color: #f0f3ec !important; }
 .home-development-balance > small { color: #84917b; font-size: 8px; }
 .home-fund-progress { width: 100%; height: 5px; overflow: hidden; border-radius: 10px; background: #293326; }
 .home-fund-progress span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg,#8ebf4e,#d4f58a); }
-.home-fund-bottom { display: flex; justify-content: space-between; gap: 10px; color: #809078; font: 8px var(--terminal-mono); }
-.home-fund-bottom a { display: inline-flex; align-items: center; gap: 4px; color: #badb8e; text-decoration: none; }
-.home-fund-bottom a:hover { color: #e4ffc2; }
+ .home-fund-links { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+ .home-fund-bottom { display: flex; justify-content: space-between; gap: 10px; color: #809078; font: 8px var(--terminal-mono); }
+ .home-fund-bottom a { display: inline-flex; align-items: center; gap: 4px; color: #badb8e; text-decoration: none; }
+ .home-fund-bottom a:hover { color: #e4ffc2; }
+ .home-copy-wallet { display: inline-flex; align-items: center; gap: 5px; border: 0; background: transparent; color: #b9f36d; font: 10px var(--terminal-mono); cursor: pointer; }
+ .home-copy-wallet:hover { color: #e4ffc2; }
+ .asset-avatar-image { object-fit: cover; }
 
 .home-operating-note {
   display: flex;

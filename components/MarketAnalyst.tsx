@@ -102,7 +102,7 @@ export function MarketAnalyst() {
           </button>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <div className="feature-stat"><span>MARKET INPUT</span><strong>LIVE FEED</strong><small>Jupiter Token API v2</small></div>
+          <div className="feature-stat"><span>MARKET INPUT</span><strong>LIVE FEED</strong><small>Jupiter Lite Token API v2</small></div>
           <div className="feature-stat"><span>WALLET ACCESS</span><strong>NONE</strong><small>No balances or private data sent</small></div>
           <div className="feature-stat"><span>EXECUTION</span><strong>DISABLED</strong><small>Analysis cannot submit trades</small></div>
         </div>
