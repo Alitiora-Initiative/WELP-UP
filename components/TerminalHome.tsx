@@ -200,8 +200,6 @@ export function TerminalHome() {
               <strong>{solPriceUsd !== null ? price(solPriceUsd) : '—'}</strong>
               {feed?.priceProvider?.state === 'Operational' ? (
                 <small className="home-muted-note">SOL mark verified by {feed.priceProvider.name}</small>
-              ) : solPriceUsd !== null ? (
-                <small className="home-muted-note">SOL mark available from the live market feed</small>
               ) : (
                 <small className="home-muted-note">{feed?.priceProvider?.error || feedError || 'Waiting for live price data'}</small>
               )}

@@ -275,10 +275,6 @@ export function TerminalShell({ children }: { children: ReactNode }) {
       <div className="command-content">
         <header className="command-header">
           <div className="command-header-left">
-            <Link href="/" className="command-header-brand" aria-label="WELP UP overview">
-              <Image src="/welp-up-logo.svg" alt="" width={30} height={30} priority />
-              <strong>WELP UP!</strong>
-            </Link>
             <button
               type="button"
               className="command-menu-button"
@@ -293,14 +289,6 @@ export function TerminalShell({ children }: { children: ReactNode }) {
               <span>WELP UP</span><i>/</i><strong>{pageTitle}</strong>
             </div>
           </div>
-          <nav className="command-top-nav" aria-label="Primary navigation">
-            <Link className={isActivePath(pathname, '/markets') ? 'is-active' : ''} href="/markets">Markets <ChevronDown size={12} /></Link>
-            <Link className={isActivePath(pathname, '/swap') ? 'is-active' : ''} href="/swap">Trade <ChevronDown size={12} /></Link>
-            <Link className={['/automation', '/agent', '/autonomous'].some((href) => isActivePath(pathname, href)) ? 'is-active' : ''} href="/automation">Automate <ChevronDown size={12} /></Link>
-            <Link className={isActivePath(pathname, '/vault') ? 'is-active' : ''} href="/vault">Vault <ChevronDown size={12} /></Link>
-            <Link className={['/portfolio', '/profile', '/settings'].some((href) => isActivePath(pathname, href)) ? 'is-active' : ''} href="/portfolio">Console <ChevronDown size={12} /></Link>
-            <Link className={['/docs', '/whitepaper'].some((href) => isActivePath(pathname, href)) ? 'is-active' : ''} href="/docs">Docs <ChevronDown size={12} /></Link>
-          </nav>
           <div className="command-header-actions">
             <span className="command-header-network"><i /> SOLANA MAINNET</span>
             <Link href="/swap" className="command-trade-link">Open trade desk <ArrowUpRight size={14} /></Link>
