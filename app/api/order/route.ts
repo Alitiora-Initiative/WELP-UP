@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requestOrder } from '@/lib/jupiter';
 import { SOL_MINT } from '@/lib/constants';
 import { WELP_FEE_POLICY } from '@/lib/server/fee-policy';
+import { EXECUTION_POLICY, validateSwapRisk } from '@/lib/server/execution-policy';
 
 export const runtime = 'nodejs';
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -48,8 +49,9 @@ export async function POST(request: NextRequest) {
   if (inputMint === SOL_MINT && BigInt(amount) > BigInt(20_000_000)) {
     return NextResponse.json({ error: 'The maximum WELP entry is 0.02 SOL.' }, { status: 400 });
   }
-  if (!Number.isInteger(slippageBps) || slippageBps < 10 || slippageBps > 300) {
-    return NextResponse.json({ error: 'Slippage must be between 0.10% and 3.00%.' }, { status: 400 });
+  const riskError = validateSwapRisk({ inputMint, amount, slippageBps, solMint: SOL_MINT });
+  if (riskError) {
+    return NextResponse.json({ error: riskError, policy: { maxSlippageBps: EXECUTION_POLICY.maxSlippageBps, maxSolInputLamports: EXECUTION_POLICY.maxSolInputLamports } }, { status: 400 });
   }
 
   try {

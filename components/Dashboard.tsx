@@ -427,14 +427,14 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
                   ))}
                 </div>
               )}
-              <div className="panel-foot"><span><span className="foot-pip" /> GeckoTerminal charts · Jupiter quotes</span><span>Rule score is not a probability of profit</span></div>
+              <div className="panel-foot"><span><span className="foot-pip" /> DexScreener snapshots · Jupiter quotes</span><span>Rule score is not a probability of profit</span></div>
             </section> : null}
 
             {view !== 'signals' ? <section className="panel swap-panel" id="swap">
               <div className="panel-heading swap-heading"><div><p className="eyebrow">USER-APPROVED</p><h2>Swap assets</h2></div><div className="swap-icon"><ArrowDownUp size={17} /></div></div>
               <div className="direction-tabs" role="group" aria-label="Swap direction">
-                <button className={direction === 'buy' ? 'direction-tab selected' : 'direction-tab'} onClick={() => { setDirection('buy'); setOrder(null); setTradeError(''); }}><ArrowDownLeft size={15} /> Buy</button>
-                <button className={direction === 'sell' ? 'direction-tab selected' : 'direction-tab'} onClick={() => { setDirection('sell'); setOrder(null); setTradeError(''); }}><ArrowUpRight size={15} /> Sell</button>
+<button data-direction="buy" className={direction === 'buy' ? 'direction-tab selected' : 'direction-tab'} onClick={() => { setDirection('buy'); setOrder(null); setTradeError(''); }}><ArrowDownLeft size={15} /> Buy</button>
+            <button data-direction="sell" className={direction === 'sell' ? 'direction-tab selected' : 'direction-tab'} onClick={() => { setDirection('sell'); setOrder(null); setTradeError(''); }}><ArrowUpRight size={15} /> Sell</button>
               </div>
               <div className="swap-box">
                 <div className="swap-box-top"><span>You {direction === 'buy' ? 'pay' : 'sell'}</span><span>{direction === 'buy' && activeSolBalance !== null ? `Balance ${activeSolBalance.toFixed(4)} SOL` : 'Mainnet'}</span></div>

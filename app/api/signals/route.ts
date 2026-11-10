@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
       count: signals.length,
       eligibleCount: signals.filter((signal) => signal.eligible).length,
       updatedAt,
-      provider: { name: 'GeckoTerminal + Jupiter Swap API v2', state: 'Operational', fetchedAt: updatedAt },
+      provider: { name: 'DexScreener + Jupiter Swap API v2', state: 'Operational', fetchedAt: updatedAt },
       dataQuality: 'complete',
     }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       count: 0,
       eligibleCount: 0,
       updatedAt,
-      provider: { name: 'GeckoTerminal + Jupiter Swap API v2', state: 'Unavailable', error: message },
+      provider: { name: 'DexScreener + Jupiter Swap API v2', state: 'Unavailable', error: message },
       dataQuality: 'unavailable',
     }, { status: 502, headers: { 'Cache-Control': 'no-store' } });
   }

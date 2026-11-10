@@ -40,7 +40,11 @@ export function MarketBoard() {
     if (!quiet) setLoading(true);
     setError('');
     try {
-      const response = await fetch('/api/markets', { cache: 'no-store' });
+      let response = await fetch('/api/markets', { cache: 'no-store' });
+      if (response.status === 429) {
+        await new Promise((resolve) => window.setTimeout(resolve, 900));
+        response = await fetch('/api/markets', { cache: 'no-store' });
+      }
       const data = await response.json() as Feed;
       if (!response.ok) throw new Error(data.error || 'Could not load the live market feed.');
       setFeed(data);
@@ -133,6 +137,6 @@ export function MarketBoard() {
       <div className="market-pagination"><span>Showing {filtered.length ? (page - 1) * pageSize + 1 : 0}–{Math.min(page * pageSize, filtered.length)} of {filtered.length}</span><div><button aria-label="Previous page" disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}><ChevronLeft size={15} /></button><span>Page {page} of {pages}</span><button aria-label="Next page" disabled={page >= pages} onClick={() => setPage((value) => Math.min(pages, value + 1))}><ChevronRight size={15} /></button></div></div>
     </section>
     {chartAsset ? <ChartPanel mint={chartAsset.mint} name={chartAsset.name} symbol={chartAsset.symbol} /> : null}
-    <div className="market-disclosures"><section><span>FEED CONTRACT</span><p>Prices, liquidity and volume come from Jupiter Token API v2. This page refreshes every 60 seconds and when the tab becomes visible. Venue fees, market hours and outages belong to the venue.</p></section><section><span>WHAT THE SCORE MEANS</span><p>The score is a weighted read of live fields — organic activity, depth, turnover, holder spread, buy pressure and short-term calm — mapped into an 80–98 band. It is not a probability of profit.</p></section><section><span>BEFORE YOU ROUTE AN ORDER</span><p>A qualified row is still a volatile asset. Review the route and price impact on the swap desk, then sign one transaction at a time in your wallet.</p><Link href="/swap">Open trade desk <ArrowUpRight size={13} /></Link></section></div>
+    <div className="market-disclosures"><section><span>FEED CONTRACT</span><p>Prices, liquidity and volume come from Jupiter Lite Token API v2. This page refreshes every 60 seconds and when the tab becomes visible. Venue fees, market hours and outages belong to the venue.</p></section><section><span>WHAT THE SCORE MEANS</span><p>The score is a weighted read of live fields — organic activity, depth, turnover, holder spread, buy pressure and short-term calm — mapped into an 80–98 band. It is not a probability of profit.</p></section><section><span>BEFORE YOU ROUTE AN ORDER</span><p>A qualified row is still a volatile asset. Review the route and price impact on the swap desk, then sign one transaction at a time in your wallet.</p><Link href="/swap">Open trade desk <ArrowUpRight size={13} /></Link></section></div>
   </main>;
 }

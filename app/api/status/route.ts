@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { WELP_FEE_POLICY } from '@/lib/server/fee-policy';
 import { WELP_LAUNCHPAD_PROGRAM_ID } from '@/lib/launch-program';
+import { EXECUTION_POLICY, executionReadiness } from '@/lib/server/execution-policy';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,7 +29,7 @@ async function checkJupiter() {
   if (!response.ok) throw new Error('Jupiter returned ' + response.status);
   const data = await response.json();
   if (!Array.isArray(data) || !data.length) throw new Error('Jupiter returned no token data');
-  return { name: 'Jupiter Token API v2', state: 'Operational', detail: 'Live token feed reachable' };
+  return { name: 'Jupiter Lite Token API v2', state: 'Operational', detail: 'Live token feed reachable' };
 }
 async function checkVault() {
   const programId = process.env.WELP_VAULT_PROGRAM_ID || '';
@@ -82,9 +83,14 @@ async function checkCustomLaunchProgram() {
 export async function GET() {
   const checks = await Promise.all([
     checkSolana().catch((error) => ({ name: 'Solana mainnet RPC', state: 'Unavailable', detail: error instanceof Error ? error.message : 'RPC check failed' })),
-    checkJupiter().catch((error) => ({ name: 'Jupiter Token API v2', state: 'Unavailable', detail: error instanceof Error ? error.message : 'Feed check failed' })),
+    checkJupiter().catch((error) => ({ name: 'Jupiter Lite Token API v2', state: 'Unavailable', detail: error instanceof Error ? error.message : 'Feed check failed' })),
     checkVault(),
     checkCustomLaunchProgram(),
+    Promise.resolve({
+      name: 'Execution safety rails',
+      state: executionReadiness().ready ? 'Ready for operator review' : 'Blocked by safety prerequisites',
+      detail: executionReadiness().blockers.join(' ') || `Private RPC configured; max slippage ${(EXECUTION_POLICY.maxSlippageBps / 100).toFixed(2)}%; max daily drawdown ${(EXECUTION_POLICY.maxDailyDrawdownBps / 100).toFixed(2)}%.`,
+    }),
     Promise.resolve({ name: 'Autonomous agents', state: 'Not enabled', detail: 'No production executor or unattended trading runtime is configured.' }),
     Promise.resolve({
       name: 'Fee routing',
@@ -96,6 +102,8 @@ export async function GET() {
   ]);
   const overall = checks.some((item) => item.state === 'Unavailable')
     ? 'Degraded · some checks unavailable'
-    : 'Operational · limited features';
+    : checks.some((item) => item.state.includes('Blocked') || item.state.includes('Not configured') || item.state.includes('Undeployed'))
+      ? 'Operational · execution blocked by safety gates'
+      : 'Operational · limited features';
   return NextResponse.json({ updatedAt: new Date().toISOString(), overall, checks }, { headers: { 'Cache-Control': 'no-store' } });
 }

@@ -1,10 +1,12 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element */
+
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ArrowRight, ArrowUpRight, BarChart3, Bot, CheckCircle2, ChevronRight, CircleDollarSign, LockKeyhole, ScanSearch, ShieldCheck, Sparkles, Wallet } from 'lucide-react';
 
-type MarketAsset = { symbol: string; priceUsd: number; priceChange24h: number; liquidityUsd?: number; volume24hUsd?: number };
+type MarketAsset = { symbol: string; name?: string; logo?: string | null; priceUsd: number; priceChange24h: number; liquidityUsd?: number; volume24hUsd?: number };
 type MarketResponse = { assets?: MarketAsset[] };
 
 const quickLinks = [
@@ -59,7 +61,7 @@ export function HomePage() {
 
       <section className="dashboard-section market-snapshot-section">
         <div className="section-heading"><div><p className="eyebrow">LIVE SNAPSHOT</p><h2>Markets worth a closer look</h2></div><Link href="/markets" className="text-link">View all markets <ArrowRight size={14} /></Link></div>
-        <div className="market-snapshot-grid">{assets.length ? assets.map((asset) => <Link href="/markets" className="snapshot-card" key={asset.symbol}><span className="asset-avatar">{asset.symbol.slice(0, 1)}</span><span><strong>{asset.symbol}</strong><small>{formatPrice(asset.priceUsd)}</small></span><em className={asset.priceChange24h >= 0 ? 'positive' : 'negative'}>{asset.priceChange24h >= 0 ? '+' : ''}{asset.priceChange24h.toFixed(2)}%</em></Link>) : <div className="dashboard-empty"><Sparkles size={16} /><span>{feedState === 'offline' ? 'The live market feed is temporarily unavailable.' : 'Connecting to the live market feed…'}</span></div>}</div>
+        <div className="market-snapshot-grid">{assets.length ? assets.map((asset) => <Link href="/markets" className="snapshot-card" key={asset.symbol}>{asset.logo ? <img className="asset-avatar asset-avatar-image" src={asset.logo} alt="" loading="lazy" /> : <span className="asset-avatar">{asset.symbol.slice(0, 1)}</span>}<span><strong>{asset.symbol}</strong><small>{formatPrice(asset.priceUsd)}</small></span><em className={asset.priceChange24h >= 0 ? 'positive' : 'negative'}>{asset.priceChange24h >= 0 ? '+' : ''}{asset.priceChange24h.toFixed(2)}%</em></Link>) : <div className="dashboard-empty"><Sparkles size={16} /><span>{feedState === 'offline' ? 'The live market feed is temporarily unavailable.' : 'Connecting to the live market feed…'}</span></div>}</div>
       </section>
 
       <section className="dashboard-section">

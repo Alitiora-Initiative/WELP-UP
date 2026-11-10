@@ -12,7 +12,8 @@ This checklist distinguishes working public-data and wallet-approved features fr
 - [x] Solana RPC transaction-signature history for a wallet address.
 - [x] Browser-local activity snapshots and display preferences.
 - [ ] Server-side account identity and durable per-user data.
-- [ ] Verified end-to-end transaction reconciliation for every trade and vault event.
+ - [x] Added finalized-signature verification and a transaction-status reconciliation endpoint for Jupiter executions.
+ - [ ] Durable idempotent transaction ledger and end-to-end reconciliation for every trade and vault event.
 
 ## Current Anchor program source status (executor-policy-foundation)
 
@@ -45,7 +46,9 @@ See [AI_AGENT_RUNTIME.md](AI_AGENT_RUNTIME.md) and [VAULT_PROGRAM_SECURITY_REVIE
 - [ ] Wire executor policy and each user-slot strategy/risk snapshot into an audited swap instruction so per-trade, daily spend, slippage, policy version, nonce, and available-balance limits are enforced atomically. UI limits alone are not security controls.
 - [ ] Verify owner pause, implemented executor-policy revocation, and share-withdrawal recovery under local-validator failure conditions.
 - [ ] Upgrade authority policy selected, documented, and secured (prefer a reviewed multisig or immutable deployment after upgrade window).
-- [ ] Monitoring, incident response, pause authority, recovery runbook, and independent RPC/indexer redundancy.
+ - [x] Added server-side execution policy rails for max slippage, per-swap SOL allocation, daily drawdown, allocation caps, RPC readiness, signer readiness, and autonomous-execution gates.
+ - [x] Added `/api/monitoring` with RPC health, fee-route alerts, execution blockers, and heartbeat metadata.
+ - [ ] Jito/private-bundle routing, dynamic priority-fee calculation, incident response, pause authority, recovery runbook, and independent RPC/indexer redundancy.
 - [ ] Mainnet integration tests and independent transaction-level verification.
 - [ ] Legal, consumer-protection, tax, sanctions, and operating-jurisdiction review before accepting public deposits.
 
