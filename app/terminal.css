@@ -228,7 +228,11 @@ button { cursor: pointer; }
 .signal-metrics strong { color: #dce5d5; font: 10px var(--terminal-mono); }
 .signal-result { display: flex; align-items: flex-start; gap: 8px; min-height: 33px; color: #9fb784; font-size: 9px; line-height: 1.55; }
 .signal-result.blocked { color: #ef9a91; }
-.signal-route { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; color: var(--terminal-accent); font-size: 10px; text-decoration: none; }
+ .signal-breakdown { margin: 12px 0 0; border-top: 1px solid var(--terminal-line); padding-top: 10px; color: var(--terminal-muted); font-size: 12px; }
+ .signal-breakdown summary { cursor: pointer; color: var(--terminal-text); font-weight: 700; }
+ .signal-breakdown ul { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+ .signal-breakdown li { line-height: 1.45; }
+ .signal-route { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; color: var(--terminal-accent); font-size: 10px; text-decoration: none; }
 .filter-row { display: flex; align-items: center; gap: 8px; margin: 6px 0 17px; }
 .filter-chip { padding: 8px 13px; border: 1px solid #30372c; border-radius: 20px; background: transparent; color: #9ba691; font-size: 9px; }
 .filter-chip.active { border-color: #839762; background: #20291a; color: var(--terminal-accent); }

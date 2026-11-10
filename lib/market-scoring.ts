@@ -41,6 +41,7 @@ export type ScoredMarketToken = {
   eligible: boolean;
   blockers: string[];
   warnings: string[];
+  confidenceBreakdown: string[];
 };
 
 export function scoreToken(value: unknown): ScoredMarketToken {
@@ -54,6 +55,9 @@ export function scoreToken(value: unknown): ScoredMarketToken {
   const holders = Math.max(0, Math.trunc(number(row.holderCount)));
   const mcap = optionalNumber(row.mcap);
   const topHolders = optionalNumber(audit.topHoldersPercentage);
+  const developerOwnership = optionalNumber(audit.developerOwnershipPercentage);
+  const liquidityLocked = typeof audit.liquidityLocked === 'boolean' ? audit.liquidityLocked : null;
+  const honeypot = typeof audit.honeypot === 'boolean' ? audit.honeypot : null;
   const freezeDisabled = typeof audit.freezeAuthorityDisabled === 'boolean'
     ? audit.freezeAuthorityDisabled
     : typeof row.freezeAuthority === 'string' ? false : null;
@@ -83,6 +87,9 @@ export function scoreToken(value: unknown): ScoredMarketToken {
   if (liquidity < 100_000) blockers.push('Liquidity is below $100,000');
   if (volume < 100_000) blockers.push('24-hour volume is below $100,000');
   if (topHolders !== null && topHolders > 60) blockers.push('Top holders own ' + topHolders.toFixed(1) + '%');
+  if (developerOwnership !== null && developerOwnership > 20) blockers.push('Developer allocation exceeds 20%');
+  if (liquidityLocked === false) blockers.push('Liquidity lock is not verified');
+  if (honeypot === true) blockers.push('Honeypot risk is reported by the audit feed');
   const suspicious = audit.isSus === true;
   if (suspicious) blockers.push('Jupiter audit flags this token as suspicious');
 
@@ -99,6 +106,15 @@ export function scoreToken(value: unknown): ScoredMarketToken {
   const change24h = number(s24.priceChange);
   if (change24h <= -25) warnings.push('24-hour drawdown is ' + change24h.toFixed(1) + '%');
   if (row.isVerified !== true) warnings.push('Token is not marked verified by the feed');
+  const confidenceBreakdown = [
+    `Organic activity contributes ${Math.round(organic * 0.32)} of the quality points (32% weight).`,
+    `Liquidity depth contributes ${Math.round(depth * 0.20)} points from ${liquidity.toLocaleString('en-US')} USD.`,
+    turnover === null ? 'Turnover is not scored because market cap is unavailable.' : `Turnover contributes ${Math.round(turnover * 0.15)} points.`,
+    `Holder spread contributes ${Math.round(holderScore * 0.13)} points from ${holders.toLocaleString('en-US')} holders.`,
+    totalTrades === 0 ? 'Buy pressure is not scored because trade counts are unavailable.' : `Buy pressure is ${buyPressure.toFixed(0)}% and contributes ${Math.round(buyPressure * 0.12)} points.`,
+    change1h === null ? 'Short-term momentum is not scored because the one-hour change is unavailable.' : `Short-term calm contributes ${Math.round(momentum * 0.08)} points from the one-hour move.`,
+    blockers.length ? `Blocked by: ${blockers.join('; ')}.` : warnings.length ? `Review warnings: ${warnings.slice(0, 3).join('; ')}.` : 'No hard blockers or open data warnings were reported.',
+  ];
 
   return {
     mint: String(row.id ?? ''),
@@ -124,5 +140,6 @@ export function scoreToken(value: unknown): ScoredMarketToken {
     eligible: blockers.length === 0,
     blockers,
     warnings,
+    confidenceBreakdown,
   };
 }
