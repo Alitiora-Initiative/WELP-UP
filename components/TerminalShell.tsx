@@ -290,12 +290,55 @@ export function TerminalShell({ children }: { children: ReactNode }) {
             </div>
           </div>
           <nav className="command-top-nav" aria-label="Primary navigation">
-            <Link href="/markets">Markets</Link>
-            <Link href="/swap">Trade</Link>
-            <Link href="/automation">Automate</Link>
-            <Link href="/vault">Vault</Link>
-            <Link href="/portfolio">Console</Link>
-            <Link href="/docs">Docs</Link>
+            <div className="command-nav-group">
+              <Link href="/markets" className="command-nav-trigger">Markets <ChevronDown size={12} /></Link>
+              <div className="command-nav-dropdown" role="menu">
+                <Link href="/markets" role="menuitem"><strong>Markets overview</strong><small>Live prices, liquidity, and pools</small></Link>
+                <Link href="/signals" role="menuitem"><strong>Live signals</strong><small>Research-backed market alerts</small></Link>
+                <Link href="/leaderboard" role="menuitem"><strong>Leaderboard</strong><small>Compare market activity</small></Link>
+              </div>
+            </div>
+            <div className="command-nav-group">
+              <Link href="/swap" className="command-nav-trigger">Trade <ChevronDown size={12} /></Link>
+              <div className="command-nav-dropdown" role="menu">
+                <Link href="/swap" role="menuitem"><strong>Swap desk</strong><small>Review routes before signing</small></Link>
+                <Link href="/activity" role="menuitem"><strong>Portfolio activity</strong><small>Track wallet transactions</small></Link>
+              </div>
+            </div>
+            <div className="command-nav-group">
+              <Link href="/automation" className="command-nav-trigger">Automate <ChevronDown size={12} /></Link>
+              <div className="command-nav-dropdown" role="menu">
+                <Link href="/automation" role="menuitem"><strong>Automation</strong><small>Rules and monitored triggers</small></Link>
+                <Link href="/agent" role="menuitem"><strong>AI analyst</strong><small>Read-only market research</small></Link>
+                <Link href="/autonomous" role="menuitem"><strong>Agent status</strong><small>Execution remains gated</small></Link>
+              </div>
+            </div>
+            <div className="command-nav-group">
+              <Link href="/vault" className="command-nav-trigger">Vault <ChevronDown size={12} /></Link>
+              <div className="command-nav-dropdown" role="menu">
+                <Link href="/vault" role="menuitem"><strong>Vault status</strong><small>Limits, custody, and audit gates</small></Link>
+                <Link href="/safety" role="menuitem"><strong>Safety rules</strong><small>Risk controls and permissions</small></Link>
+              </div>
+            </div>
+            <div className="command-nav-group">
+              <Link href="/dashboard" className="command-nav-trigger">Console <ChevronDown size={12} /></Link>
+              <div className="command-nav-dropdown" role="menu">
+                <Link href="/dashboard" role="menuitem"><strong>Overview</strong><small>Account and market snapshot</small></Link>
+                <Link href="/profile" role="menuitem"><strong>Profile</strong><small>Wallet and account identity</small></Link>
+                <Link href="/settings" role="menuitem"><strong>Settings</strong><small>Preferences and controls</small></Link>
+              </div>
+            </div>
+            <div className="command-nav-group">
+              <Link href="/docs" className="command-nav-trigger">Docs <ChevronDown size={12} /></Link>
+              <div className="command-nav-dropdown" role="menu">
+                <Link href="/docs" role="menuitem"><strong>Documentation</strong><small>How WELP UP works</small></Link>
+                <Link href="/whitepaper" role="menuitem"><strong>Whitepaper</strong><small>Architecture and policy</small></Link>
+                <Link href="/launch-studio" role="menuitem"><strong>Launch Studio</strong><small>Token launch workflow</small></Link>
+              </div>
+            </div>
+            <div className="command-nav-group command-nav-launch">
+              <Link href="/launch-studio" className="command-nav-trigger">Launch Studio</Link>
+            </div>
           </nav>
           <div className="command-header-actions">
             <span className="command-header-network"><i /> SOLANA MAINNET</span>

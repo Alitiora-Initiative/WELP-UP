@@ -3260,7 +3260,16 @@ html, body { background: #080908 !important; color: #f0f3ec !important; }
   }
 }
 
-.command-top-nav { display: flex; align-items: center; justify-content: center; gap: 4px; margin-inline: auto; }
-.command-top-nav a { display: inline-flex; align-items: center; min-height: 32px; padding: 0 10px; border: 1px solid transparent; border-radius: 6px; color: #8c9a8e; font: 10px var(--mono); white-space: nowrap; }
-.command-top-nav a:hover, .command-top-nav a:focus-visible { border-color: #385237; background: #111a12; color: #c6fb88; outline: none; }
+.command-top-nav { display: flex; align-items: center; justify-content: center; gap: 3px; margin-inline: auto; }
+.command-nav-group { position: relative; }
+.command-nav-trigger { display: inline-flex; align-items: center; gap: 5px; min-height: 34px; padding: 0 10px; border: 1px solid transparent; border-radius: 6px; color: #8c9a8e; font: 10px var(--mono); white-space: nowrap; }
+.command-nav-trigger:hover, .command-nav-trigger:focus-visible, .command-nav-group:focus-within .command-nav-trigger { border-color: #385237; background: #111a12; color: #c6fb88; outline: none; }
+.command-nav-dropdown { position: absolute; top: calc(100% + 9px); left: 50%; z-index: 50; display: grid; width: 258px; gap: 3px; padding: 8px; border: 1px solid #334834; border-radius: 12px; background: #0b100d; box-shadow: 0 22px 55px #000b, inset 0 1px 0 #ffffff08; opacity: 0; pointer-events: none; transform: translate(-50%, -5px); transition: opacity .14s ease, transform .14s ease; }
+.command-nav-group:hover .command-nav-dropdown, .command-nav-group:focus-within .command-nav-dropdown { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+.command-nav-dropdown a { display: grid; gap: 4px; min-height: 52px; padding: 9px 10px; border-radius: 8px; color: #cbd9c9; }
+.command-nav-dropdown a:hover, .command-nav-dropdown a:focus-visible { background: #172318; outline: none; }
+.command-nav-dropdown strong { color: #edf6eb; font: 700 11px var(--mono); }
+.command-nav-dropdown small { color: #80927f; font: 9px/1.35 var(--mono); }
+.command-nav-launch .command-nav-trigger { color: #b9f36d; }
+@media (max-width: 1100px) { .command-nav-trigger { padding-inline: 6px; } .command-nav-launch { display: none; } }
 @media (max-width: 940px) { .command-top-nav { display: none; } }
