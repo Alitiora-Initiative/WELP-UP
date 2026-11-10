@@ -1494,3 +1494,24 @@ h2 { margin: 0; font: 600 17px var(--display); letter-spacing: -.02em; }
 .app-shell .market-pagination button,
 .app-shell .history-pagination button { border-radius: 999px; }
 .app-shell button:not(.text-action):not(.sort-heading):not(.watch-button):not(.mobile-nav-toggle):not(.leaderboard-modal-close):not(.icon-button) { border-radius: 999px; }
+
+/* Analyst page: readable prompt stack and structured output. */
+.analyst-prompt-list { display: grid; gap: 9px; margin-top: 16px; }
+.analyst-prompt-button { display: flex; align-items: flex-start; gap: 12px; width: 100%; min-height: 52px; padding: 13px 15px; border: 1px solid #2d3d30; border-radius: 9px; background: #101711; color: #d8e7d4; text-align: left; font: 600 12px/1.45 var(--mono); transition: border-color .16s ease, background .16s ease, transform .16s ease; }
+.analyst-prompt-button:hover:not(:disabled), .analyst-prompt-button:focus-visible { border-color: #8fca65; background: #172318; outline: none; transform: translateY(-1px); }
+.analyst-prompt-button:disabled { cursor: not-allowed; opacity: .5; }
+.analyst-prompt-index { flex: 0 0 auto; color: #b9f36d; font-size: 10px; letter-spacing: .08em; }
+.analyst-submit-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 18px; padding-top: 16px; border-top: 1px solid #263428; }
+.analyst-counter { color: #8a9b88; font: 10px/1.5 var(--mono); }
+.analyst-counter i { display: inline-block; width: 4px; height: 4px; margin: 0 7px 2px; border-radius: 50%; background: #8fca65; }
+.analyst-submit { min-width: 180px; justify-content: center; }
+.analyst-answer { max-width: 78ch; color: #dbe8d9; font: 14px/1.85 var(--mono); }
+.analyst-answer-paragraph { margin: 0 0 16px; }
+.analyst-answer-item { margin: 0 0 11px 22px; padding-left: 7px; }
+.analyst-answer-item::marker { color: #b9f36d; }
+.analyst-disclaimer { margin-top: 22px; border-top: 1px solid #263428; padding-top: 16px; color: #849682; font: 10px/1.6 var(--mono); }
+@media (max-width: 620px) {
+  .analyst-submit-row { align-items: stretch; flex-direction: column; }
+  .analyst-submit { width: 100%; }
+  .analyst-counter { order: 2; }
+}

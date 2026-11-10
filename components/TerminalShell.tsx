@@ -289,6 +289,14 @@ export function TerminalShell({ children }: { children: ReactNode }) {
               <span>WELP UP</span><i>/</i><strong>{pageTitle}</strong>
             </div>
           </div>
+          <nav className="command-top-nav" aria-label="Primary navigation">
+            <Link href="/markets">Markets</Link>
+            <Link href="/swap">Trade</Link>
+            <Link href="/automation">Automate</Link>
+            <Link href="/vault">Vault</Link>
+            <Link href="/portfolio">Console</Link>
+            <Link href="/docs">Docs</Link>
+          </nav>
           <div className="command-header-actions">
             <span className="command-header-network"><i /> SOLANA MAINNET</span>
             <Link href="/swap" className="command-trade-link">Open trade desk <ArrowUpRight size={14} /></Link>

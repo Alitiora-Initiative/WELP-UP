@@ -20,6 +20,17 @@ type Analysis = {
   mode: string;
 };
 
+function renderAnswer(answer: string) {
+  return answer.split(/\n+/).filter(Boolean).map((line, index) => {
+    const bullet = line.match(/^\s*(?:[-*•]|\d+[.)])\s+(.*)$/);
+    return bullet ? (
+      <li key={`${index}-${line}`} className="analyst-answer-item">{bullet[1]}</li>
+    ) : (
+      <p key={`${index}-${line}`} className="analyst-answer-paragraph">{line}</p>
+    );
+  });
+}
+
 const STARTERS = [
   'Summarize the current market snapshot and its main risks.',
   'Which assets have the strongest liquidity and organic activity, and what are their blockers?',
@@ -98,7 +109,7 @@ export function MarketAnalyst() {
         {!status?.configured ? <div className="notice-block" style={{ marginTop: 18 }}>
           <LockKeyhole size={18} />
           <div><strong>Connect a server-side model before using the analyst.</strong>
-            <p>Add both <code>OPENAI_API_KEY</code> and <code>WELP_AI_MODEL</code> to the Vercel project’s server environment, scoped to Preview first. Choose a model enabled for your API project. Never use a <code>NEXT_PUBLIC_</code> prefix or place the key in browser code. Before enabling this publicly in Production, add durable rate limiting and provider spend controls. Until configured, no AI answer is generated.</p>
+            <p>The analyst uses the Vercel AI Gateway in the server runtime. Confirm Gateway authorization and set <code>WELP_AI_MODEL</code> only when you need a different approved model. No provider key belongs in browser code. Before enabling this publicly in Production, add durable rate limiting and provider spend controls.</p>
           </div>
         </div> : null}
       </div>
@@ -110,12 +121,14 @@ export function MarketAnalyst() {
         <label className="field-label">YOUR QUESTION
           <textarea value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={500} rows={4} placeholder="Ask about liquidity, market structure, signal blockers or data quality…" disabled={!status?.configured || loading} />
         </label>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {STARTERS.map((starter) => <button type="button" key={starter} className="outline-button small" onClick={() => setQuestion(starter)} disabled={!status?.configured || loading}>{starter}</button>)}
+        <div className="analyst-prompt-list" aria-label="Suggested research questions">
+          {STARTERS.map((starter, index) => <button type="button" key={starter} className="analyst-prompt-button" onClick={() => setQuestion(starter)} disabled={!status?.configured || loading}>
+            <span className="analyst-prompt-index">0{index + 1}</span><span>{starter}</span>
+          </button>)}
         </div>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <span className="text-xs text-muted-foreground">{question.length}/500 · Maximum 4 requests per minute per server instance</span>
-          <button type="submit" className="primary-action" disabled={!status?.configured || loading || !question.trim()}>
+        <div className="analyst-submit-row">
+          <span className="analyst-counter">{question.length}/500 <i /> Maximum 4 requests per minute per server instance</span>
+          <button type="submit" className="primary-action analyst-submit" disabled={!status?.configured || loading || !question.trim()}>
             {loading ? <LoaderCircle size={14} className="spin" /> : <Sparkles size={14} />} {loading ? 'Analyzing live snapshot…' : 'Analyze market'}
           </button>
         </div>
@@ -131,8 +144,8 @@ export function MarketAnalyst() {
           <span>Assets analyzed · {analysis.assetsAnalyzed}</span>
           <span>Feed · {new Date(analysis.marketUpdatedAt).toLocaleString()}</span>
         </div>
-        <div className="whitespace-pre-wrap text-sm leading-7 text-foreground">{analysis.answer}</div>
-        <p className="mt-5 border-t border-border pt-4 text-xs text-muted-foreground">AI-generated research can be wrong. Verify each figure against the live feed. This response is not a trade instruction and cannot execute a transaction.</p>
+        <div className="analyst-answer" aria-live="polite">{renderAnswer(analysis.answer)}</div>
+        <p className="analyst-disclaimer">AI-generated research can be wrong. Verify each figure against the live feed. This response is not a trade instruction and cannot execute a transaction.</p>
       </div>
     </section> : null}
     <p className="flex items-center gap-2 text-xs text-muted-foreground"><LockKeyhole size={13} /> The model receives only a compact public market snapshot and your question. It has no wallet, signing, transaction, or bot-execution tools.</p>

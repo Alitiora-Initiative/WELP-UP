@@ -3259,3 +3259,8 @@ html, body { background: #080908 !important; color: #f0f3ec !important; }
     transition-duration: .01ms !important;
   }
 }
+
+.command-top-nav { display: flex; align-items: center; justify-content: center; gap: 4px; margin-inline: auto; }
+.command-top-nav a { display: inline-flex; align-items: center; min-height: 32px; padding: 0 10px; border: 1px solid transparent; border-radius: 6px; color: #8c9a8e; font: 10px var(--mono); white-space: nowrap; }
+.command-top-nav a:hover, .command-top-nav a:focus-visible { border-color: #385237; background: #111a12; color: #c6fb88; outline: none; }
+@media (max-width: 940px) { .command-top-nav { display: none; } }
