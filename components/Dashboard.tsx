@@ -280,7 +280,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
           outputMint: direction === 'buy' ? activeToken.mint : SOL_MINT,
           amount: rawAmount,
           taker: walletAddress,
-          slippageBps: 150,
+          slippageBps: 50,
         }),
       });
       const data = await response.json();
@@ -307,16 +307,14 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
       setTradeError('Wallet changed after the quote. Request a new quote for the connected wallet.');
       return;
     }
-    if (direction === 'buy') {
-      const impact = order.priceImpact === undefined || order.priceImpact === null ? Number.NaN : Number(order.priceImpact);
-      if (!Number.isFinite(impact)) {
-        setTradeError('Jupiter did not return verifiable price impact, so this order cannot be signed.');
-        return;
-      }
-      if (impact > 2.5) {
-        setTradeError('This quote is above WELP’s 2.5% price-impact limit. Request a smaller quote or skip this token.');
-        return;
-      }
+    const impact = order.priceImpact === undefined || order.priceImpact === null ? Number.NaN : Number(order.priceImpact);
+    if (!Number.isFinite(impact)) {
+      setTradeError('Jupiter did not return verifiable price impact, so this order cannot be signed.');
+      return;
+    }
+    if (impact > 2.5) {
+      setTradeError('This quote is above WELP’s 2.5% price-impact limit. Request a smaller quote or skip this token.');
+      return;
     }
     setPending('sign');
     try {
@@ -458,7 +456,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
                   <div className="quote-line"><span>You pay</span><strong>{formatUnits(order.inAmount, amountInDecimals)} {formToken}</strong></div>
                   <div className="quote-line"><span>Estimated receive</span><strong>{formatUnits(order.outAmount, amountOutDecimals)} {receiveToken}</strong></div>
                   <div className="quote-line"><span>Price impact</span><strong>{orderImpact !== null && Number.isFinite(orderImpact) ? `${orderImpact.toFixed(3)}%` : 'Unavailable'}</strong></div>
-                  <div className="quote-line"><span>Max slippage</span><strong>{((order.slippageBps ?? 150) / 100).toFixed(2)}%</strong></div>
+                  <div className="quote-line"><span>Max slippage</span><strong>{((order.slippageBps ?? 50) / 100).toFixed(2)}%</strong></div>
                   {typeof order.feeBps === 'number' ? <div className="quote-line"><span>Jupiter route fee</span><strong>{(order.feeBps / 100).toFixed(2)}%</strong></div> : null}
                   <p className="quote-note">Your wallet will show the exact transaction. Only approve if the details match this quote.</p>
                 </div>

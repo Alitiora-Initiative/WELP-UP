@@ -208,7 +208,7 @@ export async function loadSignals(owner: string): Promise<Signal[]> {
     if (index > 0) await new Promise((resolve) => setTimeout(resolve, minimumGapMs));
     const pool = pools[index];
     const candles = candleSets[index];
-    const quote = await requestOrder({ inputMint: SOL_MINT, outputMint: pool.mint, amount: '1000000', taker: owner, slippageBps: 150 }).catch(() => null);
+    const quote = await requestOrder({ inputMint: SOL_MINT, outputMint: pool.mint, amount: '1000000', taker: owner, slippageBps: 50 }).catch(() => null);
     const quoteReady = quote !== null && typeof quote.transaction === 'string' && typeof quote.requestId === 'string';
     const result = analyze(pool, candles, quoteReady ? quote : null);
     const eligible = result.ready && quoteReady && result.score >= 80 && result.score <= 98;
