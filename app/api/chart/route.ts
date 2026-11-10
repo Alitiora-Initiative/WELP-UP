@@ -20,7 +20,7 @@ const INTERVALS: Record<string, { timeframe: ChartTimeframe; aggregate: ChartAgg
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const mint = searchParams.get('mint') ?? '';
-  const providerName = searchParams.get('provider') ?? 'geckoterminal';
+  const providerName = searchParams.get('provider') ?? 'dexscreener';
   const interval = searchParams.get('interval') ?? '5m';
   if (!mint) return NextResponse.json({ error: 'mint parameter required' }, { status: 400 });
 
