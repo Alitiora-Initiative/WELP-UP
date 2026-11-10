@@ -77,7 +77,7 @@ export function ChartPanel({ mint, name, symbol }: Props) {
       setActiveIndex(data.candles.length - 1);
     } catch (caught) {
       if (controller.signal.aborted) return;
-      setChartData(null);
+      if (!quiet) setChartData(null);
       setFetchError(caught instanceof Error ? caught.message : 'Chart data unavailable.');
     } finally {
       if (requestRef.current === controller) {
@@ -180,7 +180,7 @@ export function ChartPanel({ mint, name, symbol }: Props) {
       ) : null}
 
       {fetchError ? (
-        <div className="chart-live-error" role="alert"><AlertTriangle size={16} /><span>{fetchError}</span></div>
+        <div className="chart-live-error" role="status" aria-live="polite"><AlertTriangle size={16} /><span>{fetchError}</span></div>
       ) : null}
 
       <p className="chart-live-footnote">Self-hosted WELP chart surface. The snapshot is read-only and never authorizes a trade.</p>

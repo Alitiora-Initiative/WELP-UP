@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, LogOut, Wallet, X } from 'lucide-react';
 import { useConnect, useConnectedWallet, useDisconnect, useWallets } from '@solana/kit-plugin-wallet/react';
 import { client } from '@/components/Providers';
@@ -13,11 +13,28 @@ export function WalletConnectionControl() {
   const connect = useConnect(client);
   const disconnect = useDisconnect(client);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
   const connectError = connect.error instanceof Error
     ? connect.error.message
     : disconnect.error instanceof Error
       ? disconnect.error.message
       : '';
+
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const dismiss = (event: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) setPickerOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setPickerOpen(false);
+    };
+    document.addEventListener('mousedown', dismiss);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', dismiss);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [pickerOpen]);
 
   function connectWallet(wallet: (typeof wallets)[number]) {
     setPickerOpen(false);
@@ -45,13 +62,13 @@ export function WalletConnectionControl() {
             <LogOut size={13} />
           </button>
         </div>
-        {connectError ? <span className="wallet-connect-error" role="alert">{connectError}</span> : null}
+      {connectError ? <span className="wallet-connect-error" role="alert" aria-live="polite">{connectError}</span> : null}
       </div>
     );
   }
 
   return (
-    <div className="wallet-connect-control">
+    <div className="wallet-connect-control" ref={pickerRef}>
       <div className="connect-wrap">
         <button
           className="connect-button"
