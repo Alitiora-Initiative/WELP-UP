@@ -1,14 +1,10 @@
 import Link from 'next/link';
-import { AppSidebar } from '@/components/AppSidebar';
 import { Trophy, ShieldCheck, Clock } from 'lucide-react';
 
 export function LeaderboardPage() {
   return (
-    <main className="app-shell">
-      <AppSidebar active="leaderboard" status="Verified strategy data not available" />
-      <section className="workspace" id="top">
-        <header className="topbar"><div className="breadcrumb"><span>WORKSPACE</span><span className="crumb-slash">/</span><strong>Leaderboard</strong></div></header>
-        <div className="page-content">
+    <main className="terminal-page feature-page leaderboard-page">
+      <div className="leaderboard-content">
           <section className="welcome-row"><div>
             <p className="eyebrow"><Trophy size={14} /> VERIFIED PERFORMANCE</p>
             <h1>Rankings start <em>with proof.</em></h1>
@@ -25,8 +21,7 @@ export function LeaderboardPage() {
             </div>
             <div className="leaderboard-empty-actions"><Link href="/docs">Read documentation →</Link><Link href="/whitepaper">Read whitepaper →</Link></div>
           </section>
-        </div>
-      </section>
+      </div>
     </main>
   );
 }

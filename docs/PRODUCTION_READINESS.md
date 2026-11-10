@@ -12,11 +12,12 @@ This checklist distinguishes working public-data and wallet-approved features fr
 - [x] Solana RPC transaction-signature history for a wallet address.
 - [x] Browser-local activity snapshots and display preferences.
 - [ ] Server-side account identity and durable per-user data.
-- [ ] Verified end-to-end transaction reconciliation for every trade and vault event.
+ - [x] Added finalized-signature verification and a transaction-status reconciliation endpoint for Jupiter executions.
+ - [ ] Durable idempotent transaction ledger and end-to-end reconciliation for every trade and vault event.
 
 ## Current Anchor program source status (executor-policy-foundation)
 
-- [x] Added a server-side read-only market analyst route. It consumes the live Jupiter snapshot and requires a server-only OpenAI API key; it has no wallet, transaction, or bot tools.
+- [x] Added a server-side read-only market analyst route using the AI SDK and Vercel AI Gateway; it consumes the live Jupiter snapshot and has no wallet, transaction, or bot tools.
 - [x] Added bounded snapshot sanitization and response parsing tests for the analyst.
 - [x] Implemented owner-signed SOL deposits through the System Program CPI, proportional share minting, and overflow-safe accounting in the Anchor source.
 - [x] Implemented owner-only share redemption, including rent-exemption checks; owner pause/resume remains available.
@@ -30,7 +31,7 @@ This checklist distinguishes working public-data and wallet-approved features fr
 - [ ] Run all GitHub CI checks for the latest branch commit and resolve any failures.
 - [ ] Run Anchor 0.30.1 SBF build, IDL validation, local-validator transaction tests for deposit/withdraw/policy configure/revoke, and independent security audit. These remain outstanding.
 - [ ] Add a durable shared rate limiter and provider spend controls before enabling the public AI endpoint broadly.
-- [ ] Configure `OPENAI_API_KEY` and `WELP_AI_MODEL` in Vercel Preview and test a real response. No provider credential was available during implementation.
+- [ ] Confirm Vercel AI Gateway authorization and test a real analyst response in Preview; local tests cannot establish provider availability.
 
 See [AI_AGENT_RUNTIME.md](AI_AGENT_RUNTIME.md) and [VAULT_PROGRAM_SECURITY_REVIEW.md](VAULT_PROGRAM_SECURITY_REVIEW.md). These checkboxes describe code added in this branch, not production deployment or a release approval.
 
@@ -45,7 +46,9 @@ See [AI_AGENT_RUNTIME.md](AI_AGENT_RUNTIME.md) and [VAULT_PROGRAM_SECURITY_REVIE
 - [ ] Wire executor policy and each user-slot strategy/risk snapshot into an audited swap instruction so per-trade, daily spend, slippage, policy version, nonce, and available-balance limits are enforced atomically. UI limits alone are not security controls.
 - [ ] Verify owner pause, implemented executor-policy revocation, and share-withdrawal recovery under local-validator failure conditions.
 - [ ] Upgrade authority policy selected, documented, and secured (prefer a reviewed multisig or immutable deployment after upgrade window).
-- [ ] Monitoring, incident response, pause authority, recovery runbook, and independent RPC/indexer redundancy.
+ - [x] Added server-side execution policy rails for max slippage, per-swap SOL allocation, daily drawdown, allocation caps, RPC readiness, signer readiness, and autonomous-execution gates.
+ - [x] Added `/api/monitoring` with RPC health, fee-route alerts, execution blockers, and heartbeat metadata.
+ - [ ] Jito/private-bundle routing, dynamic priority-fee calculation, incident response, pause authority, recovery runbook, and independent RPC/indexer redundancy.
 - [ ] Mainnet integration tests and independent transaction-level verification.
 - [ ] Legal, consumer-protection, tax, sanctions, and operating-jurisdiction review before accepting public deposits.
 

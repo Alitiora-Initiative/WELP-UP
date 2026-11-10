@@ -4,7 +4,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowDownWideNarrow, ArrowUpRight, ChevronLeft, ChevronRight, CircleHelp, Download, LoaderCircle, RefreshCw, Search, Star } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowDownWideNarrow, ArrowUpRight, ChevronLeft, ChevronRight, CircleHelp, LoaderCircle, RefreshCw, Search, Star } from 'lucide-react';
 import { ChartPanel } from '@/components/ChartPanel';
 
 type Asset = {
@@ -20,6 +21,7 @@ const short = (value: string) => value.slice(0, 5) + '…' + value.slice(-5);
 const EMPTY_ASSETS: Asset[] = [];
 
 export function MarketBoard() {
+  const router = useRouter();
   const [feed, setFeed] = useState<Feed | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -67,6 +69,8 @@ export function MarketBoard() {
     });
     return filteredRows.sort((a, b) => sort === 'liquidity' ? b.liquidityUsd - a.liquidityUsd : sort === 'volume' ? b.volume24hUsd - a.volume24hUsd : b.score - a.score);
   }, [assets, query, filter, sort]);
+  const selectedAssets = assets.filter((asset) => selected.includes(asset.mint));
+  const swapTarget = selectedAssets.find((asset) => asset.eligible) ?? null;
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const rows = filtered.slice((page - 1) * pageSize, page * pageSize);
 
@@ -76,12 +80,6 @@ export function MarketBoard() {
       try { localStorage.setItem('welp-watchlist', JSON.stringify(next)); } catch {}
       return next;
     });
-  }
-  function exportRows(items: Asset[], filename: string) {
-    const fields = ['symbol','name','mint','price_usd','change_24h_pct','liquidity_usd','volume_24h_usd','holders','organic_score','rule_score','state','verified','blockers','warnings'];
-    const lines = [fields.join(','), ...items.map((a) => [a.symbol,a.name,a.mint,a.priceUsd,a.priceChange24h,a.liquidityUsd,a.volume24hUsd,a.holders,a.organicScore,a.score,a.state,a.verified,a.blockers.join('; '),a.warnings.join('; ')].map((v) => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(','))];
-    const url = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' }));
-    const anchor = document.createElement('a'); anchor.href = url; anchor.download = filename; anchor.click(); URL.revokeObjectURL(url);
   }
   const updated = feed?.updatedAt ? new Date(feed.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
   const tabs: Array<{ key: Filter; value: number }> = [
@@ -105,14 +103,17 @@ export function MarketBoard() {
     </section>
 
     {error ? <div className="feed-error" role="alert"><strong>Market feed unavailable</strong><span>{error}</span><button className="text-action" onClick={() => void refresh()}>Try again</button></div> : null}
-    <div className="market-toolbar"><label className="market-search"><Search size={16} /><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Search symbol, name or mint" aria-label="Search symbol, name or mint" /></label><div className="market-sort"><span>Sorted by</span><select value={sort} onChange={(event) => { setSort(event.target.value as typeof sort); setPage(1); }} aria-label="Sort assets"><option value="score">Engine score</option><option value="liquidity">Liquidity</option><option value="volume">24h volume</option></select><button className="text-action" onClick={() => setRulesOpen((value) => !value)}><CircleHelp size={14} /> Why a row is blocked</button></div></div>
+    <div className="market-toolbar"><label className="market-search"><Search size={16} /><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Search symbol, name or mint" aria-label="Search symbol, name or mint" /></label><div className="market-sort"><span>Sort</span><div className="control-segment" role="group" aria-label="Sort assets">{([{ value: 'score', label: 'Score' }, { value: 'liquidity', label: 'Liquidity' }, { value: 'volume', label: '24h volume' }] as const).map((option) => <button key={option.value} type="button" className={sort === option.value ? 'is-selected' : ''} aria-pressed={sort === option.value} onClick={() => { setSort(option.value); setPage(1); }}>{option.label}</button>)}</div><button className="text-action" onClick={() => setRulesOpen((value) => !value)}><CircleHelp size={14} /> Why a row is blocked</button></div></div>
 
     {rulesOpen ? <div className="rules-explainer"><div><strong>Hard rules</strong><span>Active freeze authority · liquidity below $100k · 24h volume below $100k · top holders above 60%.</span></div><div><strong>Warnings</strong><span>Liquidity below $250k · 24h drawdown beyond −25% · concentrated holders · incomplete feed data.</span></div><button onClick={() => setRulesOpen(false)} aria-label="Close explanation">×</button></div> : null}
 
     <section className="market-board">
-      <div className="market-board-heading"><div><h2>market board</h2><span>{feed ? feed.total + ' assets' : '—'} · {pageSize} per page · {updated}</span></div><button className="outline-button" onClick={() => exportRows(filtered, 'welp-market-board.csv')} disabled={!filtered.length}><Download size={14} /> Export CSV</button></div>
+      <div className="market-board-heading"><div><h2>market board</h2><span>{feed ? feed.total + ' assets' : '—'} · {pageSize} per page · {updated}</span></div></div>
       <div className="market-tabs">{tabs.map((tab) => <button key={tab.key} className={filter === tab.key ? 'selected' : ''} onClick={() => { setFilter(tab.key); setPage(1); }}><span>{tab.key === 'Eligible' ? <i className="tab-dot green" /> : tab.key === 'Blocked' ? <i className="tab-dot red" /> : tab.key === 'Score 90+' ? <i className="tab-dot blue" /> : tab.key === 'Verified' ? <i className="tab-dot violet" /> : null}{tab.key}</span><b>{tab.value}</b></button>)}</div>
-      <div className="selection-bar"><span>{selected.length} selected</span><button className="text-action" disabled={!selected.length} onClick={() => setSelected([])}>Clear</button><button className="text-action" disabled={!selected.length} onClick={() => exportRows(assets.filter((asset) => selected.includes(asset.mint)), 'welp-selected-assets.csv')}>Export selected <ArrowUpRight size={13} /></button></div>
+      <div className="selection-bar"><span>{selected.length} selected</span><div className="selection-actions">
+        <button className="outline-button small" disabled={!swapTarget} title={swapTarget ? 'Open the swap desk with a live quote for the selected token.' : 'Select an eligible token first.'} onClick={() => { if (swapTarget) router.push('/swap?mint=' + encodeURIComponent(swapTarget.mint)); }}>Open swap desk</button>
+        <button className="text-action" disabled={!selected.length} onClick={() => setSelected([])}>Clear</button>
+      </div></div>
       <div className="market-table-wrap"><table className="market-table"><thead><tr>
         <th><input aria-label="Select all rows on this page" type="checkbox" checked={rows.length > 0 && rows.every((row) => selected.includes(row.mint))} onChange={(event) => setSelected((current) => event.target.checked ? Array.from(new Set([...current, ...rows.map((row) => row.mint)])) : current.filter((id) => !rows.some((row) => row.mint === id)))} /></th>
         <th>ASSET</th><th>PRICE</th><th>24H</th><th>LIQUIDITY</th><th>24H VOL</th><th>ORGANIC</th><th><button className="sort-heading" onClick={() => setSort('score')}>SCORE <ArrowDownWideNarrow size={12} /></button></th><th>STATE</th><th>CHART</th><th />
@@ -124,6 +125,7 @@ export function MarketBoard() {
           <td className="numeric">{compact(asset.liquidityUsd)}</td><td className="numeric">{compact(asset.volume24hUsd)}</td><td className="numeric">{asset.organicScore}</td><td className="score-cell">{asset.score}</td>
           <td><span className={'asset-state state-' + asset.state.toLowerCase()}>{asset.state}</span><small className="state-reason">{asset.blockers[0] || asset.warnings[0] || ''}</small></td>
           <td><button type="button" className="market-chart-button" aria-pressed={chartMint === asset.mint} onClick={() => setChartMint(asset.mint)}>Chart</button></td>
+          <td><Link className="outline-button" href={'/swap?mint=' + encodeURIComponent(asset.mint)}>{asset.eligible ? 'Buy' : 'Review'}</Link></td>
           <td><button className={'watch-button ' + (watchlist.includes(asset.mint) ? 'is-watched' : '')} aria-label={watchlist.includes(asset.mint) ? 'Remove from watchlist' : 'Add to watchlist'} onClick={() => toggleWatch(asset.mint)}><Star size={15} fill={watchlist.includes(asset.mint) ? 'currentColor' : 'none'} /></button></td>
         </tr>)}
         {!rows.length ? <tr><td colSpan={11} className="empty-table">{loading ? <><LoaderCircle className="spin" size={18} /> Loading Jupiter assets…</> : error ? 'Waiting for the feed to recover.' : 'No assets match this search or filter.'}</td></tr> : null}
@@ -131,6 +133,6 @@ export function MarketBoard() {
       <div className="market-pagination"><span>Showing {filtered.length ? (page - 1) * pageSize + 1 : 0}–{Math.min(page * pageSize, filtered.length)} of {filtered.length}</span><div><button aria-label="Previous page" disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}><ChevronLeft size={15} /></button><span>Page {page} of {pages}</span><button aria-label="Next page" disabled={page >= pages} onClick={() => setPage((value) => Math.min(pages, value + 1))}><ChevronRight size={15} /></button></div></div>
     </section>
     {chartAsset ? <ChartPanel mint={chartAsset.mint} name={chartAsset.name} symbol={chartAsset.symbol} /> : null}
-    <div className="market-disclosures"><section><span>FEED CONTRACT</span><p>Prices, liquidity and volume come from Jupiter Token API v2. This page refreshes every 60 seconds and when the tab becomes visible. Venue fees, market hours and outages belong to the venue.</p></section><section><span>WHAT THE SCORE MEANS</span><p>The score is a weighted read of live fields — organic activity, depth, turnover, holder spread, buy pressure and short-term calm — mapped into an 80–98 band. It is not a probability of profit.</p></section><section><span>BEFORE YOU ROUTE AN ORDER</span><p>A qualified row is still a volatile asset. Review the route and price impact on the swap desk, then sign one transaction at a time in your wallet.</p><Link href="/swap">Open trade desk <ArrowUpRight size={13} /></Link></section></div>
+    <div className="market-disclosures"><section><span>FEED CONTRACT</span><p>Prices, liquidity and volume come from Jupiter Lite Token API v2. This page refreshes every 60 seconds and when the tab becomes visible. Venue fees, market hours and outages belong to the venue.</p></section><section><span>WHAT THE SCORE MEANS</span><p>The score is a weighted read of live fields — organic activity, depth, turnover, holder spread, buy pressure and short-term calm — mapped into an 80–98 band. It is not a probability of profit.</p></section><section><span>BEFORE YOU ROUTE AN ORDER</span><p>A qualified row is still a volatile asset. Review the route and price impact on the swap desk, then sign one transaction at a time in your wallet.</p><Link href="/swap">Open trade desk <ArrowUpRight size={13} /></Link></section></div>
   </main>;
 }

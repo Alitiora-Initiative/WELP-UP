@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+import { WELP_FEE_POLICY } from '@/lib/server/fee-policy';
+import { WELP_LAUNCHPAD_PROGRAM_ID } from '@/lib/launch-program';
+import { EXECUTION_POLICY, executionReadiness } from '@/lib/server/execution-policy';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,7 +29,7 @@ async function checkJupiter() {
   if (!response.ok) throw new Error('Jupiter returned ' + response.status);
   const data = await response.json();
   if (!Array.isArray(data) || !data.length) throw new Error('Jupiter returned no token data');
-  return { name: 'Jupiter Token API v2', state: 'Operational', detail: 'Live token feed reachable' };
+  return { name: 'Jupiter Lite Token API v2', state: 'Operational', detail: 'Live token feed reachable' };
 }
 async function checkVault() {
   const programId = process.env.WELP_VAULT_PROGRAM_ID || '';
@@ -49,14 +52,58 @@ async function checkVault() {
   }
 }
 
+/** Live mainnet deployment status of the WELP custom launchpad program. */
+async function checkCustomLaunchProgram() {
+  const programId = WELP_LAUNCHPAD_PROGRAM_ID;
+  try {
+    const response = await fetch(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getAccountInfo', params: [programId, { encoding: 'base64', commitment: 'confirmed' }] }),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(10_000),
+    });
+    const data = await response.json();
+    const value = data?.result?.value;
+    const executable = value?.executable === true;
+    const allowedLoader = ['BPFLoaderUpgradeab1e11111111111111111111111', 'BPFLoader2111111111111111111111111111111111'].includes(value?.owner ?? '');
+    const enabled = executable && allowedLoader && process.env.WELP_LAUNCHPAD_ENABLED === 'true';
+    return {
+      name: 'Custom launch program',
+      state: enabled ? 'Enabled by operator gate' : executable ? 'Executable; disabled' : 'Undeployed',
+      detail: enabled
+        ? 'Executable program and explicit operator gate detected. This is not an independent audit.'
+        : 'Custom launch is disabled until an executable program and explicit operator gate are verified.',
+    };
+  } catch {
+    return { name: 'Custom launch program', state: 'Unable to verify', detail: 'Custom launch program status could not be confirmed.' };
+  }
+}
+
 export async function GET() {
   const checks = await Promise.all([
     checkSolana().catch((error) => ({ name: 'Solana mainnet RPC', state: 'Unavailable', detail: error instanceof Error ? error.message : 'RPC check failed' })),
-    checkJupiter().catch((error) => ({ name: 'Jupiter Token API v2', state: 'Unavailable', detail: error instanceof Error ? error.message : 'Feed check failed' })),
+    checkJupiter().catch((error) => ({ name: 'Jupiter Lite Token API v2', state: 'Unavailable', detail: error instanceof Error ? error.message : 'Feed check failed' })),
     checkVault(),
+    checkCustomLaunchProgram(),
+    Promise.resolve({
+      name: 'Execution safety rails',
+      state: executionReadiness().ready ? 'Ready for operator review' : 'Blocked by safety prerequisites',
+      detail: executionReadiness().blockers.join(' ') || `Private RPC configured; max slippage ${(EXECUTION_POLICY.maxSlippageBps / 100).toFixed(2)}%; max daily drawdown ${(EXECUTION_POLICY.maxDailyDrawdownBps / 100).toFixed(2)}%.`,
+    }),
     Promise.resolve({ name: 'Autonomous agents', state: 'Not enabled', detail: 'No production executor or unattended trading runtime is configured.' }),
-    Promise.resolve({ name: 'Fee routing', state: 'Disabled', detail: 'No active collection flow or configured platform treasury.' }),
+    Promise.resolve({
+      name: 'Fee routing',
+      state: WELP_FEE_POLICY.collectionEnabled ? 'WELP referral fee configured' : 'No WELP referral fee',
+      detail: WELP_FEE_POLICY.collectionEnabled
+        ? `A Jupiter referral fee is configured at ${(WELP_FEE_POLICY.referralFeeBps / 100).toFixed(2)}%; this is not WELP-program fee enforcement.`
+        : WELP_FEE_POLICY.collectionDisabledReason,
+    }),
   ]);
-  const overall = checks.some((item) => item.state === 'Unavailable') ? 'Degraded' : 'Operational · limited features';
+  const overall = checks.some((item) => item.state === 'Unavailable')
+    ? 'Degraded · some checks unavailable'
+    : checks.some((item) => item.state.includes('Blocked') || item.state.includes('Not configured') || item.state.includes('Undeployed'))
+      ? 'Operational · execution blocked by safety gates'
+      : 'Operational · limited features';
   return NextResponse.json({ updatedAt: new Date().toISOString(), overall, checks }, { headers: { 'Cache-Control': 'no-store' } });
 }

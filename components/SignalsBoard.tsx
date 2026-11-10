@@ -8,7 +8,7 @@ type Asset = {
   mint: string; name: string; symbol: string; priceUsd: number; priceChange24h: number;
   liquidityUsd: number; volume24hUsd: number; holders: number; organicScore: number;
   score: number; verified: boolean; state: 'Eligible' | 'Watch' | 'Blocked'; eligible: boolean;
-  blockers: string[]; warnings: string[];
+  blockers: string[]; warnings: string[]; confidenceBreakdown: string[];
 };
 type Feed = { assets: Asset[]; updatedAt: string; eligible: number; blocked: number; error?: string };
 const cash = (value: number) => value >= 1e6 ? '$' + (value / 1e6).toFixed(1) + 'M' : value >= 1e3 ? '$' + (value / 1e3).toFixed(1) + 'K' : '$' + value.toFixed(2);
@@ -41,10 +41,11 @@ export function SignalsBoard() {
       <div className="signal-card-top"><div><span className="signal-symbol">{asset.symbol}</span>{asset.verified ? <span className="verified-mark">V</span> : null}<small>{asset.name}</small></div><div className="signal-score"><small>SCORE</small><strong>{asset.score}</strong></div></div>
       <div className="signal-metrics"><div><small>PRICE</small><strong>{quote(asset.priceUsd)}</strong></div><div><small>24H</small><strong className={asset.priceChange24h >= 0 ? 'positive' : 'negative'}>{asset.priceChange24h >= 0 ? '+' : ''}{asset.priceChange24h.toFixed(2)}%</strong></div><div><small>LIQUIDITY</small><strong>{cash(asset.liquidityUsd)}</strong></div><div><small>24H VOLUME</small><strong>{cash(asset.volume24hUsd)}</strong></div><div><small>HOLDERS</small><strong>{asset.holders.toLocaleString()}</strong></div><div><small>ORGANIC</small><strong>{asset.organicScore}</strong></div></div>
       <div className={'signal-result ' + (asset.eligible ? 'pass' : 'blocked')}>{asset.eligible ? <ShieldCheck size={15} /> : <ShieldAlert size={15} />}<span>{asset.blockers[0] || asset.warnings[0] || 'Passed every hard rule with no open warnings'}</span></div>
+      <details className="signal-breakdown"><summary>Why this score?</summary><ul>{asset.confidenceBreakdown.map((reason) => <li key={reason}>{reason}</li>)}</ul></details>
       <Link className="signal-route" href={'/swap?mint=' + encodeURIComponent(asset.mint)}>Route <ArrowUpRight size={13} /></Link>
     </article>)}</div>
     {!shown.length && !loading ? <div className="empty-panel">No assets match this filter.</div> : null}
     {loading && !assets.length ? <div className="empty-panel"><LoaderCircle className="spin" /> Loading live signal snapshot…</div> : null}
-    <section className="market-disclosures"><div><span>HOW THE SCORE IS BUILT</span><p>Organic activity 32% · liquidity depth 20% · turnover 15% · holder spread 13% · buy pressure 12% · short-term calm 8%. The score ranks feed quality; it does not predict a return.</p></div><div><span>HARD RULES</span><p>Freeze authority active, liquidity below $100k, 24-hour volume below $100k, or top holders above 60% blocks a row. Sharp drawdown and thin depth produce warnings.</p></div><div><span>SCOPE</span><p>The engine reads public market data only. It does not know your wallet, sign transactions or place orders.</p></div></section>
+    <section className="market-disclosures"><div><span>HOW THE SCORE IS BUILT</span><p>Organic activity 32% · liquidity depth 20% · turnover 15% · holder spread 13% · buy pressure 12% · short-term calm 8%. The score ranks feed quality; it does not predict a return.</p></div><div><span>HARD RULES</span><p>Freeze authority active, liquidity below $100k, 24-hour volume below $100k, top holders above 60%, developer allocation above 20%, unlocked liquidity, or a reported honeypot blocks a row. Missing audit fields stay visible as warnings.</p></div><div><span>SCOPE</span><p>The engine reads public market data only. It does not know your wallet, sign transactions or place orders.</p></div></section>
   </main>;
 }

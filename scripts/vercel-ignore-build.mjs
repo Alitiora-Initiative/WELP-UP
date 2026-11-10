@@ -27,6 +27,11 @@ export function isNonWebPath(path) {
 }
 
 export function shouldIgnoreBuild(changedFiles) {
+  // An empty diff means "no changes detected" (for example a branch deploy
+  // whose head equals its base). Never suppress the build for an empty set.
+  if (!Array.isArray(changedFiles) || changedFiles.length === 0) {
+    return false;
+  }
   return changedFiles.every(isNonWebPath);
 }
 

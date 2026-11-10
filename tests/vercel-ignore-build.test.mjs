@@ -33,6 +33,6 @@ test('unknown paths default to deploying rather than being ignored', () => {
   assert.equal(shouldIgnoreBuild(['new-runtime-config.json']), false);
 });
 
-test('an empty diff is safe to ignore', () => {
-  assert.equal(shouldIgnoreBuild([]), true);
+test('an empty diff does not suppress the web build', () => {
+  assert.equal(shouldIgnoreBuild([]), false);
 });

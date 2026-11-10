@@ -26,6 +26,7 @@ type ChartData = {
 
 type Props = { mint: string; name: string; symbol: string };
 
+
 const INTERVALS: Array<{ key: Interval; label: string }> = [
   { key: '1m', label: '1m' },
   { key: '5m', label: '5m' },
@@ -65,18 +66,18 @@ export function ChartPanel({ mint, name, symbol }: Props) {
     setFetchError('');
 
     try {
-      const url = `/api/chart?mint=${encodeURIComponent(mint)}&provider=geckoterminal&interval=${interval}`;
+      const url = `/api/chart?mint=${encodeURIComponent(mint)}&provider=dexscreener&interval=${interval}`;
       const response = await fetch(url, { cache: 'no-store', signal: controller.signal });
       const data = await response.json() as ChartData & { error?: string };
-      if (!response.ok) throw new Error(data.error || 'Could not load genuine pool OHLCV data.');
+      if (!response.ok) throw new Error(data.error || 'Could not load verified pool market data.');
       if (!Array.isArray(data.candles) || data.candles.length === 0) {
-        throw new Error('The data provider returned no OHLCV candles for this pool.');
+        throw new Error('The data provider returned no verified market snapshot for this pool.');
       }
       setChartData(data);
       setActiveIndex(data.candles.length - 1);
     } catch (caught) {
       if (controller.signal.aborted) return;
-      setChartData(null);
+      if (!quiet) setChartData(null);
       setFetchError(caught instanceof Error ? caught.message : 'Chart data unavailable.');
     } finally {
       if (requestRef.current === controller) {
@@ -146,7 +147,7 @@ export function ChartPanel({ mint, name, symbol }: Props) {
     <section className="chart-panel-live" aria-label={`Live candlestick chart for ${name} (${symbol})`}>
       <header className="chart-live-header">
         <div>
-          <p className="chart-live-kicker">LIVE ON-CHAIN POOL OHLCV</p>
+          <p className="chart-live-kicker">LIVE ON-CHAIN POOL SNAPSHOT</p>
           <h2>{name} <span>{symbol}</span></h2>
           <p className="chart-live-mint">{mint}</p>
         </div>
@@ -165,11 +166,11 @@ export function ChartPanel({ mint, name, symbol }: Props) {
 
       {chartData ? (
         <div className="chart-live-provenance">
-          <span>Source: <strong>GeckoTerminal pool OHLCV</strong></span>
+          <span>Source: <strong>DexScreener live snapshot</strong></span>
           <span>Pool liquidity: <strong>{volumeFormat.format(chartData.poolLiquidityUsd)}</strong></span>
           <span>Updated: <time dateTime={new Date(chartData.fetchedAt).toISOString()}>{timeLabel(Math.floor(chartData.fetchedAt / 1000))}</time></span>
-          <a href={`https://www.geckoterminal.com/solana/pools/${chartData.poolAddress}`} target="_blank" rel="noreferrer">
-            Open pool <ExternalLink size={13} />
+          <a href={`https://dexscreener.com/solana/${chartData.poolAddress}`} target="_blank" rel="noreferrer">
+            Verify pair <ExternalLink size={13} />
           </a>
         </div>
       ) : null}
@@ -179,8 +180,10 @@ export function ChartPanel({ mint, name, symbol }: Props) {
       ) : null}
 
       {fetchError ? (
-        <div className="chart-live-error" role="alert"><AlertTriangle size={16} /><span>{fetchError}</span></div>
+        <div className="chart-live-error" role="status" aria-live="polite"><AlertTriangle size={16} /><span>{fetchError}</span></div>
       ) : null}
+
+      <p className="chart-live-footnote">Self-hosted WELP chart surface. The snapshot is read-only and never authorizes a trade.</p>
 
       {geometry.length > 0 ? (
         <>
@@ -189,7 +192,7 @@ export function ChartPanel({ mint, name, symbol }: Props) {
             {lastCandle ? <strong className={changePositive ? 'is-up' : 'is-down'}>{currency.format(lastCandle.close)}</strong> : null}
           </div>
           <div className="chart-svg-wrap">
-            <svg className="chart-candles-svg" viewBox="0 0 1000 320" role="group" aria-label="Interactive candlestick plot. Focus a candle to read its OHLCV values.">
+            <svg className="chart-candles-svg" viewBox="0 0 1000 320" role="group" aria-label="Pool candle backup. Focus a candle to read its OHLCV values.">
               {[0, 1, 2, 3, 4].map((step) => {
                 const y = 20 + step * 62.5;
                 return <g key={step}>
@@ -222,7 +225,7 @@ export function ChartPanel({ mint, name, symbol }: Props) {
               <text className="chart-axis-text" x="962" y="300" textAnchor="end">{lastCandle ? new Date(lastCandle.time * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</text>
             </svg>
           </div>
-          <p className="chart-live-footnote">{visibleCandles.length} real OHLCV candles shown · refreshes every 60 seconds while this tab is visible · price display in USD</p>
+          <p className="chart-live-footnote">{visibleCandles.length} verified market snapshot shown · refreshes every 60 seconds while this tab is visible · price display in USD</p>
         </>
       ) : loading ? (
         <div className="chart-live-empty">Loading verified pool candles…</div>

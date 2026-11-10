@@ -1,5 +1,8 @@
 'use client';
 
+/* Runtime token logos use arbitrary Jupiter/CDN hosts, so next/image optimization is not applicable here. */
+/* eslint-disable @next/next/no-img-element */
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity,
@@ -21,8 +24,6 @@ import { address, getTransactionDecoder, getTransactionEncoder } from '@solana/k
 import { useClient } from '@solana/react';
 import { useConnectedWallet } from '@solana/kit-plugin-wallet/react';
 import { type AppClient } from '@/components/Providers';
-import { AppSidebar } from '@/components/AppSidebar';
-import { WalletConnectionControl } from '@/components/WalletConnectionControl';
 import { SOL_MINT } from '@/lib/constants';
 import { addWalletEvent } from '@/lib/activity';
 import { currentTime } from '@/lib/time';
@@ -36,7 +37,7 @@ type Order = {
   requestId: string;
   inAmount: string;
   outAmount: string;
-  priceImpact?: number | string;
+  priceImpact?: number | string | null;
   feeBps?: number;
   feeMint?: string;
   slippageBps?: number;
@@ -47,6 +48,16 @@ const EMPTY_SIGNALS: Signal[] = [];
 
 function shortAddress(value: string) {
   return `${value.slice(0, 4)}…${value.slice(-4)}`;
+}
+
+function TokenLogo({ symbol, logo, size = 30 }: { symbol: string; logo?: string | null; size?: number }) {
+  const [failed, setFailed] = useState(false);
+  const initial = symbol.trim().slice(0, 1).toUpperCase() || '?';
+  return logo && !failed ? (
+    <img className="token-logo" src={logo} alt={`${symbol} logo`} width={size} height={size} onError={() => setFailed(true)} />
+  ) : (
+    <span className="token-logo token-logo-fallback" style={{ width: size, height: size }} aria-label={`${symbol} logo fallback`}>{initial}</span>
+  );
 }
 
 function decodeBase64(value: string) {
@@ -133,6 +144,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
     symbol: defaultSignal.symbol,
     name: defaultSignal.name,
     decimals: defaultSignal.decimals,
+    logo: undefined,
   } : null);
   const selectedSignal = useMemo(() => currentSignals.find((signal) => signal.mint === activeToken?.mint), [currentSignals, activeToken?.mint]);
 
@@ -184,10 +196,17 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
     fetch(`/api/tokens?q=${encodeURIComponent(mint)}`, { signal: controller.signal })
       .then(async (response) => {
         const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Could not load the selected market token.');
         const match = (data.tokens as Token[] | undefined)?.find((candidate) => candidate.mint === mint);
-        if (!controller.signal.aborted && match) setToken(match);
+        if (!match) throw new Error('The selected token was not found in Jupiter’s searchable token list.');
+        if (!controller.signal.aborted) {
+          setToken(match);
+          setTradeError('');
+        }
       })
-      .catch(() => undefined);
+      .catch((error) => {
+        if (!controller.signal.aborted) setTradeError(errorMessage(error));
+      });
     return () => controller.abort();
   }, [view]);
 
@@ -250,10 +269,6 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
       setTradeError('Keep at least 0.003 SOL in the wallet for fees.');
       return;
     }
-    if (direction === 'buy' && (!selectedSignal || !selectedSignal.eligible)) {
-      setTradeError(selectedSignal ? `This signal is not in the entry window: ${selectedSignal.reason.toLowerCase()}.` : 'WELP only buys tokens with a live eligible signal.');
-      return;
-    }
     setPending('quote');
     setOrder(null);
     try {
@@ -265,7 +280,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
           outputMint: direction === 'buy' ? activeToken.mint : SOL_MINT,
           amount: rawAmount,
           taker: walletAddress,
-          slippageBps: 150,
+          slippageBps: 50,
         }),
       });
       const data = await response.json();
@@ -292,12 +307,14 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
       setTradeError('Wallet changed after the quote. Request a new quote for the connected wallet.');
       return;
     }
-    if (direction === 'buy') {
-      const impact = order.priceImpact !== undefined ? Number(order.priceImpact) : selectedSignal?.priceImpactPct;
-      if (impact === null || impact === undefined || !Number.isFinite(impact) || impact > 2.5) {
-        setTradeError('This quote is above WELP’s 2.5% price-impact limit. Request a smaller quote or skip this token.');
-        return;
-      }
+    const impact = order.priceImpact === undefined || order.priceImpact === null ? Number.NaN : Number(order.priceImpact);
+    if (!Number.isFinite(impact)) {
+      setTradeError('Jupiter did not return verifiable price impact, so this order cannot be signed.');
+      return;
+    }
+    if (impact > 2.5) {
+      setTradeError('This quote is above WELP’s 2.5% price-impact limit. Request a smaller quote or skip this token.');
+      return;
     }
     setPending('sign');
     try {
@@ -342,23 +359,12 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
   const amountOutDecimals = direction === 'buy' ? activeToken?.decimals ?? 0 : 9;
   const formToken = direction === 'buy' ? 'SOL' : activeToken?.symbol ?? 'TOKEN';
   const receiveToken = direction === 'buy' ? activeToken?.symbol ?? 'TOKEN' : 'SOL';
-  const orderImpact = order ? Number(order.priceImpact ?? selectedSignal?.priceImpactPct ?? 0) : 0;
+  const orderImpact = order && order.priceImpact !== undefined && order.priceImpact !== null ? Number(order.priceImpact) : null;
   const countEligible = currentSignals.filter((signal) => signal.eligible).length;
 
   return (
-    <main className="app-shell">
-      <AppSidebar active={view === 'signals' ? 'signals' : view === 'autonomous' ? 'autonomous' : view === 'swap' ? 'swap' : 'console'} signalCount={currentSignals.length || '—'} status={signalsLoading ? 'Scanning live pools' : 'No auto-trading'} />
-
-      <section className="workspace" id="top">
-        <header className="topbar">
-          <div className="breadcrumb"><span>WORKSPACE</span><span className="crumb-slash">/</span><strong>{view === 'signals' ? 'Live signals' : view === 'swap' ? 'Swap' : 'Overview'}</strong></div>
-          <div className="topbar-right">
-            <span className="market-open"><span className="market-pip" /> LIVE MARKET</span>
-            <WalletConnectionControl />
-          </div>
-        </header>
-
-        <div className="page-content">
+    <main className="terminal-page trade-terminal-page">
+      <div className="trade-terminal-content">
           <section className="welcome-row">
             <div>
               <p className="eyebrow"><Sparkles size={14} /> {view === 'swap' ? 'USER-APPROVED EXECUTION' : 'AUTOMATED MARKET ANALYSIS · USER-APPROVED EXECUTION'}</p>
@@ -370,7 +376,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
 
           <div className="mainnet-banner" role="note">
             <ShieldCheck size={19} />
-            <div><strong>Wallet-approved swaps are currently gated.</strong><span>Live market data is available, but swap signing and submission remain disabled until the disclosed fee is enforced atomically and the release checks pass. No unattended trading is active.</span></div>
+            <div><strong>Swaps are paused for fee verification.</strong><span>Live market data is flowing, but WELP will not quote or submit swaps until its treasury referral destination is configured and verified. This prevents real funds from moving without the disclosed WELP fee. You approve every supported transaction in your own wallet; no unattended trading is active.</span></div>
             <a href="https://docs.jup.ag/user-docs/trade/swap" target="_blank" rel="noreferrer" aria-label="Read swap documentation"><CircleHelp size={17} /></a>
           </div>
 
@@ -419,28 +425,28 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
                   ))}
                 </div>
               )}
-              <div className="panel-foot"><span><span className="foot-pip" /> GeckoTerminal charts · Jupiter quotes</span><span>Rule score is not a probability of profit</span></div>
+              <div className="panel-foot"><span><span className="foot-pip" /> DexScreener snapshots · Jupiter quotes</span><span>Rule score is not a probability of profit</span></div>
             </section> : null}
 
             {view !== 'signals' ? <section className="panel swap-panel" id="swap">
               <div className="panel-heading swap-heading"><div><p className="eyebrow">USER-APPROVED</p><h2>Swap assets</h2></div><div className="swap-icon"><ArrowDownUp size={17} /></div></div>
               <div className="direction-tabs" role="group" aria-label="Swap direction">
-                <button className={direction === 'buy' ? 'direction-tab selected' : 'direction-tab'} onClick={() => { setDirection('buy'); setOrder(null); setTradeError(''); }}><ArrowDownLeft size={15} /> Buy</button>
-                <button className={direction === 'sell' ? 'direction-tab selected' : 'direction-tab'} onClick={() => { setDirection('sell'); setOrder(null); setTradeError(''); }}><ArrowUpRight size={15} /> Sell</button>
+<button data-direction="buy" className={direction === 'buy' ? 'direction-tab selected' : 'direction-tab'} onClick={() => { setDirection('buy'); setOrder(null); setTradeError(''); }}><ArrowDownLeft size={15} /> Buy</button>
+            <button data-direction="sell" className={direction === 'sell' ? 'direction-tab selected' : 'direction-tab'} onClick={() => { setDirection('sell'); setOrder(null); setTradeError(''); }}><ArrowUpRight size={15} /> Sell</button>
               </div>
               <div className="swap-box">
                 <div className="swap-box-top"><span>You {direction === 'buy' ? 'pay' : 'sell'}</span><span>{direction === 'buy' && activeSolBalance !== null ? `Balance ${activeSolBalance.toFixed(4)} SOL` : 'Mainnet'}</span></div>
-                <div className="amount-row"><input type="number" min={direction === 'buy' ? '0.001' : '0'} max={direction === 'buy' ? '0.02' : undefined} step={direction === 'buy' ? '0.001' : 'any'} aria-label={`Amount in ${formToken}`} inputMode="decimal" value={amount} onChange={(event) => { setAmount(event.target.value); setOrder(null); }} /><span className="asset-pill">{direction === 'buy' ? <span className="sol-symbol">◎</span> : <span className="token-mini">{activeToken?.symbol.slice(0, 1) ?? '?'}</span>}{formToken}</span></div>
+                <div className="amount-row"><input type="number" min={direction === 'buy' ? '0.001' : '0'} max={direction === 'buy' ? '0.02' : undefined} step={direction === 'buy' ? '0.001' : 'any'} aria-label={`Amount in ${formToken}`} inputMode="decimal" value={amount} onChange={(event) => { setAmount(event.target.value); setOrder(null); }} /><span className="asset-pill"><TokenLogo symbol={formToken} logo={direction === 'buy' ? 'https://img.jup.ag/tokens/So11111111111111111111111111111111111111112.png' : activeToken?.logo} size={18} />{formToken}</span></div>
                 {direction === 'buy' ? <p className="amount-hint">Minimum 0.001 SOL · editable up to 0.02 SOL</p> : null}
               </div>
               <div className="swap-connector"><span><ArrowDownUp size={14} /></span></div>
               <div className="swap-box receive-box">
                 <div className="swap-box-top"><span>You receive</span><span>{direction === 'buy' && activeToken?.price ? `Price $${activeToken.price.toPrecision(4)}` : 'Best route'}</span></div>
-                <div className="amount-row"><input aria-label={`Token to ${direction === 'buy' ? 'buy' : 'sell'}`} value={activeToken ? `${activeToken.symbol} · ${shortAddress(activeToken.mint)}` : 'Search for a token'} readOnly /><span className="asset-pill asset-pill-selected"><span className="token-mini">{direction === 'buy' ? activeToken?.symbol.slice(0, 1) ?? '?' : '◎'}</span>{receiveToken}</span></div>
+                <div className="amount-row"><input aria-label={`Token to ${direction === 'buy' ? 'buy' : 'sell'}`} value={activeToken ? `${activeToken.symbol} · ${shortAddress(activeToken.mint)}` : 'Search for a token'} readOnly /><span className="asset-pill asset-pill-selected"><TokenLogo symbol={receiveToken} logo={direction === 'buy' ? activeToken?.logo : 'https://img.jup.ag/tokens/So11111111111111111111111111111111111111112.png'} size={18} />{receiveToken}</span></div>
               </div>
               <div className="token-search-wrap">
                 <label className="token-search"><Search size={15} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name, symbol or mint" aria-label="Search for a token" /><span>{searching ? <LoaderCircle className="spin" size={15} /> : 'JUPITER'}</span></label>
-                {query.trim().length >= 2 && searchResults.length > 0 ? <div className="search-results">{searchResults.map((result) => <button key={result.mint} className="search-result" onClick={() => selectToken(result)}><span className="token-badge token-badge-search">{result.symbol.slice(0, 1)}</span><span><strong>{result.symbol}</strong><small>{result.name} · {shortAddress(result.mint)}</small></span><CirclePlus size={17} /></button>)}</div> : null}
+                {query.trim().length >= 2 && searchResults.length > 0 ? <div className="search-results" role="listbox" aria-label="Token results">{searchResults.map((result) => <button key={result.mint} type="button" className="search-result" onClick={() => selectToken(result)} role="option" aria-selected={activeToken?.mint === result.mint}><TokenLogo symbol={result.symbol} logo={result.logo} size={32} /><span><strong>{result.symbol}</strong><small>{result.name} · {shortAddress(result.mint)}</small></span><CirclePlus size={17} /></button>)}</div> : null}
               </div>
               {activeToken ? <div className="token-meta"><span>Selected token</span><span title={activeToken.mint}>{activeToken.name} · {shortAddress(activeToken.mint)}</span></div> : null}
               {direction === 'buy' && selectedSignal && !selectedSignal.eligible ? <div className="trade-warning"><CircleHelp size={15} /><span>Signal outside entry range: {selectedSignal.reason}.</span></div> : null}
@@ -449,8 +455,8 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
                   <div className="quote-title"><span><ShieldCheck size={15} /> Review quote</span><small>Fresh for 45 seconds</small></div>
                   <div className="quote-line"><span>You pay</span><strong>{formatUnits(order.inAmount, amountInDecimals)} {formToken}</strong></div>
                   <div className="quote-line"><span>Estimated receive</span><strong>{formatUnits(order.outAmount, amountOutDecimals)} {receiveToken}</strong></div>
-                  <div className="quote-line"><span>Price impact</span><strong>{orderImpact.toFixed(3)}%</strong></div>
-                  <div className="quote-line"><span>Max slippage</span><strong>{((order.slippageBps ?? 150) / 100).toFixed(2)}%</strong></div>
+                  <div className="quote-line"><span>Price impact</span><strong>{orderImpact !== null && Number.isFinite(orderImpact) ? `${orderImpact.toFixed(3)}%` : 'Unavailable'}</strong></div>
+                  <div className="quote-line"><span>Max slippage</span><strong>{((order.slippageBps ?? 50) / 100).toFixed(2)}%</strong></div>
                   {typeof order.feeBps === 'number' ? <div className="quote-line"><span>Jupiter route fee</span><strong>{(order.feeBps / 100).toFixed(2)}%</strong></div> : null}
                   <p className="quote-note">Your wallet will show the exact transaction. Only approve if the details match this quote.</p>
                 </div>
@@ -478,8 +484,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
             <div className="safety-rule safety-rule-last"><strong>Phantom</strong><span>You approve every swap<br /><small>No auto-trading or private-key access in this app.</small></span></div>
           </section> : null}
           <footer className="footer"><span>WELP UP · Solana mainnet</span><span>Trading is risky. A token can lose all value.</span><a href="/terms">Terms &amp; Conditions</a><a href="https://github.com/Alitiora-Initiative/WELP-UP" target="_blank" rel="noreferrer">Source <ExternalLink size={12} /></a></footer>
-        </div>
-      </section>
+      </div>
     </main>
   );
 }

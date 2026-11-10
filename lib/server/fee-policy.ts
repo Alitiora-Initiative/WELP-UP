@@ -17,9 +17,14 @@ export const WELP_FEE_POLICY = Object.freeze({
   epochDeveloperReleaseBps: 6_000,
   epochPermanentReserveBps: 4_000,
   treasuryPdaSeed: 'treasury-v1',
-  collectionEnabled: false,
-  collectionDisabledReason:
-    'The mainnet launchpad program has not been deployed and verified with atomic 0.50% swap-fee enforcement.',
+  referralAccount: process.env.WELP_REFERRAL_ACCOUNT ?? '',
+  referralFeeBps: Number(process.env.WELP_REFERRAL_FEE_BPS ?? 50),
+  collectionEnabled:
+    /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(process.env.WELP_REFERRAL_ACCOUNT ?? '') &&
+    Number.isInteger(Number(process.env.WELP_REFERRAL_FEE_BPS ?? 50)) &&
+    Number(process.env.WELP_REFERRAL_FEE_BPS ?? 50) >= 50 &&
+    Number(process.env.WELP_REFERRAL_FEE_BPS ?? 50) <= 255,
+  collectionDisabledReason: 'No WELP referral fee is configured; WELP swap order and execution routes fail closed until a verified treasury referral destination is configured.',
 });
 
 export function splitProtocolSwapFee(grossInputBaseUnits: bigint) {

@@ -40,6 +40,9 @@ jobs:
       - name: Install stable Rust host toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Install IDL-compatible nightly host toolchain
+        run: rustup toolchain install nightly-2025-04-15 --profile minimal
+
       - name: Verify host Rust and Cargo
         run: |
           rustc --version
@@ -142,6 +145,8 @@ jobs:
         env:
           # Anchor resolves Cargo through this variable before invoking metadata.
           CARGO: ${{ runner.temp }}/cargo-wrapper/cargo
+          # Anchor 0.30.1 IDL generation uses proc_macro2's removed source_file API.
+          RUSTUP_TOOLCHAIN: nightly-2025-04-15
 
       - name: Run vault ProgramTest against the built SBF binary
         run: cargo test --manifest-path programs/program-tests/Cargo.toml --test vault_program_test

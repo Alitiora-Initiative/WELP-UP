@@ -1,44 +1,42 @@
 import Link from 'next/link';
 import { ArrowUpRight, CheckCircle2, CircleDashed, LockKeyhole } from 'lucide-react';
-import { LaunchpadCreatorStudio } from '@/components/LaunchpadCreatorStudio';
-import './launchpad.css';
+import { LaunchStudioCreatorStudio } from '@/components/LaunchStudioCreatorStudio';
+import './launch-studio.css';
 
 export const dynamic = 'force-dynamic';
 
 const launchStages = [
   {
-    label: 'Custom token mint',
-    detail: 'Creator-selected whole supply and 0–9 decimals are fixed when the mint is initialized.',
-    state: 'Program pending',
+    label: 'Creator-owned token metadata',
+    detail: 'Your name, ticker, description, links and logo remain intact. WELP-UP attribution is limited to launch provenance and the contract-address record.',
+    state: 'Live',
   },
   {
-    label: 'Bonding-curve sale',
-    detail: 'Purchases, allocations, quote accounting and the early-window wallet cap must be enforced on-chain.',
-    state: 'Not enabled',
+    label: 'Pump.fun bonding curve',
+    detail: 'The wallet signs a real pump.fun create transaction through PumpPortal; the mint address is the public CA.',
+    state: 'Live',
   },
   {
-    label: 'Raydium CPMM pool',
-    detail: 'Graduation is permissionless; pool creation and LP-token destruction must complete atomically.',
-    state: 'Integration pending',
+    label: 'WELP custom program rail',
+    detail: 'Creator-defined supply and decimals remain unavailable until the executable mainnet program and explicit operator gate are confirmed. Deployment status is not an independent audit.',
+    state: 'Disabled pending verified deployment',
   },
 ];
 
-export default function LaunchpadPage() {
+export default function LaunchStudioPage() {
   return (
     <main className="launchpad-page-v2">
       <section className="lp-hero-v2">
         <div>
-          <p className="lp-kicker">WELP UP / SOLANA LAUNCHPAD</p>
+          <p className="lp-kicker">WELP UP / SOLANA LAUNCH STUDIO</p>
           <h1>Launch on your terms<span>.</span></h1>
           <p>
-            Review token parameters and protocol release gates. Live discovery,
-            launch creation, purchases and graduation require a deployed,
-            verified mainnet launch program and on-chain indexer.
+            Launch a token on the public pump.fun bonding curve through PumpPortal. The custom WELP rail remains disabled until its executable program is verified and the operator explicitly enables it. Your wallet signs every supported transaction.
           </p>
         </div>
         <div className="lp-hero-state">
-          <strong>MAINNET PROGRAM STATUS</strong>
-          <small>Creator transactions are locked pending program deployment and review.</small>
+          <strong>DUAL LAUNCH RAIL</strong>
+          <small>Pump.fun rail: wallet-signed via PumpPortal. Custom rail: disabled pending reviewed deployment.</small>
         </div>
       </section>
 
@@ -65,7 +63,7 @@ export default function LaunchpadPage() {
         </p>
       </section>
 
-      <LaunchpadCreatorStudio />
+      <LaunchStudioCreatorStudio />
 
       <section className="lp-discovery-v2 glass-panel" aria-labelledby="lp-stages-title">
         <div className="lp-section-head-v2">

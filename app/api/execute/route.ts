@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { executeOrder } from '@/lib/jupiter';
 import { WELP_FEE_POLICY } from '@/lib/server/fee-policy';
+import { getFinalizedSignatureStatus } from '@/lib/server/solana-rpc';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   if (!WELP_FEE_POLICY.collectionEnabled) {
-    return NextResponse.json({ error: 'Execution is disabled until the disclosed WELP fee is atomically enforced.' }, { status: 503 });
+    return NextResponse.json({ error: 'WELP fee routing is not configured. Swap execution is disabled until the treasury referral destination is verified.' }, { status: 503 });
   }
   let body: Record<string, unknown>;
   try {
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
   }
   const signedTransaction = typeof body.signedTransaction === 'string' ? body.signedTransaction : '';
   const requestId = typeof body.requestId === 'string' ? body.requestId : '';
-  if (!signedTransaction || signedTransaction.length > 100_000 || !/^[A-Za-z0-9_-]{8,256}$/.test(requestId)) {
+  if (!signedTransaction || signedTransaction.length > 200_000 || !/^[A-Za-z0-9+/=_-]+$/.test(signedTransaction) || !/^[A-Za-z0-9_-]{8,256}$/.test(requestId)) {
     return NextResponse.json({ error: 'Signed order or order ID is invalid.' }, { status: 400 });
   }
 
@@ -25,7 +26,14 @@ export async function POST(request: NextRequest) {
     if (result.status !== 'Success' || typeof result.signature !== 'string') {
       return NextResponse.json({ error: 'Jupiter did not confirm the swap.', status: result.status ?? 'Failed' }, { status: 502 });
     }
-    return NextResponse.json({ status: result.status, signature: result.signature });
+    const finalized = await getFinalizedSignatureStatus(result.signature);
+    if (finalized.state === 'failed') {
+      return NextResponse.json({ error: 'The finalized Solana transaction failed.', status: finalized.state, signature: result.signature, transactionError: finalized.error }, { status: 502 });
+    }
+    if (finalized.state !== 'finalized') {
+      return NextResponse.json({ error: 'Swap submitted but is not finalized yet.', status: finalized.state, signature: result.signature, reconciliationRequired: true }, { status: 202, headers: { 'Cache-Control': 'no-store' } });
+    }
+    return NextResponse.json({ status: result.status, signature: result.signature, finalized: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Jupiter could not submit this swap.';
     return NextResponse.json({ error: message }, { status: 502 });

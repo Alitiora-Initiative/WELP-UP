@@ -27,6 +27,7 @@
     "@solana/kit-plugin-rpc": "0.22.0",
     "@solana/kit-plugin-wallet": "0.22.0",
     "@solana/react": "8.5.0",
+    "ai": "^7.0.166",
     "lucide-react": "1.60.0",
     "next": "16.4.2",
     "react": "19.3.1",
