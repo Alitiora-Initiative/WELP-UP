@@ -3279,6 +3279,7 @@ html, body { background: #080908 !important; color: #f0f3ec !important; }
 
 .command-top-nav { display: flex; align-items: center; justify-content: center; gap: 3px; margin-inline: auto; }
 .command-nav-group { position: relative; }
+.command-nav-group::after { content: ''; position: absolute; top: 100%; left: 50%; width: 258px; height: 9px; transform: translateX(-50%); }
 .command-nav-trigger { display: inline-flex; align-items: center; gap: 5px; min-height: 34px; padding: 0 10px; border: 1px solid transparent; border-radius: 6px; color: #8c9a8e; font: 10px var(--mono); white-space: nowrap; }
 .command-nav-trigger:hover, .command-nav-trigger:focus-visible, .command-nav-group:focus-within .command-nav-trigger { border-color: #385237; background: #111a12; color: #c6fb88; outline: none; }
 .command-nav-dropdown { position: absolute; top: calc(100% + 9px); left: 50%; z-index: 50; display: grid; width: 258px; gap: 3px; padding: 8px; border: 1px solid #334834; border-radius: 12px; background: #0b100d; box-shadow: 0 22px 55px #000b, inset 0 1px 0 #ffffff08; opacity: 0; pointer-events: none; transform: translate(-50%, -5px); transition: opacity .14s ease, transform .14s ease; }

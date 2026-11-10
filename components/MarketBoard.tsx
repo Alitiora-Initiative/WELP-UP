@@ -40,11 +40,7 @@ export function MarketBoard() {
     if (!quiet) setLoading(true);
     setError('');
     try {
-      let response = await fetch('/api/markets', { cache: 'no-store' });
-      if (response.status === 429) {
-        await new Promise((resolve) => window.setTimeout(resolve, 900));
-        response = await fetch('/api/markets', { cache: 'no-store' });
-      }
+      const response = await fetch('/api/markets', { cache: 'no-store' });
       const data = await response.json() as Feed;
       if (!response.ok) throw new Error(data.error || 'Could not load the live market feed.');
       setFeed(data);
