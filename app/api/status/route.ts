@@ -29,7 +29,7 @@ async function checkJupiter() {
   if (!response.ok) throw new Error('Jupiter returned ' + response.status);
   const data = await response.json();
   if (!Array.isArray(data) || !data.length) throw new Error('Jupiter returned no token data');
-  return { name: 'Jupiter Token API v2', state: 'Operational', detail: 'Live token feed reachable' };
+  return { name: 'Jupiter Lite Token API v2', state: 'Operational', detail: 'Live token feed reachable' };
 }
 async function checkVault() {
   const programId = process.env.WELP_VAULT_PROGRAM_ID || '';
@@ -83,7 +83,7 @@ async function checkCustomLaunchProgram() {
 export async function GET() {
   const checks = await Promise.all([
     checkSolana().catch((error) => ({ name: 'Solana mainnet RPC', state: 'Unavailable', detail: error instanceof Error ? error.message : 'RPC check failed' })),
-    checkJupiter().catch((error) => ({ name: 'Jupiter Token API v2', state: 'Unavailable', detail: error instanceof Error ? error.message : 'Feed check failed' })),
+    checkJupiter().catch((error) => ({ name: 'Jupiter Lite Token API v2', state: 'Unavailable', detail: error instanceof Error ? error.message : 'Feed check failed' })),
     checkVault(),
     checkCustomLaunchProgram(),
     Promise.resolve({
