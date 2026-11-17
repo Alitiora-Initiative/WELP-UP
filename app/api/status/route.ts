@@ -23,13 +23,13 @@ async function checkSolana() {
 async function checkJupiter() {
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (process.env.JUPITER_API_KEY) headers['x-api-key'] = process.env.JUPITER_API_KEY;
-  const response = await fetch('https://lite-api.jup.ag/tokens/v2/toporganicscore/24h?limit=100', {
+  const response = await fetch('https://api.jup.ag/tokens/v2/toporganicscore/24h?limit=100', {
     headers, next: { revalidate: 30 }, signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) throw new Error('Jupiter returned ' + response.status);
   const data = await response.json();
   if (!Array.isArray(data) || !data.length) throw new Error('Jupiter returned no token data');
-  return { name: 'Jupiter Lite Token API v2', state: 'Operational', detail: 'Live token feed reachable' };
+  return { name: 'Jupiter Tokens API v2', state: 'Operational', detail: 'Live token feed reachable' };
 }
 async function checkVault() {
   const programId = process.env.WELP_VAULT_PROGRAM_ID || '';
@@ -83,7 +83,7 @@ async function checkCustomLaunchProgram() {
 export async function GET() {
   const checks = await Promise.all([
     checkSolana().catch((error) => ({ name: 'Solana mainnet RPC', state: 'Unavailable', detail: error instanceof Error ? error.message : 'RPC check failed' })),
-    checkJupiter().catch((error) => ({ name: 'Jupiter Lite Token API v2', state: 'Unavailable', detail: error instanceof Error ? error.message : 'Feed check failed' })),
+    checkJupiter().catch((error) => ({ name: 'Jupiter Tokens API v2', state: 'Unavailable', detail: error instanceof Error ? error.message : 'Feed check failed' })),
     checkVault(),
     checkCustomLaunchProgram(),
     Promise.resolve({

@@ -213,7 +213,7 @@ export function TerminalHome() {
             </div>
             <div className="home-market-source">
               <span>DATA SOURCE</span>
-              <strong>Jupiter Lite Token API v2</strong>
+              <strong>Jupiter Tokens API v2</strong>
               <small><Clock3 size={12} /> Updated {updated} · {feed?.provider?.state ?? 'PENDING'}</small>
             </div>
           </div>
@@ -236,8 +236,8 @@ export function TerminalHome() {
           <div className="home-readiness-list">
             <div className="home-readiness-row">
               <span className="home-readiness-icon"><Activity size={15} /></span>
-              <span><strong>Market data</strong><small>Jupiter Token API v2</small></span>
-              <em className={stateTone(checkState(status, 'Jupiter Token API v2'))}>{checkState(status, 'Jupiter Token API v2')}</em>
+              <span><strong>Market data</strong><small>Jupiter Tokens API v2</small></span>
+              <em className={stateTone(checkState(status, 'Jupiter Tokens API v2'))}>{checkState(status, 'Jupiter Tokens API v2')}</em>
             </div>
             <div className="home-readiness-row">
               <span className="home-readiness-icon"><Wallet size={15} /></span>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
-const SEARCH_URL = 'https://lite-api.jup.ag/tokens/v2/search';
+const SEARCH_URL = 'https://api.jup.ag/tokens/v2/search';
 
 export async function GET(request: NextRequest) {
   const query = request.nextUrl.searchParams.get('q')?.trim() ?? '';
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   try {
     const url = new URL(SEARCH_URL);
     url.searchParams.set('query', query);
-    const response = await fetch(url, { headers, cache: 'no-store', signal: AbortSignal.timeout(12_000) });
+    const response = await fetch(url, { headers, next: { revalidate: 10 }, signal: AbortSignal.timeout(12_000) });
     if (!response.ok) return NextResponse.json({ error: 'Token search is temporarily unavailable.' }, { status: 502 });
     const data = await response.json();
     const rows = Array.isArray(data) ? data : Array.isArray(data?.tokens) ? data.tokens : [];
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
         price: Number.isFinite(Number(row.usdPrice)) ? Number(row.usdPrice) : null,
       }];
     });
-    return NextResponse.json({ tokens }, { headers: { 'Cache-Control': 'no-store' } });
+    return NextResponse.json({ tokens }, { headers: { 'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=20' } });
   } catch {
     return NextResponse.json({ error: 'Token search timed out. Please try again.' }, { status: 504 });
   }
