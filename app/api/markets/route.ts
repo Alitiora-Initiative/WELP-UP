@@ -4,13 +4,13 @@ import { scoreToken } from '@/lib/market-scoring';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const FEED = 'https://lite-api.jup.ag/tokens/v2/toporganicscore/24h?limit=100';
+const FEED = 'https://api.jup.ag/tokens/v2/toporganicscore/24h?limit=100';
 const SOL_MINT = 'So11111111111111111111111111111111111111112';
 const PRICE_FEED = `https://lite-api.jup.ag/price/v3?ids=${SOL_MINT}`;
 
 async function fetchWithRetry(url: string, headers: Record<string, string>, attempts = 2) {
   for (let attempt = 0; attempt < attempts; attempt += 1) {
-    const response = await fetch(url, { headers, cache: 'no-store', signal: AbortSignal.timeout(15_000) });
+    const response = await fetch(url, { headers, next: { revalidate: 30 }, signal: AbortSignal.timeout(15_000) });
     if (response.ok || response.status !== 429 || attempt === attempts - 1) return response;
     await new Promise((resolve) => setTimeout(resolve, 450 * (attempt + 1)));
   }
@@ -21,7 +21,7 @@ function providerFailure(error: string, status = 502) {
   return NextResponse.json({
     error,
     updatedAt: new Date().toISOString(),
-    provider: { name: 'Jupiter Lite Token API v2', state: 'Unavailable', error },
+    provider: { name: 'Jupiter Tokens API v2', state: 'Unavailable', error },
     dataQuality: 'unavailable',
     total: 0,
     eligible: 0,
@@ -37,7 +37,7 @@ export async function GET() {
     if (process.env.JUPITER_API_KEY) headers['x-api-key'] = process.env.JUPITER_API_KEY;
     const [feedResponse, priceResponse] = await Promise.all([
       fetchWithRetry(FEED, headers),
-      fetch(PRICE_FEED, { headers, cache: 'no-store', signal: AbortSignal.timeout(10_000) }),
+      fetch(PRICE_FEED, { headers, next: { revalidate: 20 }, signal: AbortSignal.timeout(10_000) }),
     ]);
     if (!feedResponse.ok) return providerFailure('Jupiter market feed returned ' + feedResponse.status + '.');
     const payload: unknown = await feedResponse.json();
@@ -51,9 +51,9 @@ export async function GET() {
     const solPriceUsd = Number.isFinite(solPrice) && solPrice > 0 ? solPrice : null;
     const priceState = solPriceUsd === null ? 'Unavailable' : 'Operational';
     return NextResponse.json({
-      source: 'Jupiter Lite Token API v2',
+      source: 'Jupiter Tokens API v2',
       updatedAt: fetchedAt,
-      provider: { name: 'Jupiter Lite Token API v2', state: 'Operational', fetchedAt },
+      provider: { name: 'Jupiter Tokens API v2', state: 'Operational', fetchedAt },
       priceProvider: { name: 'Jupiter Price API v3', state: priceState, fetchedAt, error: solPriceUsd === null ? 'SOL price was not returned.' : undefined },
       dataQuality: priceState === 'Operational' ? 'complete' : 'partial',
       solPriceUsd,
