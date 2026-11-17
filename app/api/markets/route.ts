@@ -10,7 +10,7 @@ const PRICE_FEED = `https://lite-api.jup.ag/price/v3?ids=${SOL_MINT}`;
 
 async function fetchWithRetry(url: string, headers: Record<string, string>, attempts = 2) {
   for (let attempt = 0; attempt < attempts; attempt += 1) {
-    const response = await fetch(url, { headers, cache: 'no-store', signal: AbortSignal.timeout(15_000) });
+    const response = await fetch(url, { headers, next: { revalidate: 30 }, signal: AbortSignal.timeout(15_000) });
     if (response.ok || response.status !== 429 || attempt === attempts - 1) return response;
     await new Promise((resolve) => setTimeout(resolve, 450 * (attempt + 1)));
   }
@@ -37,7 +37,7 @@ export async function GET() {
     if (process.env.JUPITER_API_KEY) headers['x-api-key'] = process.env.JUPITER_API_KEY;
     const [feedResponse, priceResponse] = await Promise.all([
       fetchWithRetry(FEED, headers),
-      fetch(PRICE_FEED, { headers, cache: 'no-store', signal: AbortSignal.timeout(10_000) }),
+      fetch(PRICE_FEED, { headers, next: { revalidate: 20 }, signal: AbortSignal.timeout(10_000) }),
     ]);
     if (!feedResponse.ok) return providerFailure('Jupiter market feed returned ' + feedResponse.status + '.');
     const payload: unknown = await feedResponse.json();

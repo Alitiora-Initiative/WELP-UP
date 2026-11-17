@@ -18,13 +18,13 @@ async function checkSolana() {
   if (!response.ok) throw new Error('RPC returned ' + response.status);
   const data = await response.json();
   if (data.error || data.result !== 'ok') throw new Error('RPC did not report healthy');
-  return { name: 'Solana mainnet RPC', state: 'Operational', detail: endpoint };
+  return { name: 'Solana mainnet RPC', state: 'Operational', detail: 'Mainnet RPC health check passed.' };
 }
 async function checkJupiter() {
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (process.env.JUPITER_API_KEY) headers['x-api-key'] = process.env.JUPITER_API_KEY;
-  const response = await fetch('https://lite-api.jup.ag/tokens/v2/toporganicscore/24h?limit=1', {
-    headers, cache: 'no-store', signal: AbortSignal.timeout(10_000),
+  const response = await fetch('https://lite-api.jup.ag/tokens/v2/toporganicscore/24h?limit=100', {
+    headers, next: { revalidate: 30 }, signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) throw new Error('Jupiter returned ' + response.status);
   const data = await response.json();
@@ -105,5 +105,5 @@ export async function GET() {
     : checks.some((item) => item.state.includes('Blocked') || item.state.includes('Not configured') || item.state.includes('Undeployed'))
       ? 'Operational · execution blocked by safety gates'
       : 'Operational · limited features';
-  return NextResponse.json({ updatedAt: new Date().toISOString(), overall, checks }, { headers: { 'Cache-Control': 'no-store' } });
+  return NextResponse.json({ updatedAt: new Date().toISOString(), overall, checks }, { headers: { 'Cache-Control': 'public, s-maxage=15, stale-while-revalidate=45' } });
 }
