@@ -4,7 +4,7 @@ This roadmap distinguishes the product the user wants from features currently av
 
 ## Next planned milestone: launchpad and platform hardening
 
-The launchpad and protocol-security milestone is in progress but not production-ready. The current launchpad route is a configuration/status page; no production token mint, bonding curve, buy/sell, escrow, refund or graduation transaction is available. The complete task list, account model, acceptance gates, fee requirements, and security checklist are in [docs/LAUNCHPAD_AND_SECURITY_BACKLOG.md](docs/LAUNCHPAD_AND_SECURITY_BACKLOG.md).
+The PumpPortal rail can prepare a user-signed Pump.fun launch transaction. The WELP custom-supply rail is disabled: its mainnet program ID is not executable, and there is no WELP-owned bonding curve, buy/sell, escrow, refund or graduation transaction. The vault and on-chain treasury remain undeployed. The complete task list, account model, acceptance gates, fee requirements, and security checklist are in [docs/LAUNCHPAD_AND_SECURITY_BACKLOG.md](docs/LAUNCHPAD_AND_SECURITY_BACKLOG.md).
 
 - [ ] Build the Anchor launch program for creator-selected supply from 1 to 1,000,000,000 whole tokens, with launch escrow, Active/Graduated/Refundable state, checked purchase math and owner/account validation.
 - [ ] Add the early-slot per-wallet 5% allocation cap (10,000,000 tokens at the specified supply) and refund protection.
@@ -48,9 +48,9 @@ The launchpad and protocol-security milestone is in progress but not production-
 - [x] Remove the former browser paper-bot simulator rather than presenting simulated performance as live trading capability.
 - [ ] Build and independently review a real agent runtime only after the vault, consent, executor isolation, and recovery gates below are satisfied.
 
-### Live trading — not implemented
+### Automated trading — not implemented; manual swaps are fee-gated
 
-The requested product is an AI agent that analyzes the market, selects suitable tokens, trades within the funds the user allocates, manages positions, and attempts take-profit or other exits. The user's approved design requirements are:
+The browser app can request a Jupiter Swap API v2 order and have a connected wallet sign it. In the current development environment, no referral account is configured, so order and execute routes fail closed and a complete real-funds swap has not been verified. The requested autonomous product is an AI agent that analyzes the market, selects suitable tokens, trades within the funds the user allocates, manages positions, and attempts take-profit or other exits. The user's approved design requirements are:
 
 - [ ] Connect a real market-data feed and strategy service; clearly separate generated signals from deterministic paper rules.
 - [ ] Before the agent can trade, the user chooses a SOL allocation and explicitly confirms a transaction that funds the isolated vault.
@@ -87,7 +87,7 @@ This is a staged plan, not a promise that a provider, market, or trading product
 | P0 | Paper bot studio | Local config CRUD, validation, transparent manual ticks and simulated metrics; unit tests pass. | Removed from production UI; no paper performance is presented |
 | P0 | Wallet connect clarity | Keep a clear connect control in the terminal; improve wallet choice and visible network guidance before live trading. Require a user click for wallet prompts; connection alone never starts a bot. | Shared control reused; further clarity pending |
 | P1 | Market catalog and price feed | Add curated Solana markets first; verify mint, pool, source, timestamp, quote asset, and stale-data behavior. Expand chain coverage only with maintained, deduplicated listings; do not claim “all crypto” without it. | Not started |
-| P1 | TradingView charts | Confirm library access and usage terms; implement a datafeed with symbol search, OHLC history, live updates, market hours/time zone, and stale/error states. The chart library itself does not provide market data; see the [Datafeed API](https://www.tradingview.com/charting-library-docs/latest/connecting_data/datafeed-api/). | Not started |
+| P1 | Chart experience | Use DexScreener's hosted chart for the selected highest-liquidity Solana pair; do not infer OHLC history from snapshot data. A separate TradingView integration remains unstarted and would require its own access and datafeed review. | DexScreener embed implemented |
 | P1 | Mainnet vault release gate | Deploy only the reviewed source to Solana Mainnet after audit; verify caps, executor permissions, pause/revoke, owner recovery and SPL-token withdrawals with explicit wallet-signed mainnet checks. | Partial scaffold only |
 | P1 | User-controlled funding and recovery | Map deposits, token ownership, open positions, failed swaps, emergency pause, and withdrawal flows. Retain owner control; never treat losses or liquidations as protocol revenue. | Not started |
 | P2 | Fonbnk fiat on/off-ramp | Obtain a merchant account; confirm supported fiat currencies and Solana asset availability for this merchant; integrate the provider widget or signed server API, webhook verification, reconciliation, limits, KYC/AML, refunds, support, and disclosures. Keep provider credentials server-side. See [Fonbnk Widget docs](https://docs.fonbnk.com/widget-integration/getting-started) and [Server API docs](https://docs.fonbnk.com/server-to-server/getting-started). | Not started |

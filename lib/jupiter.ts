@@ -25,8 +25,11 @@ export async function requestOrder(params: {
   url.searchParams.set('taker', params.taker);
   url.searchParams.set('slippageBps', String(params.slippageBps));
   if (params.referralAccount) {
+    if (!Number.isInteger(params.referralFeeBps) || (params.referralFeeBps ?? 0) < 50 || (params.referralFeeBps ?? 0) > 255) {
+      throw new Error('Jupiter referral fee must be between 0.50% and 2.55%.');
+    }
     url.searchParams.set('referralAccount', params.referralAccount);
-    if (params.referralFeeBps !== undefined) url.searchParams.set('referralFee', String(params.referralFeeBps));
+    url.searchParams.set('referralFee', String(params.referralFeeBps));
   }
   const response = await fetch(url, { headers: headers(), cache: 'no-store', signal: AbortSignal.timeout(20_000) });
   const data = await response.json().catch(() => null);
@@ -38,6 +41,9 @@ export async function requestOrder(params: {
   }
   if (typeof data.transaction !== 'string' || !data.transaction.trim() || typeof data.requestId !== 'string' || !data.requestId.trim()) {
     throw new Error('Jupiter returned a quote without a signable transaction.');
+  }
+  if (params.referralAccount && Number(data.feeBps) !== params.referralFeeBps) {
+    throw new Error('Jupiter did not include the configured referral fee in this order.');
   }
   return data as Record<string, unknown>;
 }

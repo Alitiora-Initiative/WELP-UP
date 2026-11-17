@@ -170,7 +170,7 @@ export function TerminalShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
+  const [groupExpansion, setGroupExpansion] = useState<Record<string, boolean>>({});
 
   const currentPage = navGroups.flatMap((group) => group.items).find((item) => isActivePath(pathname, item.href));
   const activeGroup = navGroups.find((group) =>
@@ -195,9 +195,10 @@ export function TerminalShell({ children }: { children: ReactNode }) {
   }
 
   function toggleGroup(label: string) {
-    setExpandedGroups((current) =>
-      current.includes(label) ? current.filter((item) => item !== label) : [...current, label],
-    );
+    setGroupExpansion((current) => ({
+      ...current,
+      [label]: !(current[label] ?? label === activeGroup),
+    }));
   }
 
   return (
@@ -213,7 +214,7 @@ export function TerminalShell({ children }: { children: ReactNode }) {
 
         <nav className="command-nav" aria-label="Application navigation">
           {navGroups.map((group, groupIndex) => {
-            const expanded = group.label === 'WORKSPACE' || expandedGroups.includes(group.label) || group.label === activeGroup;
+            const expanded = group.label === 'WORKSPACE' || (groupExpansion[group.label] ?? group.label === activeGroup);
             const groupActive = group.items.some((item) => isActivePath(pathname, item.href));
             return (
               <section className={'command-nav-group' + (groupIndex === 0 ? ' command-nav-primary' : '')} key={group.label}>
@@ -225,13 +226,13 @@ export function TerminalShell({ children }: { children: ReactNode }) {
                     className={'command-nav-label command-nav-toggle' + (groupActive ? ' has-active' : '')}
                     onClick={() => toggleGroup(group.label)}
                     aria-expanded={expanded}
+                    aria-controls={'welp-nav-' + group.label.toLowerCase()}
                   >
                     <span>{group.label}</span>
                     <ChevronDown size={13} />
                   </button>
                 )}
-                {expanded ? (
-                  <div className="command-nav-items">
+                <div className="command-nav-items" id={'welp-nav-' + group.label.toLowerCase()} hidden={!expanded}>
                     {group.items.map((item) => {
                       const active = isActivePath(pathname, item.href);
                       const Icon = item.icon;
@@ -250,8 +251,7 @@ export function TerminalShell({ children }: { children: ReactNode }) {
                         </Link>
                       );
                     })}
-                  </div>
-                ) : null}
+                </div>
               </section>
             );
           })}

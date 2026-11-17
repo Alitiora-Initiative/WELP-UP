@@ -6,6 +6,11 @@ import { EXECUTION_POLICY, executionReadiness } from '@/lib/server/execution-pol
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+const ACCEPTED_PROGRAM_LOADERS = new Set([
+  'BPFLoaderUpgradeab1e11111111111111111111111',
+  'BPFLoader2111111111111111111111111111111111',
+]);
+
 async function checkSolana() {
   const endpoint = process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
   const response = await fetch(endpoint, {
@@ -44,9 +49,12 @@ async function checkVault() {
       cache: 'no-store',
       signal: AbortSignal.timeout(10_000),
     });
+    if (!response.ok) throw new Error('RPC returned ' + response.status);
     const data = await response.json();
-    const executable = data?.result?.value?.executable === true;
-    return { name: 'Vault program', state: executable ? 'Executable · audit still required' : 'Not deployed', detail: executable ? 'Program account is executable; this does not establish an independent audit or enable funding.' : 'Configured address did not return an executable program. Funding remains disabled.' };
+    if (data?.error) throw new Error('RPC could not verify the program account.');
+    const value = data?.result?.value;
+    const executable = value?.executable === true && ACCEPTED_PROGRAM_LOADERS.has(value?.owner ?? '');
+    return { name: 'Vault program', state: executable ? 'Executable · audit still required' : 'Not deployed', detail: executable ? 'Program account is executable under a supported loader; this does not establish an independent audit or enable funding.' : 'Configured address did not return a supported executable program. Funding remains disabled.' };
   } catch {
     return { name: 'Vault program', state: 'Unable to verify', detail: 'Program status could not be confirmed. Funding remains disabled.' };
   }
@@ -63,17 +71,21 @@ async function checkCustomLaunchProgram() {
       cache: 'no-store',
       signal: AbortSignal.timeout(10_000),
     });
+    if (!response.ok) throw new Error('RPC returned ' + response.status);
     const data = await response.json();
+    if (data?.error) throw new Error('RPC could not verify the program account.');
     const value = data?.result?.value;
     const executable = value?.executable === true;
     const allowedLoader = ['BPFLoaderUpgradeab1e11111111111111111111111', 'BPFLoader2111111111111111111111111111111111'].includes(value?.owner ?? '');
-    const enabled = executable && allowedLoader && process.env.WELP_LAUNCHPAD_ENABLED === 'true';
+    const securityReviewed = process.env.WELP_LAUNCHPAD_SECURITY_REVIEWED === 'true';
+    const enabled = executable && allowedLoader &&
+      process.env.WELP_LAUNCHPAD_ENABLED === 'true' && securityReviewed;
     return {
       name: 'Custom launch program',
       state: enabled ? 'Enabled by operator gate' : executable ? 'Executable; disabled' : 'Undeployed',
       detail: enabled
         ? 'Executable program and explicit operator gate detected. This is not an independent audit.'
-        : 'Custom launch is disabled until an executable program and explicit operator gate are verified.',
+        : 'Custom launch is disabled until an executable program, deployment gate, and independent security-review gate are verified.',
     };
   } catch {
     return { name: 'Custom launch program', state: 'Unable to verify', detail: 'Custom launch program status could not be confirmed.' };
@@ -94,9 +106,9 @@ export async function GET() {
     Promise.resolve({ name: 'Autonomous agents', state: 'Not enabled', detail: 'No production executor or unattended trading runtime is configured.' }),
     Promise.resolve({
       name: 'Fee routing',
-      state: WELP_FEE_POLICY.collectionEnabled ? 'WELP referral fee configured' : 'No WELP referral fee',
+      state: WELP_FEE_POLICY.collectionEnabled ? 'Referral account configured · order validation required' : 'Not configured · swap routes disabled',
       detail: WELP_FEE_POLICY.collectionEnabled
-        ? `A Jupiter referral fee is configured at ${(WELP_FEE_POLICY.referralFeeBps / 100).toFixed(2)}%; this is not WELP-program fee enforcement.`
+        ? `Jupiter orders must include a ${(WELP_FEE_POLICY.referralFeeBps / 100).toFixed(2)}% referral fee before a quote is returned. Configuration shape is checked here; this is not WELP-program fee enforcement or 60/40 treasury settlement.`
         : WELP_FEE_POLICY.collectionDisabledReason,
     }),
   ]);

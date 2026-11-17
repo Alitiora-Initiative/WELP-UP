@@ -12,8 +12,8 @@ const ACCEPTED_PROGRAM_LOADERS = new Set([
 
 /**
  * Live mainnet deployment check for the WELP launchpad program. The custom
- * supply/decimals rail must stay disabled on the website until this program
- * returns a real on-chain owner, so no fake state is ever shown.
+ * supply/decimals rail requires an executable program, an explicit deployment
+ * gate, and an independent security-review release gate before it can launch.
  */
 export async function GET() {
   const endpoint = process.env.SOLANA_RPC_URL ?? 'https://api.mainnet-beta.solana.com';
@@ -39,17 +39,19 @@ export async function GET() {
     // Presence is insufficient: require an executable account owned by a known
     // Solana BPF loader and an explicit operator enable flag before unlocking.
     const programPresent = executable && BASE58.test(owner ?? '') && ACCEPTED_PROGRAM_LOADERS.has(owner ?? '');
-    const deployed = programPresent && process.env.WELP_LAUNCHPAD_ENABLED === 'true';
+    const launchEnabled = programPresent &&
+      process.env.WELP_LAUNCHPAD_ENABLED === 'true' &&
+      process.env.WELP_LAUNCHPAD_SECURITY_REVIEWED === 'true';
     return NextResponse.json(
       {
         programId: WELP_LAUNCHPAD_PROGRAM_ID,
-        deployed,
+        deployed: programPresent,
         executable,
-        launchEnabled: deployed,
-        detail: deployed
-          ? 'Executable program detected and operator launch gate enabled; this is not an independent security audit.'
+        launchEnabled,
+        detail: launchEnabled
+          ? 'Executable program detected and both operator release gates enabled; this does not independently verify the binary or audit.'
           : programPresent
-            ? 'Executable program detected, but the launch rail remains disabled until reviewed deployment configuration enables it.'
+            ? 'Executable program detected, but custom launch remains disabled until deployment and independent security-review gates are explicitly enabled.'
             : 'No executable program is verified at the configured ID; custom launch is disabled.',
         owner,
         checkedAt: new Date().toISOString(),

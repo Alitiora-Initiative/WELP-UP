@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import {
   MAX_TOTAL_SUPPLY_WHOLE,
@@ -90,5 +91,15 @@ test('protocol fee uses integer rounding with no floating point', () => {
   const route = calculateProtocolSwapFee(10_000n);
   assert.equal(route.protocolFeeBaseUnits, 50n);
   assert.equal(route.netSwapInputBaseUnits, 9_950n);
+});
+
+test('custom launch stays locked behind an executable deployment and explicit review gate', () => {
+  const route = readFileSync(new URL('../app/api/program-status/route.ts', import.meta.url), 'utf8');
+  const studio = readFileSync(new URL('../components/LaunchStudioCreatorStudio.tsx', import.meta.url), 'utf8');
+  assert.match(route, /ACCEPTED_PROGRAM_LOADERS\.has/);
+  assert.match(route, /WELP_LAUNCHPAD_ENABLED === 'true'/);
+  assert.match(route, /WELP_LAUNCHPAD_SECURITY_REVIEWED === 'true'/);
+  assert.match(route, /const launchEnabled = programPresent/);
+  assert.match(studio, /programStatus\?\.launchEnabled === true/);
 });
 

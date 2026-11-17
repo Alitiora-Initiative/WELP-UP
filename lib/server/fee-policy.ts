@@ -1,12 +1,12 @@
 import 'server-only';
 
 /**
- * Canonical WELP mainnet swap-fee policy.
+ * Configuration policy for the Jupiter referral fee on WELP-routed swaps.
  *
- * The fee is 0.50% of gross input on each WELP-controlled swap.
- * The full fee is credited to treasury; after a 14-day epoch, 60% of
- * eligible new inflows is released to the developer and 40% remains reserved.
- * This server module is a policy reference, not on-chain enforcement.
+ * This is not an on-chain fee or treasury settlement. A correctly shaped
+ * referral account only enables requesting fee-bearing quotes; each Jupiter
+ * order must return the configured fee rate before it is shown for signing.
+ * The separate 60/40 epoch math is a design reference, not implemented here.
  */
 export const WELP_FEE_POLICY = Object.freeze({
   network: 'solana-mainnet-beta',
@@ -24,7 +24,7 @@ export const WELP_FEE_POLICY = Object.freeze({
     Number.isInteger(Number(process.env.WELP_REFERRAL_FEE_BPS ?? 50)) &&
     Number(process.env.WELP_REFERRAL_FEE_BPS ?? 50) >= 50 &&
     Number(process.env.WELP_REFERRAL_FEE_BPS ?? 50) <= 255,
-  collectionDisabledReason: 'No WELP referral fee is configured; WELP swap order and execution routes fail closed until a verified treasury referral destination is configured.',
+  collectionDisabledReason: 'No WELP Jupiter referral account is configured; WELP swap order and execution routes fail closed until an account is configured and fee-bearing orders are validated.',
 });
 
 export function splitProtocolSwapFee(grossInputBaseUnits: bigint) {

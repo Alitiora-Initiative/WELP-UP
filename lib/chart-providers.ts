@@ -1,53 +1,98 @@
-/** Read-only DexScreener market snapshots for the self-hosted chart. */
-export type Candle = {
-  time: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
+export type DexScreenerPair = {
+  pairAddress: string;
+  priceUsd: number;
+  liquidityUsd: number;
+  volume24hUsd: number;
+  priceChange24h: number | null;
 };
 
-export type ChartTimeframe = 'minute' | 'hour' | 'day';
-export type ChartAggregate = 1 | 4 | 5 | 12 | 15;
-export type ProviderResult<T> = { status: 'ok' | 'stale' | 'error'; data?: T; source: string; fetchedAt: number; error?: string; ageMs?: number; poolAddress?: string; poolLiquidityUsd?: number };
-export interface ChartProvider { name: string; fetchCandles(mint: string, from: number, to: number, timeframe: ChartTimeframe, aggregate: ChartAggregate): Promise<ProviderResult<Candle[]>>; }
+export type ProviderResult<T> = {
+  status: 'ok' | 'error';
+  source: 'DexScreener';
+  fetchedAt: number;
+  data?: T;
+  error?: string;
+};
 
-type RecordValue = Record<string, unknown>;
 const MINT_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const DEX_BASE = 'https://api.dexscreener.com/latest/dex/tokens';
-const SOURCE = 'DexScreener live snapshot';
 
-function record(value: unknown): RecordValue { return typeof value === 'object' && value !== null && !Array.isArray(value) ? value as RecordValue : {}; }
-function number(value: unknown) { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : null; }
-function failure(fetchedAt: number, error: string): ProviderResult<Candle[]> { return { status: 'error', source: SOURCE, fetchedAt, error }; }
+type RecordValue = Record<string, unknown>;
 
-export class DexScreenerProvider implements ChartProvider {
-  readonly name = 'dexscreener';
-  async fetchCandles(mint: string, _from: number, to: number, _timeframe: ChartTimeframe, _aggregate: ChartAggregate): Promise<ProviderResult<Candle[]>> {
+function record(value: unknown): RecordValue {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? value as RecordValue
+    : {};
+}
+
+function number(value: unknown): number | null {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function isValidMint(mint: string): boolean {
+  return MINT_RE.test(mint);
+}
+
+export class DexScreenerProvider {
+  readonly name = 'DexScreener' as const;
+
+  async fetchPair(mint: string): Promise<ProviderResult<DexScreenerPair>> {
     const fetchedAt = Date.now();
-    if (!MINT_RE.test(mint)) return failure(fetchedAt, 'Invalid Solana mint address.');
+    if (!isValidMint(mint)) {
+      return { status: 'error', source: this.name, fetchedAt, error: 'Invalid Solana mint address.' };
+    }
+
     try {
-      const response = await fetch(`${DEX_BASE}/${encodeURIComponent(mint)}`, { cache: 'no-store', signal: AbortSignal.timeout(10_000), headers: { accept: 'application/json' } });
-      if (!response.ok) return failure(fetchedAt, `DexScreener returned HTTP ${response.status}.`);
+      const response = await fetch(`${DEX_BASE}/${encodeURIComponent(mint)}`, {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(10_000),
+        headers: { accept: 'application/json' },
+      });
+      if (!response.ok) {
+        return { status: 'error', source: this.name, fetchedAt, error: `DexScreener returned HTTP ${response.status}.` };
+      }
+
       const payload = record(await response.json());
       const pairs = Array.isArray(payload.pairs) ? payload.pairs.map(record) : [];
-      const pair = pairs.filter((item) => item.chainId === 'solana').sort((a, b) => (number(record(b.liquidity).usd) ?? 0) - (number(record(a.liquidity).usd) ?? 0))[0];
-      if (!pair) return failure(fetchedAt, 'DexScreener returned no Solana liquidity pair for this mint.');
-      const close = number(pair.priceUsd);
-      const liquidity = number(record(pair.liquidity).usd);
-      const volume = number(record(pair.volume).h24) ?? 0;
-      if (!close || close <= 0 || !liquidity || liquidity <= 0) return failure(fetchedAt, 'DexScreener returned incomplete price or liquidity data.');
-      const timestamp = number(pair.pairCreatedAt) ? Math.floor(number(pair.pairCreatedAt)! / 1000) : Math.floor(to);
-      const candle: Candle = { time: timestamp, open: close, high: close, low: close, close, volume };
-      return { status: 'ok', data: [candle], source: SOURCE, fetchedAt, ageMs: 0, poolAddress: String(pair.pairAddress ?? ''), poolLiquidityUsd: liquidity };
+      const pair = pairs
+        .filter((item) => {
+          const pairAddress = String(item.pairAddress ?? '');
+          const liquidity = number(record(item.liquidity).usd);
+          const price = number(item.priceUsd);
+          return item.chainId === 'solana' && isValidMint(pairAddress) &&
+            liquidity !== null && liquidity > 0 && price !== null && price > 0;
+        })
+        .sort((left, right) =>
+          (number(record(right.liquidity).usd) ?? 0) - (number(record(left.liquidity).usd) ?? 0),
+        )[0];
+
+      if (!pair) {
+        return { status: 'error', source: this.name, fetchedAt, error: 'DexScreener returned no Solana liquidity pair for this mint.' };
+      }
+
+      const priceChange24h = number(record(pair.priceChange).h24);
+      return {
+        status: 'ok',
+        source: this.name,
+        fetchedAt,
+        data: {
+          pairAddress: String(pair.pairAddress),
+          priceUsd: number(pair.priceUsd)!,
+          liquidityUsd: number(record(pair.liquidity).usd)!,
+          volume24hUsd: number(record(pair.volume).h24) ?? 0,
+          priceChange24h,
+        },
+      };
     } catch (error) {
-      return failure(fetchedAt, error instanceof Error ? error.message : 'DexScreener request failed.');
+      return {
+        status: 'error',
+        source: this.name,
+        fetchedAt,
+        error: error instanceof Error ? error.message : 'DexScreener request failed.',
+      };
     }
   }
 }
 
-const PROVIDERS: Record<string, ChartProvider> = { dexscreener: new DexScreenerProvider() };
-export function getProvider(name: string): ChartProvider | null { return PROVIDERS[name] ?? null; }
-export function listProviders(): string[] { return Object.keys(PROVIDERS); }
-export async function fetchWithFallback(mint: string, from: number, to: number, timeframe: ChartTimeframe = 'minute', aggregate: ChartAggregate = 5) { return PROVIDERS.dexscreener.fetchCandles(mint, from, to, timeframe, aggregate); }
+export const dexScreenerProvider = new DexScreenerProvider();

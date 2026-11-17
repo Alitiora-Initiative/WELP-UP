@@ -7,9 +7,9 @@ WELP UP is a Solana market research and wallet-signed trading interface at [welp
 ## Current feature boundaries
 
 - **Markets and signals:** read live upstream Solana market data. Feed or RPC outages are reported as unavailable; the app does not fabricate prices, balances, listings or volume.
-- **Trading:** user reviews and signs supported transactions in their wallet. Automated trading and custody are not enabled. Jupiter swaps fail closed unless a valid server-owned Jupiter referral destination and fee are configured. This referral path is separate from WELP's undeployed on-chain treasury program and must not be described as treasury revenue until its destination and settlement are verified.
+- **Trading:** Jupiter Swap API v2 orders are designed for user review and wallet signing; automated trading and custody are not enabled. WELP swap order and execute routes fail closed until a server-side Jupiter referral account and fee are configured. Each returned order must include the configured fee basis points. This referral route is separate from WELP's undeployed on-chain treasury program and does not implement the proposed 60/40 treasury settlement.
 - **Pump launch:** the launch route prepares a PumpPortal `create` transaction targeting the Pump bonding-curve pool; the connected wallet must sign it, and the site submits the signed transaction to Solana. A successful transaction's mint is its Solana contract address (CA). This does not guarantee listing or indexing by third-party platforms.
-- **Custom supply and decimals:** UI or program source is not proof of mainnet support. Keep this feature disabled until the program is built, reviewed, deployed, initialized and independently verified on mainnet.
+- **Custom supply and decimals:** the WELP program is not executable on mainnet. Keep the rail disabled until the binary and program ID are verified, an independent security review is complete, and both `WELP_LAUNCHPAD_ENABLED` and `WELP_LAUNCHPAD_SECURITY_REVIEWED` are explicitly enabled.
 - **Development fund:** the homepage shows the confirmed SOL balance of the public development wallet against a 4 SOL goal. It links to the account explorer and reports unavailable when RPC verification fails. Donations are voluntary, go directly to that address and are not controlled by WELP software. The goal does not trigger an unattended transaction or guarantee deployment.
 - **Graduation and DEX listing:** platform support, graduation, indexing and CoinGecko inclusion are controlled by third parties and are not promised by mint creation alone.
 
@@ -17,7 +17,14 @@ WELP UP is a Solana market research and wallet-signed trading interface at [welp
 
 WELP does not ask for seed phrases. Every supported asset transfer requires the user's wallet signature. Never place private keys in source, issues, chat, browser storage or deployment logs. A deployment key must be protected outside the application, funded only for a reviewed deployment, and used only after reproducible builds, tests, security review and verification of program ID, binary, upgrade authority, treasury and fee destinations.
 
-The current Anchor source and sample program ID are not evidence of a deployed or audited mainnet program. No user funds should be sent to a program/PDA until its deployed code and permissions have been independently verified. The 0.50% policy does not tax direct trades on Pump, Jupiter or other DEXs unless the actual route carries a verifiable WELP fee transfer. A 14-day 60/40 allocation is a policy design until implemented and verified on-chain.
+The current Anchor source and sample program IDs are not evidence of a deployed or audited mainnet program. No user funds should be sent to a program/PDA until deployed code and permissions have been independently verified. A Jupiter referral fee applies only to orders requested through WELP's configured Jupiter route; it does not tax direct trades on Pump, Jupiter or other DEXs. The proposed 14-day 60/40 allocation is a policy design until implemented and verified on-chain.
+
+### Mainnet readiness check (2026-11-17)
+
+- The vault has no configured production program ID; the source placeholder returned no account from the public mainnet RPC. Vault deposits, automated execution and fee settlement remain disabled.
+- The custom launchpad ID (`BrcdB9sV7z9DvF9rDHG263HUxXgJM3iCQdF36TcxbFEn`) returned an account owned by the System Program with `executable: false`; it is not a deployed WELP program. The custom-supply launch rail must remain disabled.
+- The current development environment does not expose `WELP_REFERRAL_ACCOUNT` or `WELP_REFERRAL_FEE_BPS`. Jupiter order/execute routes therefore return 503; no end-to-end signed swap or WELP fee settlement is claimed. Check `/api/status` in the target deployment before enabling any route.
+- The public Jupiter token/search feeds and Jupiter Swap API v2 order endpoint responded during read-only checks. A reachable quote API is not proof that a wallet-signed swap will execute or settle.
 
 ## Local development
 
@@ -46,6 +53,6 @@ A Solana CA is a mint address. Wallets and platforms may recognize it, but marke
 - **Social metadata:** optional HTTPS website, X and Telegram links are included in Pump launch metadata. The WELP token image remains the default image; creator image upload is not provided.
 - **Comments and community chat:** not provided.
 - **Holder concentration charts:** no WELP holder-distribution chart is provided; do not interpret an aggregate holder count as a distribution.
-- **Candles:** charts use live provider OHLCV when available and surface provider/freshness failures.
+- **Charts:** the app embeds DexScreener's hosted chart for the highest-liquidity Solana pair returned for a mint. WELP does not synthesize OHLC candles from a single price snapshot. Signals separately use GeckoTerminal OHLCV plus Jupiter fee-bearing quotes.
 - **Transaction history:** the portfolio view reads transactions for a connected public wallet; it is not a token-specific live buy/sell/migration ledger.
 - **Discovery filters:** the market board filters and sorts only on fields returned by its live provider. Creation time, bonding progress and social engagement are not shown without verified feeds.
