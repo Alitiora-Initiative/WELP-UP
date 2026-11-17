@@ -1,6 +1,8 @@
 # Production readiness checklist
 
-**Status as of 2026-11-06: not approved for real-money vault custody or autonomous trading.**
+**Status as of 2026-11-17: not approved for real-money vault custody or autonomous trading.**
+
+A read-only mainnet RPC check found no vault program configured or deployed. The custom launchpad source ID is not executable on mainnet. In the current development environment, no Jupiter referral account is configured, so WELP order/execute routes return 503. The manual Jupiter swap flow is therefore not verified end-to-end with real funds; do not describe it as live until the fee route is configured and a wallet-signed transaction is independently reconciled.
 
 This checklist distinguishes working public-data and wallet-approved features from infrastructure that is only designed, scaffolded, or absent. Do not change a status to complete without reproducible evidence linked in this document.
 
@@ -8,7 +10,7 @@ This checklist distinguishes working public-data and wallet-approved features fr
 
 - [x] Wallet connection and public wallet balance reads.
 - [x] Live market/token data and deterministic signal evaluation.
-- [x] Jupiter Swap API v2 order request and signed-order execution path.
+- [x] Jupiter Swap API v2 order request and signed-order execution path; both routes fail closed until the referral account is configured, and end-to-end real-funds execution remains unverified.
 - [x] Solana RPC transaction-signature history for a wallet address.
 - [x] Browser-local activity snapshots and display preferences.
 - [ ] Server-side account identity and durable per-user data.
@@ -37,7 +39,7 @@ See [AI_AGENT_RUNTIME.md](AI_AGENT_RUNTIME.md) and [VAULT_PROGRAM_SECURITY_REVIE
 
 ## Mainnet vault launch gates
 
-- [ ] Final program ID generated from the reviewed source and keypair.
+- [ ] Final program ID generated from the reviewed source and keypair. The current source placeholder returned no account from mainnet RPC.
 - [ ] Mainnet deployment completed and source verified against deployed bytecode.
 - [ ] Independent audit by a qualified Solana/Anchor security firm, with findings remediated.
 - [ ] Property, fuzz, invariant, and adversarial tests for share accounting, rounding, rent, token accounts, CPI account validation, re-entrancy-like composition risks, and emergency paths.
@@ -71,11 +73,11 @@ No live bot performance, ROI, TVL, active-agent count, or copier count may be sh
 
 ## Fees and treasury
 
-**Current fee policy (not collected):** WELP's target protocol fee is 0.50% (50 bps) of gross input for each WELP-controlled swap. 100% is credited to treasury at collection; after a 14-day epoch, 60% of eligible new inflows is released to the published developer/operator receiving address and 40% is added to the protected reserve. The split is applied once, not twice. There are no additional fixed USDC trade, transfer or launch-creation charges, and the creator-configurable 0–3% fee model has been removed.
+**Proposed on-chain protocol fee (not collected):** WELP's design target is 0.50% (50 bps) of gross input for each WELP-controlled swap. The proposed 100% treasury credit and 60/40 14-day epoch distribution are not implemented. A separate Jupiter referral fee may be configured for the browser swap route; the current development environment has no referral account, and that off-chain referral does not settle into the WELP treasury or follow the 60/40 model. There are no additional fixed USDC trade, transfer or launch-creation charges, and the creator-configurable 0–3% fee model has been removed.
 
-The canonical server policy is in lib/server/fee-policy.ts. The TypeScript and Rust helpers perform integer fee calculations only; they do not collect funds. The launchpad crate is not deployed to mainnet, has no production deployment keypair, and does not implement a buy/sell instruction or a generic SPL input-token fee vault. The Jupiter order/execute route cannot currently append the on-chain fee legs, so both routes remain fail-closed.
+The canonical server policy is in `lib/server/fee-policy.ts`. Its 50 bps default is a requested Jupiter referral fee, not an on-chain WELP treasury fee. When configured, `/api/order` passes the server-owned referral account and fee to Jupiter and rejects orders unless Jupiter returns the configured `feeBps`; `/api/execute` remains gated by the same configuration. The current development environment has no referral account, so both routes fail closed. A configured referral account is not by itself proof of account ownership, fee settlement, or WELP treasury revenue.
 
-Before enabling collection, implement and verify the actual mainnet swap instruction, atomically credit 100% of the fee to a treasury vault for the exact input mint, and wire its 14-day epoch release. Add replay protection and event receipts, run SBF-backed adversarial tests, verify the deployed bytecode/IDL/upgrade authority, and complete an independent Solana/Anchor security review. The current SOL-only vault cannot collect arbitrary SPL-token input fees. Do not treat a frontend build or fee calculation test as proof of collection.
+The separate 0.50% protocol treasury policy and 60/40 epoch model are not implemented. The launchpad crate is not deployed to mainnet and does not implement a buy/sell instruction or generic SPL input-token fee vault. Before describing referral fees as live, configure the correct Jupiter referral account, inspect a fee-bearing order, and reconcile a wallet-signed execution and finalized on-chain result. Before claiming WELP treasury collection, implement and verify the actual mainnet swap instruction, atomically credit 100% of the fee to a treasury vault for the exact input mint, wire its 14-day epoch release, add replay protection and event receipts, run SBF-backed adversarial tests, verify deployed bytecode/IDL/upgrade authority, and complete an independent Solana/Anchor security review. Do not treat a frontend build or fee-calculation test as proof of collection.
 
 ## Production operations
 

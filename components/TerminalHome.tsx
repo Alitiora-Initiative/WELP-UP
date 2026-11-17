@@ -327,12 +327,12 @@ export function TerminalHome() {
         <div className="home-development-copy">
           <div className="eyebrow">COMMUNITY DEVELOPMENT FUND</div>
           <h2>Help fund the program review and deployment.</h2>
-          <p>Contributions go directly to the published development wallet. Copy the address below and send SOL from your wallet; WELP cannot move these funds.</p>
+          <p>The 3,000 SOL target budgets engineering, independent security reviews, deployment and operating infrastructure, with a remediation reserve. It is a fundraising target—not a per-program rent estimate—and excludes seed liquidity. Contributions go directly to the published development wallet; send SOL from your wallet. WELP cannot move these funds.</p>
         </div>
         <div className="home-development-balance">
           <span>VERIFIED WALLET BALANCE</span>
           <strong>{fundValue}</strong>
-          <small>Goal: {(fund?.goalLamports ?? 4_000_000_000) / 1e9} SOL</small>
+          <small>Goal: {(fund?.goalLamports ?? 3_000_000_000_000) / 1e9} SOL</small>
           <div className="home-fund-progress"><span style={{ width: Math.max(0, Math.min(100, (fund?.progressBps ?? 0) / 100)) + '%' }} /></div>
           <div className="home-fund-bottom">
             <span>{fund?.progressBps == null ? 'Balance unavailable' : (fund.progressBps / 100).toFixed(2) + '% funded'}</span>

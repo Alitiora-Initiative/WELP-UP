@@ -27,7 +27,7 @@ test('Jupiter order and execute endpoints fail closed until the WELP fee destina
   assert.match(order, /const referralAccount = WELP_FEE_POLICY\.referralAccount/);
   assert.match(order, /const referralFeeBps = WELP_FEE_POLICY\.referralFeeBps/);
   assert.doesNotMatch(order, /body\.referralAccount|body\.referralFeeBps/);
-  assert.match(policy, /routes fail closed until a verified treasury referral destination is configured/);
+  assert.match(policy, /routes fail closed until an account is configured and fee-bearing orders are validated/);
 });
 
 test('Jupiter v2 order sends only documented fields and requires a signable transaction', () => {
@@ -35,4 +35,5 @@ test('Jupiter v2 order sends only documented fields and requires a signable tran
   assert.match(jupiter, /searchParams\.set\('referralFee', String\(params\.referralFeeBps\)\)/);
   assert.match(jupiter, /!data\.transaction\.trim\(\)/);
   assert.match(jupiter, /!data\.requestId\.trim\(\)/);
+  assert.match(jupiter, /Number\(data\.feeBps\) !== params\.referralFeeBps/);
 });

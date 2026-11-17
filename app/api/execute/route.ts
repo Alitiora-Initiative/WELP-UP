@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   if (!WELP_FEE_POLICY.collectionEnabled) {
-    return NextResponse.json({ error: 'WELP fee routing is not configured. Swap execution is disabled until the treasury referral destination is verified.' }, { status: 503 });
+    return NextResponse.json({ error: 'WELP fee routing is not configured. Swap execution is disabled until a referral account is configured.' }, { status: 503 });
   }
   let body: Record<string, unknown>;
   try {

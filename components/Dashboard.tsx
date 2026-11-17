@@ -24,6 +24,7 @@ import { address, getTransactionDecoder, getTransactionEncoder } from '@solana/k
 import { useClient } from '@solana/react';
 import { useConnectedWallet } from '@solana/kit-plugin-wallet/react';
 import { type AppClient } from '@/components/Providers';
+import { ChartPanel } from '@/components/ChartPanel';
 import { SOL_MINT } from '@/lib/constants';
 import { addWalletEvent } from '@/lib/activity';
 import { currentTime } from '@/lib/time';
@@ -37,6 +38,8 @@ type Order = {
   requestId: string;
   inAmount: string;
   outAmount: string;
+  otherAmountThreshold?: string;
+  routePlan?: Array<{ swapInfo?: { label?: string }; percent?: number }>;
   priceImpact?: number | string | null;
   feeBps?: number;
   feeMint?: string;
@@ -74,7 +77,7 @@ function encodeBase64(value: ArrayLike<number>) {
 function parseUnits(value: string, decimals: number) {
   const trimmed = value.trim();
   const match = /^(\d+)(?:\.(\d*))?$/.exec(trimmed);
-  if (!match || (match[2]?.length ?? 0) > decimals) return null;
+  if (!match || trimmed.length > 64 || (match[2]?.length ?? 0) > decimals) return null;
   const scale = BigInt(10) ** BigInt(decimals);
   const fractional = (match[2] ?? '').padEnd(decimals, '0');
   return (BigInt(match[1]) * scale + BigInt(fractional || '0')).toString();
@@ -360,6 +363,8 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
   const formToken = direction === 'buy' ? 'SOL' : activeToken?.symbol ?? 'TOKEN';
   const receiveToken = direction === 'buy' ? activeToken?.symbol ?? 'TOKEN' : 'SOL';
   const orderImpact = order && order.priceImpact !== undefined && order.priceImpact !== null ? Number(order.priceImpact) : null;
+  const routeLabels = order?.routePlan?.map((route) => route.swapInfo?.label).filter((label): label is string => Boolean(label)) ?? [];
+  const feeAsset = !order?.feeMint ? 'asset' : order.feeMint === SOL_MINT ? 'SOL' : order.feeMint === activeToken?.mint ? activeToken?.symbol ?? 'token' : 'quote asset';
   const countEligible = currentSignals.filter((signal) => signal.eligible).length;
 
   return (
@@ -368,15 +373,15 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
           <section className="welcome-row">
             <div>
               <p className="eyebrow"><Sparkles size={14} /> {view === 'swap' ? 'USER-APPROVED EXECUTION' : 'AUTOMATED MARKET ANALYSIS · USER-APPROVED EXECUTION'}</p>
-              <h1>{view === 'signals' ? <>Market <em>signals.</em></> : view === 'swap' ? <>Review a <em>swap.</em></> : <>Trade with <em>clarity.</em></>}</h1>
-              <p className="welcome-copy">{view === 'signals' ? 'The current rule engine reviews live Solana pools and highlights candidates. Signals are analysis, not trades or profit forecasts.' : view === 'swap' ? 'Choose a token and amount, inspect the Jupiter quote, then approve that single transaction in Phantom.' : 'WELP reviews live Solana pools. You inspect each quote and approve every swap in your wallet.'}</p>
+              <h1>{view === 'signals' ? <>Market <em>signals.</em></> : view === 'swap' ? <>Swap with <em>clarity.</em></> : <>Trade with <em>clarity.</em></>}</h1>
+              <p className="welcome-copy">{view === 'signals' ? 'The current rule engine reviews live Solana pools and highlights candidates. Signals are analysis, not trades or profit forecasts.' : view === 'swap' ? 'Search a token, inspect the live Jupiter route, minimum received, and fee, then approve one transaction in your connected wallet.' : 'WELP reviews live Solana pools. You inspect each quote and approve every swap in your wallet.'}</p>
             </div>
-            <div className="date-pill"><span className="date-dot" /> MAINNET · REAL FUNDS</div>
+            <div className="date-pill"><span className="date-dot" /> MAINNET · WALLET-SIGNED</div>
           </section>
 
           <div className="mainnet-banner" role="note">
             <ShieldCheck size={19} />
-            <div><strong>Swaps are paused for fee verification.</strong><span>Live market data is flowing, but WELP will not quote or submit swaps until its treasury referral destination is configured and verified. This prevents real funds from moving without the disclosed WELP fee. You approve every supported transaction in your own wallet; no unattended trading is active.</span></div>
+            <div><strong>Wallet-signed execution · fee-gated orders.</strong><span>Jupiter Swap API v2 supplies live orders. WELP returns a quote only when its referral account is configured and Jupiter confirms the requested fee. The exact rate and route are shown before you sign. The app never holds keys or trades unattended.</span></div>
             <a href="https://docs.jup.ag/user-docs/trade/swap" target="_blank" rel="noreferrer" aria-label="Read swap documentation"><CircleHelp size={17} /></a>
           </div>
 
@@ -398,7 +403,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
             </article>
           </section> : null}
 
-          <div className={`content-grid${view !== 'console' ? ' content-grid-single' : ''}`}>
+          <div className={view === 'swap' ? 'swap-workspace-grid' : `content-grid${view !== 'console' ? ' content-grid-single' : ''}`}>
             {view !== 'swap' ? <section className="panel signals-panel" id="signals">
               <div className="panel-heading">
                 <div><p className="eyebrow">MARKET SCANNER</p><h2>Live signals <span className="heading-live" /></h2></div>
@@ -455,33 +460,38 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
                   <div className="quote-title"><span><ShieldCheck size={15} /> Review quote</span><small>Fresh for 45 seconds</small></div>
                   <div className="quote-line"><span>You pay</span><strong>{formatUnits(order.inAmount, amountInDecimals)} {formToken}</strong></div>
                   <div className="quote-line"><span>Estimated receive</span><strong>{formatUnits(order.outAmount, amountOutDecimals)} {receiveToken}</strong></div>
+                  {order.otherAmountThreshold ? <div className="quote-line"><span>Minimum received</span><strong>{formatUnits(order.otherAmountThreshold, amountOutDecimals)} {receiveToken}</strong></div> : null}
                   <div className="quote-line"><span>Price impact</span><strong>{orderImpact !== null && Number.isFinite(orderImpact) ? `${orderImpact.toFixed(3)}%` : 'Unavailable'}</strong></div>
                   <div className="quote-line"><span>Max slippage</span><strong>{((order.slippageBps ?? 50) / 100).toFixed(2)}%</strong></div>
-                  {typeof order.feeBps === 'number' ? <div className="quote-line"><span>Jupiter route fee</span><strong>{(order.feeBps / 100).toFixed(2)}%</strong></div> : null}
-                  <p className="quote-note">Your wallet will show the exact transaction. Only approve if the details match this quote.</p>
+                  {typeof order.feeBps === 'number' ? <div className="quote-line"><span>Referral fee</span><strong>{(order.feeBps / 100).toFixed(2)}% · {feeAsset}</strong></div> : <div className="quote-line"><span>Referral fee</span><strong>Not returned</strong></div>}
+                  <div className="quote-line"><span>Route</span><strong>{routeLabels.length ? routeLabels.join(' → ') : 'Jupiter best route'}</strong></div>
+                  <p className="quote-note">Minimum received and fees come from this live order. Your wallet shows the exact transaction; approve only if its details match this quote.</p>
                 </div>
               ) : null}
               {tradeError ? <div className="inline-error" role="alert">{tradeError}</div> : null}
               {signature ? <div className="success-box"><ShieldCheck size={17} /><span>Swap submitted successfully.</span><a href={`https://explorer.solana.com/tx/${signature}`} target="_blank" rel="noreferrer">View <ExternalLink size={13} /></a></div> : null}
               {order ? (
                 <button className="primary-button" onClick={() => void approveWithWallet()} disabled={pending !== '' || !connected}>
-                  {pending === 'sign' ? <><LoaderCircle className="spin" size={16} /> Waiting for wallet…</> : <><LockKeyhole size={16} /> Review & sign in Phantom</>}
+                  {pending === 'sign' ? <><LoaderCircle className="spin" size={16} /> Waiting for wallet…</> : <><LockKeyhole size={16} /> Review &amp; sign in {connected?.wallet.name ?? 'your wallet'}</>}
                 </button>
               ) : (
                 <button className="primary-button" onClick={() => void createQuote()} disabled={!connected || pending !== '' || !activeToken}>
                   {pending === 'quote' ? <><LoaderCircle className="spin" size={16} /> Getting Jupiter quote…</> : <><ArrowDownUp size={16} /> Get quote</>}
                 </button>
               )}
-              <p className="swap-caption"><LockKeyhole size={13} /> Quotes and swaps stay off until the site wallet session is active, and each swap still needs your approval.</p>
+              <p className="swap-caption"><LockKeyhole size={13} /> Quotes require a connected wallet and configured fee route. Every swap is reviewed and signed in your selected wallet.</p>
             </section> : null}
           </div>
 
-          {view === 'console' ? <section className="safety-panel" id="safety">
+            {view === 'swap' && activeToken ? <ChartPanel mint={activeToken.mint} name={activeToken.name} symbol={activeToken.symbol} /> : null}
+
+            {view === 'console' ? <section className="safety-panel" id="safety">
+
             <div className="safety-heading"><span className="safety-icon"><ShieldCheck size={18} /></span><div><p className="eyebrow">BUILT-IN GUARDRAILS</p><h2>Rules before risk</h2></div></div>
             <div className="safety-rule"><strong>80–98</strong><span>Entry score range<br /><small>Outside this band, WELP will not open a signal-based buy.</small></span></div>
             <div className="safety-rule"><strong>0.001 SOL</strong><span>Minimum buy<br /><small>Every entry keeps at least 0.003 SOL for fees.</small></span></div>
             <div className="safety-rule"><strong>$0.50</strong><span>Minimum wallet equity<br /><small>Solana and stablecoin balance must meet the floor.</small></span></div>
-            <div className="safety-rule safety-rule-last"><strong>Phantom</strong><span>You approve every swap<br /><small>No auto-trading or private-key access in this app.</small></span></div>
+            <div className="safety-rule safety-rule-last"><strong>Wallet signature</strong><span>You approve every swap<br /><small>No auto-trading or private-key access in this app.</small></span></div>
           </section> : null}
           <footer className="footer"><span>WELP UP · Solana mainnet</span><span>Trading is risky. A token can lose all value.</span><a href="/terms">Terms &amp; Conditions</a><a href="https://github.com/Alitiora-Initiative/WELP-UP" target="_blank" rel="noreferrer">Source <ExternalLink size={12} /></a></footer>
       </div>

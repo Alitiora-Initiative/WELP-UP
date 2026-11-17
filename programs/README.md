@@ -8,7 +8,7 @@ Per-user PDA SOL vault (Anchor source implementation, not yet deployed). Current
 - `docs/vault/ARCHITECTURE.md`
 - `docs/PRODUCTION_READINESS.md`
 
-**Deployment status: not deployed to Devnet or Mainnet. Mainnet funds are disabled.** The program ID in source is a placeholder. Do not derive a user deposit address or accept funds from this source build. `execute_swap` fails closed with `TradingDisabled`; Jupiter CPI, policy consumption and strategy-snapshot enforcement by the swap path, SPL-token accounting, local-validator tests, and independent audit are not complete. Legacy direct withdrawal is disabled to prevent share-accounting bypass; the legacy initializer is disabled because its cap arguments were not persisted.
+**Deployment status: not deployed to Devnet or Mainnet. Mainnet funds are disabled.** The source ID is a placeholder and is not configured for production. A read-only mainnet RPC check on 2026-11-17 found no account at the placeholder ID. Do not derive a user deposit address or accept funds from this source build. `execute_swap` fails closed with `TradingDisabled`; Jupiter CPI, policy consumption and strategy-snapshot enforcement by the swap path, SPL-token accounting, local-validator tests, and independent audit are not complete. Legacy direct withdrawal is disabled to prevent share-accounting bypass; the legacy initializer is disabled because its cap arguments were not persisted.
 
 Do not derive a deposit address from the placeholder program ID. Do not deploy this program or accept deposits until all launch gates have been completed and independently reviewed.
 
@@ -39,7 +39,7 @@ A new Anchor 0.30.1 crate is present at \`programs/launchpad\`. The current impl
 - a protected 40% reserve counter excluded from later epoch distributions;
 - checked Rust math and unit tests for the 0–3% creator fee, the 0.5%-of-creator-fee split and remainder carry.
 
-**Deployment status: local source only; not deployed to Devnet or Mainnet.** The program ID in \`lib.rs\` is a sample local ID with no deployment keypair. Do not derive a production PDA or send funds to it. The fee routing helper is not yet called by a launch buy/sell handler and does not transfer any funds. Mint initialization, purchases, curve, escrow, refunds, Raydium CPMM CPI, LP burn and production indexing are not implemented.
+**Deployment status: local source only; not deployed to Devnet or Mainnet.** The program ID in `lib.rs` is a sample local ID with no deployment keypair. A read-only mainnet RPC check on 2026-11-17 found the address owned by the System Program with `executable: false`; it is not a deployed WELP program. Do not derive a production PDA or send funds to it. The fee routing helper is not yet called by a launch buy/sell handler and does not transfer any funds. Mint initialization, purchases, curve, escrow, refunds, Raydium CPMM CPI, LP burn and production indexing are not implemented.
 
 Run the host-side unit tests with:
 

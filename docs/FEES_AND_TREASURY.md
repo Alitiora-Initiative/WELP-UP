@@ -42,9 +42,11 @@ No browser setting or server-side flag is sufficient to enforce the fee. The pro
 
 ## Current implementation status
 
-The TypeScript policy and integer fee calculation are defined in source. This is not proof of fee collection.
+The TypeScript policy and integer fee calculation are defined in source. This is not proof of WELP treasury fee collection.
 
-The current Anchor welp_launchpad crate is **not deployed on Solana mainnet** and has no production deployment keypair. Its sample program ID must not be used to derive a payment address. The current source does not yet have a production bonding-curve swap instruction or a composable Jupiter swap CPI with both fee transfers. The application order and execute endpoints therefore remain fail-closed; they do not submit mainnet swaps that omit the protocol fee.
+The browser's Jupiter Swap API v2 path can request a referral fee using a server-configured referral account and basis-point rate. The order helper rejects a quote unless Jupiter returns the configured `feeBps`, and each resulting transaction still requires the connected wallet's signature. In the current development environment, no referral account is configured, so the order and execute endpoints return 503. Do not set the account to an arbitrary wallet address; it must be the correct Jupiter referral account and its fee settlement must be verified before enabling the flow.
+
+This Jupiter referral path is separate from the WELP protocol treasury policy described above. It does not call the WELP on-chain program, does not implement the 60/40 epoch distribution, and does not establish that fees reach the published developer recipient. The current Anchor `welp_launchpad` crate is **not deployed on Solana mainnet** and has no production deployment keypair. Its sample program ID must not be used to derive a payment address. The source does not yet have a production bonding-curve swap instruction or a composable Jupiter swap CPI with atomic treasury fee transfers.
 
 The previous fixed-amount USDC supported-transfer instruction and its integration test have been removed from the program source. No direct SPL transfer fee is charged. The current treasury vault is a SOL System Program PDA, not a generic SPL-token vault. Asset-specific token vaults and token transfer CPIs are not implemented, so non-SOL input-asset fees remain unsupported.
 

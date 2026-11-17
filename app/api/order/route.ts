@@ -8,10 +8,9 @@ export const runtime = 'nodejs';
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
 export async function POST(request: NextRequest) {
-  // Never allow a WELP-controlled swap to run without an explicit fee destination.
-  // This prevents the UI from presenting a fee-bearing product while silently collecting nothing.
+  // Never return a WELP-controlled order without an explicit referral destination.
   if (!WELP_FEE_POLICY.collectionEnabled) {
-    return NextResponse.json({ error: 'WELP fee routing is not configured. Swaps are temporarily disabled until the treasury referral destination is verified.' }, { status: 503 });
+    return NextResponse.json({ error: 'WELP fee routing is not configured. Swaps are temporarily disabled until a referral account is configured.' }, { status: 503 });
   }
   let body: Record<string, unknown>;
   try {

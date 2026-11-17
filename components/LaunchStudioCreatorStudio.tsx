@@ -80,7 +80,7 @@ type PreparedLaunch = {
   metadataUri: string;
 };
 type LaunchResult = { mint: string; name: string; symbol: string; signature: string; rail: 'pump' | 'welp' };
-type ProgramStatus = { deployed: boolean; executable?: boolean; launchEnabled?: boolean; detail?: string; owner: string | null; checkedAt: string };
+type ProgramStatus = { deployed: boolean; executable?: boolean; launchEnabled?: boolean; detail?: string; error?: string; owner: string | null; checkedAt: string };
 
 export function LaunchStudioCreatorStudio() {
   const connected = useConnectedWallet(client);
@@ -103,7 +103,7 @@ export function LaunchStudioCreatorStudio() {
 
   const brandedName = brandLaunchName(name);
   const brandedSymbol = brandLaunchSymbol(symbol);
-  const welpRailReady = programStatus?.deployed === true;
+  const welpRailReady = programStatus?.launchEnabled === true;
   const canLaunchPump = Boolean(owner && brandedName && brandedSymbol && logo.trim() && !pending);
   const canLaunchWelp = Boolean(
     owner &&
@@ -262,12 +262,10 @@ export function LaunchStudioCreatorStudio() {
     <section className="lp-studio glass-panel" aria-labelledby="lp-studio-title">
       <div className="lp-studio-heading">
         <div>
-          <p className="lp-kicker">LIVE LAUNCH RAILS</p>
+          <p className="lp-kicker">LAUNCH ROUTE STATUS</p>
           <h2 id="lp-studio-title">Launch a coin.</h2>
           <p className="lp-muted">
-            Two rails: the live pump.fun bonding curve, or the WELP program where you
-            choose your own supply and precision. Your wallet signs; welpup.fun only
-            serializes, broadcasts and charges the fixed on-chain service fee.
+            Pump.fun launches are prepared through PumpPortal and signed by your wallet. The WELP custom-supply rail stays disabled until its mainnet program is deployed, verified, and explicitly enabled after review.
           </p>
         </div>
         <span className="lp-lock-state">WALLET SIGNED</span>
@@ -300,11 +298,11 @@ export function LaunchStudioCreatorStudio() {
             {programStatus === null
               ? 'Checking mainnet deployment…'
               : welpRailReady
-                ? 'Executable program detected; operator launch gate enabled. This is not an independent audit.'
-                : 'On-chain deployment pending.'}
+                ? 'Executable program detected and release gates enabled. This is not proof of an independent audit.'
+                : programStatus.error || programStatus.detail || 'No executable mainnet program is verified; custom launches are disabled.'}
           </em>
           <span className={'lp-rail-badge' + (welpRailReady ? ' ready' : '')}>
-            {programStatus === null ? '…' : welpRailReady ? 'LIVE' : 'PENDING DEPLOY'}
+            {programStatus === null ? '…' : welpRailReady ? 'LIVE' : programStatus.error ? 'UNVERIFIED' : 'PENDING DEPLOY'}
           </span>
         </button>
       </div>
@@ -332,9 +330,7 @@ export function LaunchStudioCreatorStudio() {
       </div>
       {rail === 'welp' ? (
         <p className="lp-fee-note">
-          <ServerCog size={14} /> The WELP service fee is {Number(LAUNCH_SERVICE_FEE_LAMPORTS) / 1e9} SOL and is paid
-          straight to the on-chain treasury vault PDA inside your launch transaction — the
-          website cannot redirect it, and the program records it for the epoch split.
+          <ServerCog size={14} /> Proposed WELP service fee: {Number(LAUNCH_SERVICE_FEE_LAMPORTS) / 1e9} SOL. It is not charged while the custom program is undeployed; this rail cannot submit a transaction until its release gates pass.
         </p>
       ) : null}
 
@@ -365,7 +361,7 @@ export function LaunchStudioCreatorStudio() {
         {rail === 'pump' ? (
           <p className="lp-raw-note">This launch uses the public pump.fun bonding curve through PumpPortal. No WELP service fee is added by this transaction.</p>
         ) : (
-          <p className="lp-raw-note">The WELP custom rail creates a classic SPL mint with your exact supply and precision plus Metaplex metadata for instant wallet rendering, pays the fixed service fee into the canonical treasury vault PDA and never grants the website a key.</p>
+          <p className="lp-raw-note">The WELP custom rail is not deployed on mainnet. No custom mint or WELP service-fee transaction can be submitted; the page keeps the rail disabled until program verification and release review are complete.</p>
         )}
       </div>
     </section>

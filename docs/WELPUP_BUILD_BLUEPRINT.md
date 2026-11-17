@@ -29,7 +29,7 @@ This is the staged implementation plan for user-created Solana trading bots, the
 - [x] The existing `/swap` flow is separate and asks the connected wallet to approve each transaction. Preserve that route and its user approval flow.
 - [x] The site connects through an external wallet provider; `WalletConnectionControl` reads the connected wallet address and never accepts a private key. `welp.wallet.load_keypair` and `sign_swap` fail closed, and `welp.config` rejects `SOLANA_PRIVATE_KEY`.
 - [x] The `/vault` page currently uses a separate Devnet wallet client and labels itself Devnet. This is not the requested production configuration and must not be exposed as a Mainnet vault before a verified Mainnet program exists.
-- [x] Current market data is split across GeckoTerminal pool/candle queries and Jupiter price/quote calls; the activity chart is based on local wallet snapshots. There is no unified, cross-checked multi-source market chart.
+- [x] Market signals use GeckoTerminal pool/candle queries and Jupiter quote checks. Market charts now embed DexScreener's hosted chart for the highest-liquidity Solana pair; WELP does not synthesize historical candles from price snapshots. The activity chart remains based on local wallet snapshots.
 - [x] No global theme or text-scale preference, public bot marketplace, or on-chain performance leaderboard was found in the current app routes/components.
 - [x] `programs/vault` is an Anchor 0.30.1 scaffold. It has per-wallet vault PDAs, owner controls, SOL funding/withdrawal, and limit helpers. `execute_swap` returns `TradingDisabled`; SPL position accounting and Jupiter/Raydium CPI are absent.
 - [x] `programs/README.md`, `docs/vault/ARCHITECTURE.md`, and `docs/vault/THREAT_MODEL.md` describe the program ID as an undeployed placeholder and mainnet as disabled. Do not use that address for funding or treat executable-account presence as source verification.
@@ -205,7 +205,7 @@ These decisions translate the supplied requirements into a bounded first release
 ### Milestone 8 — Multi-source charts and data provenance
 
 - [x] Define typed provider adapters for price, volume, liquidity, candles, and token metadata; keep provider-specific parsing outside UI components.
-- [x] Add read-only source selectors for Jupiter pool data, DexScreener, and Birdeye/Phantom price views only after each source's public endpoint, data rights, schema, and rate limits are confirmed; do not require a user's private/API key.
+- [x] Keep market charts on the DexScreener hosted chart for the selected Solana pair. Any future source selector (for example Birdeye/Phantom price views) requires separate public-endpoint, data-rights, schema, and rate-limit review; never require a user's private/API key.
 - [x] Add an optional split-screen chart grid so users can compare the same mint/pair across selected sources; expose source, timestamp, liquidity, and disagreement state in each pane.
 - [x] Validate mint addresses, numeric ranges, timestamps, decimals, and response shape. Treat all provider and chain data as untrusted.
 - [x] Display source and last-update time; mark stale/missing data and never silently substitute zero or synthetic values.

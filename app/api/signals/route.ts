@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { loadSignals } from '@/lib/signals';
+import { WELP_FEE_POLICY } from '@/lib/server/fee-policy';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,7 +17,9 @@ export async function GET(request: NextRequest) {
       count: signals.length,
       eligibleCount: signals.filter((signal) => signal.eligible).length,
       updatedAt,
-      provider: { name: 'DexScreener + Jupiter Swap API v2', state: 'Operational', fetchedAt: updatedAt },
+      provider: { name: 'GeckoTerminal OHLCV', state: 'Operational', fetchedAt: updatedAt },
+      quoteProvider: { name: 'Jupiter Swap API v2', state: WELP_FEE_POLICY.collectionEnabled ? 'Fee-bearing quotes enabled' : 'Blocked by fee configuration' },
+      execution: { enabled: WELP_FEE_POLICY.collectionEnabled, feeConfigured: WELP_FEE_POLICY.collectionEnabled },
       dataQuality: 'complete',
     }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
@@ -27,7 +30,9 @@ export async function GET(request: NextRequest) {
       count: 0,
       eligibleCount: 0,
       updatedAt,
-      provider: { name: 'DexScreener + Jupiter Swap API v2', state: 'Unavailable', error: message },
+      provider: { name: 'GeckoTerminal OHLCV', state: 'Unavailable', error: message },
+      quoteProvider: { name: 'Jupiter Swap API v2', state: 'Unavailable' },
+      execution: { enabled: false, feeConfigured: WELP_FEE_POLICY.collectionEnabled },
       dataQuality: 'unavailable',
     }, { status: 502, headers: { 'Cache-Control': 'no-store' } });
   }

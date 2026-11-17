@@ -1,5 +1,6 @@
 import { requestOrder } from '@/lib/jupiter';
 import { SOL_MINT } from '@/lib/constants';
+import { WELP_FEE_POLICY } from '@/lib/server/fee-policy';
 
 const GECKO = 'https://api.geckoterminal.com/api/v2';
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
@@ -208,7 +209,17 @@ export async function loadSignals(owner: string): Promise<Signal[]> {
     if (index > 0) await new Promise((resolve) => setTimeout(resolve, minimumGapMs));
     const pool = pools[index];
     const candles = candleSets[index];
-    const quote = await requestOrder({ inputMint: SOL_MINT, outputMint: pool.mint, amount: '1000000', taker: owner, slippageBps: 50 }).catch(() => null);
+    const quote = WELP_FEE_POLICY.collectionEnabled
+      ? await requestOrder({
+          inputMint: SOL_MINT,
+          outputMint: pool.mint,
+          amount: '1000000',
+          taker: owner,
+          slippageBps: 50,
+          referralAccount: WELP_FEE_POLICY.referralAccount,
+          referralFeeBps: WELP_FEE_POLICY.referralFeeBps,
+        }).catch(() => null)
+      : null;
     const quoteReady = quote !== null && typeof quote.transaction === 'string' && typeof quote.requestId === 'string';
     const result = analyze(pool, candles, quoteReady ? quote : null);
     const eligible = result.ready && quoteReady && result.score >= 80 && result.score <= 98;
@@ -216,7 +227,7 @@ export async function loadSignals(owner: string): Promise<Signal[]> {
       ...pool,
       score: Math.round(result.score * 100) / 100,
       eligible,
-      reason: !result.ready ? 'Not enough chart history' : !quoteReady ? 'Jupiter quote unavailable' : result.score < 80 ? 'Below the 80 point entry floor' : result.score > 98 ? 'Above the 98 point entry ceiling' : 'Inside the 80–98 entry window',
+      reason: !result.ready ? 'Not enough chart history' : !WELP_FEE_POLICY.collectionEnabled ? 'Swap fee destination is not configured' : !quoteReady ? 'Jupiter fee-bearing quote unavailable' : result.score < 80 ? 'Below the 80 point entry floor' : result.score > 98 ? 'Above the 98 point entry ceiling' : 'Inside the 80–98 entry window',
       notes: result.notes,
       priceImpactPct: result.impact,
     });
