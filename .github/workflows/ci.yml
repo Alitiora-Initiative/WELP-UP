@@ -80,8 +80,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Solana 1.18.26 host-side code depends on the pre-1.100 never-type fallback.
+      # Rust 1.100 changed the fallback from () to ! and breaks this upstream crate.
       - uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: 1.99.1
           components: rustfmt, clippy
       - name: Cache Cargo registry
         uses: actions/cache@v4
