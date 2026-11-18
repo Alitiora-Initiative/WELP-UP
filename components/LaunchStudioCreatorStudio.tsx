@@ -97,6 +97,7 @@ export function LaunchStudioCreatorStudio() {
   const [decimals, setDecimals] = useState(6);
   const [rail, setRail] = useState<'pump' | 'welp'>('pump');
   const [programStatus, setProgramStatus] = useState<ProgramStatus | null>(null);
+  const [metadataStorageReady, setMetadataStorageReady] = useState<boolean | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<LaunchResult | null>(null);
@@ -104,7 +105,7 @@ export function LaunchStudioCreatorStudio() {
   const brandedName = brandLaunchName(name);
   const brandedSymbol = brandLaunchSymbol(symbol);
   const welpRailReady = programStatus?.launchEnabled === true;
-  const canLaunchPump = Boolean(owner && brandedName && brandedSymbol && logo.trim() && !pending);
+  const canLaunchPump = Boolean(owner && brandedName && brandedSymbol && logo.trim() && metadataStorageReady === true && !pending);
   const canLaunchWelp = Boolean(
     owner &&
       brandedName &&
@@ -125,6 +126,10 @@ export function LaunchStudioCreatorStudio() {
       .then((response) => response.json() as Promise<ProgramStatus>)
       .then((status) => { if (!cancelled) setProgramStatus(status); })
       .catch(() => { if (!cancelled) setProgramStatus({ deployed: false, owner: null, checkedAt: new Date().toISOString() }); });
+    fetch('/api/launch/prepare', { cache: 'no-store' })
+      .then((response) => response.json() as Promise<{ ready?: boolean }>)
+      .then((status) => { if (!cancelled) setMetadataStorageReady(status.ready === true); })
+      .catch(() => { if (!cancelled) setMetadataStorageReady(false); });
     return () => { cancelled = true; };
   }, []);
 
@@ -243,6 +248,10 @@ export function LaunchStudioCreatorStudio() {
     setError('');
     setResult(null);
     if (!connected || !owner) { setError('Connect a Solana wallet before launching.'); return; }
+    if (rail === 'pump' && metadataStorageReady !== true) {
+      setError('Pump.fun metadata storage is not configured. The WELP UP operator must add PINATA_JWT to Vercel Production.');
+      return;
+    }
     if (!brandedName || !brandedSymbol) { setError('Enter a token name and ticker. WELP UP branding is added automatically.'); return; }
     setPending(true);
     try {
@@ -340,6 +349,12 @@ export function LaunchStudioCreatorStudio() {
       </div>
 
       <div className="lp-studio-footer">
+        {rail === 'pump' && metadataStorageReady === false ? (
+          <p className="lp-validation-message" role="status">Pump.fun launches are temporarily unavailable: the WELP UP operator must configure server-side IPFS metadata storage (PINATA_JWT) in Vercel Production.</p>
+        ) : null}
+        {rail === 'pump' && metadataStorageReady === null ? (
+          <p className="lp-raw-note">Checking IPFS metadata storage…</p>
+        ) : null}
         <WalletConnectionControl />
         <button type="button" className="primary-action" onClick={() => void launch()} disabled={!canLaunch}>
           {pending ? <LoaderCircle className="spin" size={15} /> : <Rocket size={15} />} {pending ? 'Preparing and launching…' : rail === 'pump' ? 'Launch coin' : 'Launch with WELP program'}

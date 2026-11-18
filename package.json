@@ -19,6 +19,7 @@
     "test:fees": "node --experimental-strip-types --test tests/fee-policy.test.mjs",
     "test:vercel-deploy-gate": "node --experimental-strip-types --test tests/vercel-ignore-build.test.mjs",
     "test:launchpad-config": "node --experimental-strip-types --test tests/launchpad-config.test.mjs",
+    "test:pump-metadata": "node --experimental-strip-types --test tests/pump-metadata.test.mjs",
     "prepare": "node scripts/install-git-hooks.mjs",
     "test:git-hooks": "node --experimental-strip-types --test tests/git-hooks.test.mjs"
   },
