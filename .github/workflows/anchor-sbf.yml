@@ -37,8 +37,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential pkg-config libudev-dev
 
-      - name: Install stable Rust host toolchain
+      # Keep the Anchor 0.30.1 / Solana 1.18.26 host toolchain compatible with
+      # solana-client 1.18.26, which fails under Rust 1.100's never-type fallback.
+      - name: Install Rust 1.99.1 host toolchain
         uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.99.1
 
       - name: Install IDL-compatible nightly host toolchain
         run: rustup toolchain install nightly-2025-04-15 --profile minimal

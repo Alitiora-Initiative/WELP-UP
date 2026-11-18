@@ -161,7 +161,10 @@ pub mod welp_vault {
             to: ctx.accounts.fee_recipient.to_account_info(),
         };
         anchor_lang::system_program::transfer(
-            CpiContext::new(ctx.accounts.system_program.to_account_info(), transfer_accounts),
+            CpiContext::new(
+                ctx.accounts.system_program.to_account_info(),
+                transfer_accounts,
+            ),
             amount,
         )?;
         Ok(())
