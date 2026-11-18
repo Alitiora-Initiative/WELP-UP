@@ -1,37 +1,121 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateKeyPairSigner, getBase64EncodedWireTransaction, getTransactionDecoder, partiallySignTransactionWithSigners } from '@solana/kit';
-import { brandLaunchName, brandLaunchSymbol, launchMetadataUri } from '@/lib/launch-branding';
+import {
+  generateKeyPairSigner,
+  getBase64EncodedWireTransaction,
+  getTransactionDecoder,
+  partiallySignTransactionWithSigners,
+} from '@solana/kit';
+import { brandLaunchName, brandLaunchSymbol } from '@/lib/launch-branding';
+import { PumpMetadataError, uploadPumpTokenMetadata } from '@/lib/server/pump-metadata';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+const MAX_METADATA_BYTES = 200;
+
+export async function GET() {
+  return NextResponse.json(
+    { ready: Boolean(process.env.PINATA_JWT?.trim()), metadataStorage: 'public IPFS' },
+    { headers: { 'Cache-Control': 'no-store' } },
+  );
+}
+
+function optionalHttpsField(body: Record<string, unknown>, key: 'website' | 'twitter' | 'telegram') {
+  const raw = typeof body[key] === 'string' ? body[key].trim() : '';
+  if (!raw) return undefined;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new PumpMetadataError(`${key} must be a valid HTTPS URL.`, 400);
+  }
+  if (url.protocol !== 'https:' || url.username || url.password) {
+    throw new PumpMetadataError(`${key} must use a public HTTPS URL.`, 400);
+  }
+  if (raw.length > 200) {
+    throw new PumpMetadataError(`${key} URL must be 200 characters or fewer.`, 400);
+  }
+  return url.toString();
+}
 
 export async function POST(request: NextRequest) {
-  if (!new URL(request.url).protocol.startsWith('http')) return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
   let body: Record<string, unknown>;
-  try { body = await request.json(); } catch { return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 }); }
-  const owner = typeof body.owner === 'string' ? body.owner : '';
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body. Send the launch details as JSON.' }, { status: 400 });
+  }
+
+  const owner = typeof body.owner === 'string' ? body.owner.trim() : '';
   const name = brandLaunchName(typeof body.name === 'string' ? body.name : '');
   const symbol = brandLaunchSymbol(typeof body.symbol === 'string' ? body.symbol : '');
   const description = typeof body.description === 'string' ? body.description.trim().slice(0, 500) : '';
-  const logo = typeof body.logo === 'string' ? body.logo.trim().slice(0, 500) : '';
-  if (logo) {
-    try { if (new URL(logo).protocol !== 'https:') throw new Error(''); } catch { return NextResponse.json({ error: 'Logo URL must use HTTPS.' }, { status: 400 }); }
+  const logo = typeof body.logo === 'string' ? body.logo.trim() : '';
+
+  if (!BASE58.test(owner)) {
+    return NextResponse.json({ error: 'Connect a valid Solana wallet before launching.' }, { status: 400 });
   }
-  const social = Object.fromEntries(['website', 'twitter', 'telegram'].flatMap((key) => {
-    const value = typeof body[key] === 'string' ? body[key].trim() : '';
-    if (!value) return [];
-    try { const url = new URL(value); return url.protocol === 'https:' ? [[key, url.toString()]] : []; }
-    catch { return []; }
-  })) as { website?: string; twitter?: string; telegram?: string };
+  if (!name || new TextEncoder().encode(name).length > 32) {
+    return NextResponse.json({ error: 'Token name must contain 1–32 UTF-8 bytes.' }, { status: 400 });
+  }
+  if (!symbol || !/^[\x21-\x7e]{1,10}$/.test(symbol)) {
+    return NextResponse.json({ error: 'Ticker must contain 1–10 printable ASCII characters.' }, { status: 400 });
+  }
+  if (!logo) {
+    return NextResponse.json({ error: 'Add a public HTTPS token logo URL before launching.' }, { status: 400 });
+  }
+  if (logo.length > 500) {
+    return NextResponse.json({ error: 'Token logo URL must be 500 characters or fewer.' }, { status: 400 });
+  }
+
+  let logoUrl: URL;
+  try {
+    logoUrl = new URL(logo);
+  } catch {
+    return NextResponse.json({ error: 'Token logo must be a valid HTTPS URL.' }, { status: 400 });
+  }
+  if (logoUrl.protocol !== 'https:' || logoUrl.username || logoUrl.password) {
+    return NextResponse.json({ error: 'Token logo must use a public HTTPS URL.' }, { status: 400 });
+  }
+
+  let social: { website?: string; twitter?: string; telegram?: string };
+  try {
+    social = {
+      website: optionalHttpsField(body, 'website'),
+      twitter: optionalHttpsField(body, 'twitter'),
+      telegram: optionalHttpsField(body, 'telegram'),
+    };
+  } catch (error) {
+    if (error instanceof PumpMetadataError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: 'One of the social links is invalid.' }, { status: 400 });
+  }
+
   const initialBuySol = Number(body.initialBuySol ?? 0.01);
-  if (!BASE58.test(owner) || !name || !symbol || !logo) return NextResponse.json({ error: 'Connect a wallet and provide a token name, ticker, and HTTPS logo URL.' }, { status: 400 });
-  if (!Number.isFinite(initialBuySol) || initialBuySol < 0.001 || initialBuySol > 1) return NextResponse.json({ error: 'Initial buy must be between 0.001 and 1 SOL.' }, { status: 400 });
+  if (!Number.isFinite(initialBuySol) || initialBuySol < 0.001 || initialBuySol > 1) {
+    return NextResponse.json({ error: 'Initial buy must be between 0.001 and 1 SOL.' }, { status: 400 });
+  }
 
   try {
     const mintSigner = await generateKeyPairSigner();
-    const origin = new URL(request.url).origin;
-    const uri = launchMetadataUri(origin, { mint: mintSigner.address, name, symbol, description, logo, ...social });
+    const uri = await uploadPumpTokenMetadata({
+      mint: mintSigner.address,
+      name,
+      symbol,
+      description,
+      image: logoUrl.toString(),
+      ...social,
+    });
+
+    if (new TextEncoder().encode(uri).length > MAX_METADATA_BYTES) {
+      return NextResponse.json(
+        { error: 'The pinned token metadata URI is too long for Pump.fun (maximum 200 bytes).' },
+        { status: 502 },
+      );
+    }
+
     const upstream = await fetch('https://pumpportal.fun/api/trade-local', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -49,24 +133,47 @@ export async function POST(request: NextRequest) {
       cache: 'no-store',
       signal: AbortSignal.timeout(20_000),
     });
+
     if (!upstream.ok) {
-      const detail = await upstream.text().catch(() => '');
-      return NextResponse.json({ error: detail.slice(0, 240) || 'Launch transaction provider rejected the request.' }, { status: 502 });
+      const detail = (await upstream.text().catch(() => '')).trim();
+      return NextResponse.json(
+        {
+          error: detail
+            ? `PumpPortal rejected the launch (HTTP ${upstream.status}): ${detail.slice(0, 220)}`
+            : `PumpPortal rejected the launch request (HTTP ${upstream.status}).`,
+        },
+        { status: 502 },
+      );
     }
+
     const bytes = new Uint8Array(await upstream.arrayBuffer());
+    if (bytes.length === 0) {
+      return NextResponse.json({ error: 'PumpPortal returned an empty launch transaction.' }, { status: 502 });
+    }
+
     const transaction = getTransactionDecoder().decode(bytes);
     const mintSigned = await partiallySignTransactionWithSigners([mintSigner], transaction);
     const encoded = getBase64EncodedWireTransaction(mintSigned);
-    return NextResponse.json({
-      transaction: encoded,
-      mint: mintSigner.address,
-      name,
-      symbol,
-      metadataUri: uri,
-      provider: 'pump.fun bonding curve via PumpPortal',
-      network: 'solana-mainnet-beta',
-    }, { headers: { 'Cache-Control': 'no-store' } });
+
+    return NextResponse.json(
+      {
+        transaction: encoded,
+        mint: mintSigner.address,
+        name,
+        symbol,
+        metadataUri: uri,
+        provider: 'pump.fun bonding curve via PumpPortal',
+        network: 'solana-mainnet-beta',
+      },
+      { headers: { 'Cache-Control': 'no-store' } },
+    );
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Could not prepare the launch transaction.' }, { status: 502 });
+    if (error instanceof PumpMetadataError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Could not prepare the launch transaction.' },
+      { status: 502 },
+    );
   }
 }
