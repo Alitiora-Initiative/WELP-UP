@@ -39,7 +39,9 @@ export function HomePage() {
     return () => { mounted = false; };
   }, []);
 
+  const observedMoves = assets.filter((asset) => asset.priceChange24h !== null).length;
   const gainers = assets.filter((asset) => asset.priceChange24h !== null && asset.priceChange24h >= 0).length;
+  const observedVolumeRows = assets.filter((asset) => asset.volume24hUsd !== null).length;
   const totalVolume = assets.reduce((sum, asset) => sum + (asset.volume24hUsd ?? 0), 0);
 
   return (
@@ -55,7 +57,7 @@ export function HomePage() {
         <div className="dashboard-command-card">
           <div className="command-card-header"><span><i /> WELP COMMAND CENTRE</span><span className="command-badge">NON-CUSTODIAL</span></div>
           <div className="command-card-title"><span>Market pulse</span><strong>{feedState === 'live' ? 'LIVE' : feedState === 'offline' ? 'OFFLINE' : 'CONNECTING'}</strong></div>
-          <div className="pulse-grid"><div><small>Assets indexed</small><strong>{assets.length || '—'}</strong></div><div><small>Positive movers</small><strong>{assets.length ? `${gainers}/${assets.length}` : '—'}</strong></div><div><small>24h volume · top {assets.length} assets</small><strong>{totalVolume ? `$${(totalVolume / 1000000).toFixed(1)}M` : '—'}</strong></div></div>
+          <div className="pulse-grid"><div><small>Assets indexed</small><strong>{assets.length || '—'}</strong></div><div><small>Positive movers</small><strong>{observedMoves ? `${gainers}/${observedMoves}` : '—'}</strong></div><div><small>24h volume · {observedVolumeRows}/{assets.length} reporting</small><strong>{observedVolumeRows ? `${(totalVolume / 1000000).toFixed(1)}M` : '—'}</strong></div></div>
           <div className="command-card-footer"><span className={feedState === 'live' ? 'status-live' : ''}><i /> {feedState === 'live' ? 'Market feed connected' : feedState === 'offline' ? 'Market feed unavailable' : 'Connecting to market feed'}</span><Link href="/system-status">System status <ChevronRight size={13} /></Link></div>
         </div>
       </section>
