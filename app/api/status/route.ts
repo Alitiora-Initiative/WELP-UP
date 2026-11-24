@@ -12,8 +12,8 @@ const ACCEPTED_PROGRAM_LOADERS = new Set([
 ]);
 
 async function checkSolana() {
-  const hasDedicatedRpc = Boolean(process.env.SOLANA_RPC_URL);
-  const endpoint = process.env.SOLANA_RPC_URL || 'https://api.mainnet.solana.com';
+  const hasDedicatedRpc = Boolean(process.env.SOLANA_RPC_URL?.trim());
+  const endpoint = process.env.SOLANA_RPC_URL?.trim() || 'https://api.mainnet.solana.com';
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -32,6 +32,18 @@ async function checkSolana() {
       : 'The shared public RPC responded, but Solana documents public RPC as unsuitable for production applications. Configure a dedicated private RPC before production wallet and transaction traffic.',
   };
 }
+
+function checkWalletRpcConfiguration() {
+  const clientEndpointConfigured = Boolean(process.env.NEXT_PUBLIC_SOLANA_RPC_URL?.trim());
+  return {
+    name: 'Browser wallet RPC',
+    state: clientEndpointConfigured ? 'Configured · public client endpoint' : 'Not configured · shared public RPC fallback',
+    detail: clientEndpointConfigured
+      ? 'A browser RPC endpoint is present in the build environment. Browser-side CORS, rate limits and transaction submission must still be tested from a real wallet session; the endpoint value is not exposed here.'
+      : 'The browser wallet client falls back to Solana shared public RPC. Configure NEXT_PUBLIC_SOLANA_RPC_URL with an origin-restricted provider endpoint for production wallet reads and submissions.',
+  };
+}
+
 async function checkJupiter() {
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (process.env.JUPITER_API_KEY) headers['x-api-key'] = process.env.JUPITER_API_KEY;
@@ -101,7 +113,8 @@ async function checkCustomLaunchProgram() {
 
 export async function GET() {
   const checks = await Promise.all([
-    checkSolana().catch((error) => ({ name: 'Solana mainnet RPC', state: 'Unavailable', detail: error instanceof Error ? error.message : 'RPC check failed' })),
+    checkSolana().catch((error) => ({ name: 'Solana server RPC', state: 'Unavailable', detail: error instanceof Error ? error.message : 'RPC check failed' })),
+    Promise.resolve(checkWalletRpcConfiguration()),
     checkJupiter().catch((error) => ({ name: 'Jupiter Tokens API v2', state: 'Unavailable', detail: error instanceof Error ? error.message : 'Feed check failed' })),
     checkVault(),
     checkCustomLaunchProgram(),
