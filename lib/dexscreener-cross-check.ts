@@ -42,7 +42,7 @@ export function parseDexScreenerTokenPairs(
 
   for (const mint of mints) {
     if (!MINT_RE.test(mint)) continue;
-    const candidates = rows.flatMap((pair) => {
+    const candidates: Array<{ pair: Row; pairSide: 'base' | 'quote'; priceUsd: number }> = rows.flatMap((pair): Array<{ pair: Row; pairSide: 'base' | 'quote'; priceUsd: number }> => {
       if (pair.chainId !== 'solana') return [];
       const base = record(pair.baseToken);
       const quote = record(pair.quoteToken);
