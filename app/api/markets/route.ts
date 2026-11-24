@@ -27,6 +27,7 @@ function providerFailure(error: string, status = 502) {
     total: 0,
     eligible: 0,
     blocked: 0,
+    watch: 0,
     liquidityUsd: null,
     liquidityReportedAssets: 0,
     volume24hUsd: null,
