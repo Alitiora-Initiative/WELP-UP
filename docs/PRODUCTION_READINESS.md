@@ -18,8 +18,8 @@ The separate branch `production-readiness-2026-11` contains a proposed data-inte
 
 **Provider and account checks from 24 November 2026:**
 
-- The reviewed Vercel custom-environment listing contained `WEBACY_API_KEY` but did not show `SOLANA_RPC_URL`, `JUPITER_API_KEY`, or `AI_GATEWAY_API_KEY`. Vercel's deployment OIDC token is automatically provided at runtime and may not appear as a custom project variable; use the AI status endpoint and a real Preview request to verify it.
-- A live Solana RPC health check against the shared public endpoint is not adequate production RPC readiness. Configure a dedicated private endpoint and a tested fallback.
+- The reviewed Vercel custom-environment listing contained `WEBACY_API_KEY` but did not show `SOLANA_RPC_URL`, `NEXT_PUBLIC_SOLANA_RPC_URL`, `JUPITER_API_KEY`, or `AI_GATEWAY_API_KEY`. Vercel's deployment OIDC token is automatically provided at runtime and may not appear as a custom project variable; use the AI status endpoint and a real Preview request to verify it.
+- A live Solana RPC health check against the shared public endpoint is not adequate production RPC readiness. Configure a private server endpoint and a separately origin-restricted browser endpoint; test the latter with an actual wallet session.
 - Jupiter Token API keyless access is useful for prototyping but is documented at 0.5 requests per second. Configure a production project API key and monitor the rate/usage limits.
 - Prior live tests against Webacy returned HTTP 500 for Solana Trading Lite and HTTP 403 for URL screening. The key must be rotated, account permissions checked for both required endpoints, and both scans retested successfully before WELP claims Webacy protection is active.
 - The referral-fee configuration remains disabled; swap order/execute routes remain fail-closed until the fee destination is configured and a returned fee-bearing order is verified.
