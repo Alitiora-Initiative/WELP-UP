@@ -28,6 +28,7 @@ function providerFailure(error: string, status = 502) {
     eligible: 0,
     blocked: 0,
     marketIntegrity: { provider: 'DexScreener', state: 'unavailable', checkedAssets: 0, matchedAssets: 0, requestedAssets: 0, updatedAt: new Date().toISOString(), error },
+    dataCoverage: { totalAssets: 0, coreScreeningCompleteAssets: 0, liquidityReportedAssets: 0, volumeReportedAssets: 0, priceReportedAssets: 0, priceChangeReportedAssets: 0 },
     assets: [],
   }, { status, headers: { 'Cache-Control': 'no-store' } });
 }
@@ -55,6 +56,7 @@ export async function GET() {
       marketCrossCheck: marketIntegrity.records[asset.mint] ?? { provider: 'DexScreener' as const, state: 'not_checked' as const },
     }));
     const eligible = assets.filter((asset) => asset.eligible).length;
+    const coreScreeningCompleteAssets = assets.filter((asset) => asset.screeningDataComplete).length;
     const pricePayload = priceResponse.ok ? await priceResponse.json().catch(() => null) : null;
     const solPrice = Number(pricePayload?.[SOL_MINT]?.usdPrice ?? pricePayload?.data?.[SOL_MINT]?.price);
     const solPriceUsd = Number.isFinite(solPrice) && solPrice > 0 ? solPrice : null;
@@ -66,7 +68,15 @@ export async function GET() {
       freshness: { upstreamCacheSeconds: 30, note: 'Observed by WELP at this time; provider data may be served from the shared 30-second cache window.' },
       provider: { name: 'Jupiter Tokens API v2', state: 'Operational', access: process.env.JUPITER_API_KEY ? 'api-key' : 'keyless-limited', fetchedAt },
       priceProvider: { name: 'Jupiter Price API v3', state: priceState, fetchedAt, error: solPriceUsd === null ? 'SOL price was not returned.' : undefined },
-      dataQuality: priceState === 'Operational' ? 'complete' : 'partial',
+      dataQuality: priceState === 'Operational' && coreScreeningCompleteAssets === assets.length ? 'complete' : 'partial',
+      dataCoverage: {
+        totalAssets: assets.length,
+        coreScreeningCompleteAssets,
+        liquidityReportedAssets: assets.filter((asset) => asset.liquidityUsd !== null).length,
+        volumeReportedAssets: assets.filter((asset) => asset.volume24hUsd !== null).length,
+        priceReportedAssets: assets.filter((asset) => asset.priceUsd !== null).length,
+        priceChangeReportedAssets: assets.filter((asset) => asset.priceChange24h !== null).length,
+      },
       solPriceUsd,
       total: assets.length,
       eligible,
