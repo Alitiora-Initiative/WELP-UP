@@ -119,7 +119,7 @@ export function MarketBoard() {
     <div className="market-discovery-tabs" aria-label="Market discovery source">
       <span>DISCOVERY</span>
       <div className="control-segment" role="group" aria-label="Choose live discovery feed">
-        {UNIVERSE_OPTIONS.map((option) => <button key={option.key} type="button" className={universe === option.key ? 'is-selected' : ''} aria-pressed={universe === option.key} onClick={() => { setUniverse(option.key); setFilter('All'); setPage(1); setSelected([]); setFeed(null); setLoading(true); setError(''); }}>{option.label}</button>)}
+        {UNIVERSE_OPTIONS.map((option) => <button key={option.key} type="button" className={universe === option.key ? 'is-selected' : ''} aria-pressed={universe === option.key} onClick={() => { setUniverse(option.key); setFilter('All'); setPage(1); setSelected([]); setChartMint(''); setFeed(null); setLoading(true); setError(''); }}>{option.label}</button>)}
       </div>
       {universe !== 'recent' ? <>
         <span>WINDOW</span>
