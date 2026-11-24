@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ArrowRight, ArrowUpRight, BarChart3, Bot, CheckCircle2, ChevronRight, CircleDollarSign, LockKeyhole, ScanSearch, ShieldCheck, Sparkles, Wallet } from 'lucide-react';
 
-type MarketAsset = { symbol: string; name?: string; logo?: string | null; priceUsd: number; priceChange24h: number; liquidityUsd?: number; volume24hUsd?: number };
+type MarketAsset = { symbol: string; name?: string; logo?: string | null; priceUsd: number | null; priceChange24h: number | null; liquidityUsd?: number | null; volume24hUsd?: number | null };
 type MarketResponse = { assets?: MarketAsset[] };
 
 const quickLinks = [
@@ -16,7 +16,8 @@ const quickLinks = [
   { href: '/portfolio', icon: Wallet, label: 'Portfolio', copy: 'View wallet-derived balances and activity.' },
 ];
 
-function formatPrice(value: number) {
+function formatPrice(value: number | null) {
+  if (value === null) return '—';
   if (value >= 1000) return `$${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
   if (value >= 1) return `$${value.toFixed(2)}`;
   return `$${value.toPrecision(4)}`;
@@ -38,7 +39,7 @@ export function HomePage() {
     return () => { mounted = false; };
   }, []);
 
-  const gainers = assets.filter((asset) => asset.priceChange24h >= 0).length;
+  const gainers = assets.filter((asset) => asset.priceChange24h !== null && asset.priceChange24h >= 0).length;
   const totalVolume = assets.reduce((sum, asset) => sum + (asset.volume24hUsd ?? 0), 0);
 
   return (
@@ -54,14 +55,14 @@ export function HomePage() {
         <div className="dashboard-command-card">
           <div className="command-card-header"><span><i /> WELP COMMAND CENTRE</span><span className="command-badge">NON-CUSTODIAL</span></div>
           <div className="command-card-title"><span>Market pulse</span><strong>{feedState === 'live' ? 'LIVE' : feedState === 'offline' ? 'OFFLINE' : 'CONNECTING'}</strong></div>
-          <div className="pulse-grid"><div><small>Assets indexed</small><strong>{assets.length || '—'}</strong></div><div><small>Positive movers</small><strong>{assets.length ? `${gainers}/${assets.length}` : '—'}</strong></div><div><small>24h volume</small><strong>{totalVolume ? `$${(totalVolume / 1000000).toFixed(1)}M` : '—'}</strong></div></div>
+          <div className="pulse-grid"><div><small>Assets indexed</small><strong>{assets.length || '—'}</strong></div><div><small>Positive movers</small><strong>{assets.length ? `${gainers}/${assets.length}` : '—'}</strong></div><div><small>24h volume · top {assets.length} assets</small><strong>{totalVolume ? `$${(totalVolume / 1000000).toFixed(1)}M` : '—'}</strong></div></div>
           <div className="command-card-footer"><span className={feedState === 'live' ? 'status-live' : ''}><i /> {feedState === 'live' ? 'Market feed connected' : feedState === 'offline' ? 'Market feed unavailable' : 'Connecting to market feed'}</span><Link href="/system-status">System status <ChevronRight size={13} /></Link></div>
         </div>
       </section>
 
       <section className="dashboard-section market-snapshot-section">
         <div className="section-heading"><div><p className="eyebrow">LIVE SNAPSHOT</p><h2>Markets worth a closer look</h2></div><Link href="/markets" className="text-link">View all markets <ArrowRight size={14} /></Link></div>
-        <div className="market-snapshot-grid">{assets.length ? assets.map((asset) => <Link href="/markets" className="snapshot-card" key={asset.symbol}>{asset.logo ? <img className="asset-avatar asset-avatar-image" src={asset.logo} alt="" loading="lazy" /> : <span className="asset-avatar">{asset.symbol.slice(0, 1)}</span>}<span><strong>{asset.symbol}</strong><small>{formatPrice(asset.priceUsd)}</small></span><em className={asset.priceChange24h >= 0 ? 'positive' : 'negative'}>{asset.priceChange24h >= 0 ? '+' : ''}{asset.priceChange24h.toFixed(2)}%</em></Link>) : <div className="dashboard-empty"><Sparkles size={16} /><span>{feedState === 'offline' ? 'The live market feed is temporarily unavailable.' : 'Connecting to the live market feed…'}</span></div>}</div>
+        <div className="market-snapshot-grid">{assets.length ? assets.map((asset) => <Link href="/markets" className="snapshot-card" key={asset.symbol}>{asset.logo ? <img className="asset-avatar asset-avatar-image" src={asset.logo} alt="" loading="lazy" /> : <span className="asset-avatar">{asset.symbol.slice(0, 1)}</span>}<span><strong>{asset.symbol}</strong><small>{formatPrice(asset.priceUsd)}</small></span><em className={asset.priceChange24h === null ? '' : asset.priceChange24h >= 0 ? 'positive' : 'negative'}>{asset.priceChange24h === null ? '—' : (asset.priceChange24h >= 0 ? '+' : '') + asset.priceChange24h.toFixed(2) + '%'}</em></Link>) : <div className="dashboard-empty"><Sparkles size={16} /><span>{feedState === 'offline' ? 'The live market feed is temporarily unavailable.' : 'Connecting to the live market feed…'}</span></div>}</div>
       </section>
 
       <section className="dashboard-section">
