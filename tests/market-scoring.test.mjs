@@ -22,12 +22,14 @@ const strongToken = {
   stats24h: { priceChange: 2, buyVolume: 1_000_000, sellVolume: 1_000_000, numBuys: 10_000, numSells: 0 },
 };
 
-test('scoreToken produces a 0–100 quality score with complete data coverage', () => {
+test('scoreToken produces a 0–100 quality score when all weighted inputs are present', () => {
   const scored = scoreToken(strongToken);
   assert.equal(scored.score, 100);
   assert.equal(scored.scoreCoveragePct, 100);
   assert.equal(scored.eligible, true);
-  assert.equal(scored.state, 'Eligible');
+  assert.equal(scored.state, 'Watch'); // the market fields are complete, but this feed omits liquidity-lock and honeypot status
+  assert.match(scored.warnings.join(' | '), /Liquidity-lock status is not reported/);
+  assert.match(scored.warnings.join(' | '), /Honeypot status is not reported/);
   assert.equal(scored.turnover, 100);
   assert.equal(scored.buyPressure, 100);
   assert.equal(scored.holders, 150_000);
