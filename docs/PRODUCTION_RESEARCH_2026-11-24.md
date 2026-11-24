@@ -53,11 +53,15 @@ Jupiter documents keyless access for lightweight prototyping at 0.5 requests per
 
 **Release action:** create a production Jupiter API key, store it as a Sensitive server-side Vercel environment variable, and monitor usage. Do not put it in a `NEXT_PUBLIC_` variable or browser bundle.
 
+### Jupiter audit fields and the meaning of screening
+
+Jupiter Tokens API v2 documents `mintAuthorityDisabled`, `freezeAuthorityDisabled`, `topHoldersPercentage` and the conditional `isSus` flag. The developer concentration field is `devBalancePercentage`, not `developerOwnershipPercentage`. An absent `isSus` flag is not a clean bill of health. Jupiter's normal token audit does not give WELP a verified liquidity-lock status or honeypot result, so the market scorer must not read or claim those fields from this provider. WELP uses Webacy token screening for honeypot-related checks at the swap-order gate and URL screening in launch preparation; those checks are currently fail-closed and still require successful provider retesting. A successful market screen is not a substitute for a contract audit, liquidity-lock verification or phishing check.
+
 ### Independent market cross-check: DexScreener
 
 DexScreener provides a practical second view of price, pool liquidity, volume and pair metadata. Its documented token endpoint accepts up to 30 comma-separated token addresses in one request and is rate-limited at 300 requests per minute.
 
-**Branch change:** WELP compares the top 30 ranked Jupiter assets against a batched DexScreener response. It selects the largest-liquidity matching Solana base-token pair and exposes the price delta and liquidity/volume context. The check is cached for 30 seconds and is explicitly supplementary:
+**Branch change:** WELP compares the top 30 ranked Jupiter assets against a batched DexScreener response. It selects the largest-liquidity matching Solana pair where the token is either base or quote, and derives the quote-token USD value from the pair's base USD price and native pair ratio and exposes the price delta and liquidity/volume context. The check is cached for 30 seconds and is explicitly supplementary:
 
 - It does not replace Jupiter prices.
 - It does not contribute to the deterministic score.
