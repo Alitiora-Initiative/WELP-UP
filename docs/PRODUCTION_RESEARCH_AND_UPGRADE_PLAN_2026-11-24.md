@@ -29,7 +29,7 @@ The live codebase already includes:
 - Webacy fail-closed checks in swap-order and launch-link preparation routes.
 
 Important limitations found in the repository and deployment:
-- Market discovery primarily reads Jupiter's 24-hour top-organic list; it does not yet present distinct new, trending and most-traded universes.
+- The default market view reads Jupiter's 24-hour top-organic list. This branch adds selectable Jupiter top-trending, top-traded and recent-pool discovery feeds, with 5m/1h/6h/24h windows for the interval-based universes. The lists stay distinct rather than being merged into one unexplained ranking.
 - The app's Jupiter API key is optional in code, but keyless Token API requests are documented as limited to 0.5 requests/second. A production API key is needed before raising polling or discovery volume.
 - The Solana RPC path can fall back to the shared public mainnet endpoint. Solana explicitly describes public RPC as development/shared infrastructure, not a production service.
 - No dedicated WELP database is attached to the Vercel project. The team's existing Supabase installation is not assigned to this project; do not reuse another product's database.
@@ -49,7 +49,9 @@ This branch corrects that behavior:
 - Missing buy/sell trade counts produce `buyPressure: null`, not a fabricated 50%.
 - Missing liquidity or incomplete 24-hour buy/sell volume blocks eligibility rather than silently treating it as a genuine zero measurement.
 - Low score coverage is surfaced as a Watch warning.
-- The market board shows the score's data coverage and explains that the score is not a safety rating or profit probability.
+- The market board shows the score's weighted-input coverage and explains that the score is not a safety rating or profit probability.
+- The market API and board now allow users to select Jupiter's organic, trending, most-traded and recent-pool universes. Interval-based views expose 5m, 1h, 6h and 24h windows. Results remain provider-sourced; no ranking is synthesized across the different lists.
+- Missing price, 24-hour change, liquidity, volume, holders and organic-score fields remain null in the API model and render as unavailable in the home and market boards instead of being silently presented as zero. Aggregated liquidity and volume totals are withheld when the selected feed is incomplete.
 
 The score remains a quality-ranking aid only. It does not establish that a token is safe, liquid enough to exit, or likely to rise. The Webacy pre-swap gate remains a separate check and must remain fail-closed until live provider access is verified.
 
