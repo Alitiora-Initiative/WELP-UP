@@ -44,7 +44,7 @@ export async function GET() {
     if (!Array.isArray(payload)) return providerFailure('Jupiter returned an unexpected market-feed format.');
 
     const assets = payload.map(scoreToken).filter((asset) => asset.mint.length > 0);
-    assets.sort((a, b) => b.score - a.score || b.liquidityUsd - a.liquidityUsd);
+    assets.sort((a, b) => b.score - a.score || (b.liquidityUsd ?? -1) - (a.liquidityUsd ?? -1));
     const eligible = assets.filter((asset) => asset.eligible).length;
     const pricePayload = priceResponse.ok ? await priceResponse.json().catch(() => null) : null;
     const solPrice = Number(pricePayload?.[SOL_MINT]?.usdPrice ?? pricePayload?.data?.[SOL_MINT]?.price);
