@@ -15,6 +15,15 @@ type Asset = {
 };
 type Feed = { updatedAt: string; total: number; eligible: number; blocked: number; liquidityUsd: number | null; volume24hUsd: number | null; assets: Asset[]; error?: string };
 type Filter = 'All' | 'Eligible' | 'Blocked' | 'Score 90+' | 'Verified';
+type Universe = 'toporganicscore' | 'toptrending' | 'toptraded' | 'recent';
+type Interval = '5m' | '1h' | '6h' | '24h';
+const UNIVERSE_OPTIONS: Array<{ key: Universe; label: string }> = [
+  { key: 'toporganicscore', label: 'Organic' },
+  { key: 'toptrending', label: 'Trending' },
+  { key: 'toptraded', label: 'Most traded' },
+  { key: 'recent', label: 'New pools' },
+];
+const INTERVAL_OPTIONS: Interval[] = ['5m', '1h', '6h', '24h'];
 const compact = (value: number | null) => value === null ? '—' : value >= 1e9 ? '$' + (value / 1e9).toFixed(1) + 'B' : value >= 1e6 ? '$' + (value / 1e6).toFixed(1) + 'M' : value >= 1e3 ? '$' + (value / 1e3).toFixed(value >= 1e5 ? 0 : 1) + 'K' : '$' + value.toFixed(2);
 const price = (value: number | null) => value === null ? '—' : value >= 1000 ? '$' + value.toLocaleString('en-US', { maximumFractionDigits: 2 }) : value >= 1 ? '$' + value.toFixed(2) : value >= .01 ? '$' + value.toFixed(4) : '$' + value.toPrecision(4);
 const short = (value: string) => value.slice(0, 5) + '…' + value.slice(-5);
@@ -27,6 +36,8 @@ export function MarketBoard() {
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('All');
+  const [universe, setUniverse] = useState<Universe>('toporganicscore');
+  const [interval, setInterval] = useState<Interval>('24h');
   const [sort, setSort] = useState<'score' | 'liquidity' | 'volume'>('score');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<string[]>([]);
@@ -40,7 +51,8 @@ export function MarketBoard() {
     if (!quiet) setLoading(true);
     setError('');
     try {
-      const response = await fetch('/api/markets', { cache: 'no-store' });
+      const params = new URLSearchParams({ universe, interval });
+      const response = await fetch('/api/markets?' + params.toString(), { cache: 'no-store' });
       const data = await response.json() as Feed;
       if (!response.ok) throw new Error(data.error || 'Could not load the live market feed.');
       setFeed(data);
@@ -48,7 +60,7 @@ export function MarketBoard() {
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Market feed unavailable.');
     } finally { setLoading(false); }
-  }, []);
+  }, [universe, interval]);
 
   useEffect(() => {
     const initial = window.setTimeout(() => void refresh(), 0);
@@ -82,6 +94,7 @@ export function MarketBoard() {
     });
   }
   const updated = feed?.updatedAt ? new Date(feed.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
+  const universeLabel = UNIVERSE_OPTIONS.find((option) => option.key === universe)?.label ?? 'Organic';
   const tabs: Array<{ key: Filter; value: number }> = [
     { key: 'All', value: feed?.total ?? 0 }, { key: 'Eligible', value: feed?.eligible ?? 0 },
     { key: 'Blocked', value: feed?.blocked ?? 0 }, { key: 'Score 90+', value: assets.filter((a) => a.score >= 90).length },
@@ -96,13 +109,26 @@ export function MarketBoard() {
     </div><div className="feed-actions"><span className={'live-status ' + (feed && !error ? 'is-live' : 'is-muted')}><i />{loading && !feed ? 'CONNECTING' : error ? 'FEED ISSUE' : 'LIVE FEED'}</span><button className="outline-button" onClick={() => void refresh()} disabled={loading}><RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh</button></div></div>
 
     <section className="market-stats">
-      <div><span>TRACKED ASSETS</span><strong>{feed ? feed.total.toFixed(0) : '—'}</strong><small>Top organic Solana assets from the live feed</small></div>
+      <div><span>TRACKED ASSETS</span><strong>{feed ? feed.total.toFixed(0) : '—'}</strong><small>{universeLabel}{universe === 'recent' ? ' pool discovery' : ' · ' + interval} from Jupiter</small></div>
       <div><span>ELIGIBLE NOW</span><strong>{feed ? feed.eligible : '—'}</strong><small>Passed every hard rule</small></div>
       <div><span>TRACKED LIQUIDITY</span><strong>{feed ? compact(feed.liquidityUsd) : '—'}</strong><small>Sum across the tracked set</small></div>
       <div><span>24H VOLUME</span><strong>{feed ? compact(feed.volume24hUsd) : '—'}</strong><small>Feed updated {updated}</small></div>
     </section>
 
     {error ? <div className="feed-error" role="alert"><strong>Market feed unavailable</strong><span>{error}</span><button className="text-action" onClick={() => void refresh()}>Try again</button></div> : null}
+    <div className="market-discovery-tabs" aria-label="Market discovery source">
+      <span>DISCOVERY</span>
+      <div className="control-segment" role="group" aria-label="Choose live discovery feed">
+        {UNIVERSE_OPTIONS.map((option) => <button key={option.key} type="button" className={universe === option.key ? 'is-selected' : ''} aria-pressed={universe === option.key} onClick={() => { setUniverse(option.key); setFilter('All'); setPage(1); setSelected([]); setFeed(null); setLoading(true); setError(''); }}>{option.label}</button>)}
+      </div>
+      {universe !== 'recent' ? <>
+        <span>WINDOW</span>
+        <div className="control-segment" role="group" aria-label="Choose market discovery period">
+          {INTERVAL_OPTIONS.map((value) => <button key={value} type="button" className={interval === value ? 'is-selected' : ''} aria-pressed={interval === value} onClick={() => { setInterval(value); setPage(1); setSelected([]); setFeed(null); setLoading(true); setError(''); }}>{value}</button>)}
+        </div>
+      </> : null}
+    </div>
+
     <div className="market-toolbar"><label className="market-search"><Search size={16} /><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Search symbol, name or mint" aria-label="Search symbol, name or mint" /></label><div className="market-sort"><span>Sort</span><div className="control-segment" role="group" aria-label="Sort assets">{([{ value: 'score', label: 'Score' }, { value: 'liquidity', label: 'Liquidity' }, { value: 'volume', label: '24h volume' }] as const).map((option) => <button key={option.value} type="button" className={sort === option.value ? 'is-selected' : ''} aria-pressed={sort === option.value} onClick={() => { setSort(option.value); setPage(1); }}>{option.label}</button>)}</div><button className="text-action" onClick={() => setRulesOpen((value) => !value)}><CircleHelp size={14} /> Why a row is blocked</button></div></div>
 
     {rulesOpen ? <div className="rules-explainer"><div><strong>Hard rules</strong><span>Active freeze authority · liquidity below $100k · 24h volume below $100k · top holders above 60%.</span></div><div><strong>Warnings</strong><span>Liquidity below $250k · 24h drawdown beyond −25% · concentrated holders · incomplete feed data.</span></div><button onClick={() => setRulesOpen(false)} aria-label="Close explanation">×</button></div> : null}
