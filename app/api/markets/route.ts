@@ -60,8 +60,10 @@ export async function GET() {
       total: assets.length,
       eligible,
       blocked: assets.length - eligible,
-      liquidityUsd: assets.reduce((sum, asset) => sum + asset.liquidityUsd, 0),
-      volume24hUsd: assets.reduce((sum, asset) => sum + asset.volume24hUsd, 0),
+      liquidityUsd: assets.length > 0 && assets.every((asset) => asset.liquidityUsd !== null)
+        ? assets.reduce((sum, asset) => sum + (asset.liquidityUsd ?? 0), 0) : null,
+      volume24hUsd: assets.length > 0 && assets.every((asset) => asset.volume24hUsd !== null)
+        ? assets.reduce((sum, asset) => sum + (asset.volume24hUsd ?? 0), 0) : null,
       assets,
     }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
