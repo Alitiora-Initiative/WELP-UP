@@ -10,6 +10,8 @@
 
 WELP UP should be an **AI-assisted Solana research and wallet-approved execution-review terminal**.
 
+Jupiter's Tokens API v2 organic score is relative to the wider Solana token ecosystem, built from organic volume, holders, traders and buyers. It is useful as an activity-quality input, but is neither a safety rating nor a probability. The WELP 0–100 desk score is a separately defined heuristic with explicit field coverage; it is not statistically calibrated or backtested.
+
 The useful division of responsibility is:
 
 1. Market-data providers supply observed facts.
