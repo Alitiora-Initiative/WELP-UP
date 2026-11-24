@@ -117,11 +117,23 @@ test('incomplete volume or liquidity fails eligibility instead of passing on zer
     stats24h: { ...strongToken.stats24h, buyVolume: undefined },
   });
   assert.equal(noVolume.eligible, false);
+  assert.equal(noVolume.volume24hUsd, null);
   assert.match(noVolume.blockers.join(' | '), /24-hour volume data is unavailable/);
 
   const noLiquidity = scoreToken({ ...strongToken, liquidity: undefined });
   assert.equal(noLiquidity.eligible, false);
+  assert.equal(noLiquidity.liquidityUsd, null);
   assert.match(noLiquidity.blockers.join(' | '), /Liquidity data is unavailable/);
+
+  const missingPresentationFields = scoreToken({
+    ...strongToken,
+    usdPrice: undefined,
+    organicScore: undefined,
+    stats24h: { ...strongToken.stats24h, priceChange: undefined },
+  });
+  assert.equal(missingPresentationFields.priceUsd, null);
+  assert.equal(missingPresentationFields.priceChange24h, null);
+  assert.equal(missingPresentationFields.organicScore, null);
 });
 
 test('Jupiter suspicious-token audit flag is a hard eligibility blocker', () => {
