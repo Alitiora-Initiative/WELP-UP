@@ -30,7 +30,9 @@ type MarketFeed = {
 
 type AnalystStatus = {
   configured: boolean;
+  verified: boolean;
   model: string | null;
+  authMethod?: string;
 };
 
 type Review = {
@@ -79,10 +81,10 @@ export function AiAutomationWatch() {
       .then(async (response) => {
         const data = await response.json() as AnalystStatus & { error?: string };
         if (!response.ok) throw new Error(data.error || 'AI analyst status is unavailable.');
-        if (active) setStatus({ configured: data.configured === true, model: data.model ?? null });
+        if (active) setStatus({ configured: data.configured === true, verified: data.verified === true, model: data.model ?? null, authMethod: data.authMethod });
       })
       .catch(() => {
-        if (active) setStatus({ configured: false, model: null });
+        if (active) setStatus({ configured: false, verified: false, model: null, authMethod: 'none' });
       });
     return () => { active = false; };
   }, []);
@@ -185,6 +187,7 @@ export function AiAutomationWatch() {
 
       reviewed[candidate.key] = now;
       try { localStorage.setItem('welp-watch-ai-reviewed', JSON.stringify(reviewed)); } catch {}
+      setStatus((current) => current ? { ...current, verified: true } : current);
       setReview({
         policyName: candidate.policy.name,
         mint: candidate.asset.mint,
@@ -222,8 +225,8 @@ export function AiAutomationWatch() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="feature-stat">
             <span>AI ANALYST</span>
-            <strong>{status === null ? 'CHECKING' : status.configured ? 'CONFIGURED' : 'UNAVAILABLE'}</strong>
-            <small>{status?.model || 'Server-side model configuration required'}</small>
+            <strong>{status === null ? 'CHECKING' : !status.configured ? 'AUTH MISSING' : status.verified ? 'LIVE VERIFIED' : 'AUTH READY'}</strong>
+            <small>{status?.model || 'Vercel AI Gateway model'}</small>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -252,12 +255,16 @@ export function AiAutomationWatch() {
         <div className="feature-stats mt-4">
           <div className="feature-stat"><span>SAVED RULES</span><strong>{policyCount}</strong><small>Browser-local policies</small></div>
           <div className="feature-stat"><span>WATCH STATE</span><strong>{enabled ? 'ACTIVE' : 'PAUSED'}</strong><small>60-second live scans</small></div>
-          <div className="feature-stat"><span>LAST FEED</span><strong>{lastFeedAt ? new Date(lastFeedAt).toLocaleTimeString() : '—'}</strong><small>Jupiter snapshot timestamp</small></div>
+          <div className="feature-stat"><span>LAST FEED</span><strong>{lastFeedAt ? new Date(lastFeedAt).toLocaleTimeString() : '—'}</strong><small>WELP observation time · upstream cache may be up to 30s</small></div>
         </div>
 
-        {!status?.configured ? (
+        {status && !status.configured ? (
           <p className="notice-block" role="status">
-            The read-only AI analyst is not configured for this deployment. Add OPENAI_API_KEY and WELP_AI_MODEL as server-only Vercel variables before AI reviews can run.
+            No AI Gateway authentication was detected. Vercel deployments normally receive an OIDC token automatically; outside Vercel, configure AI_GATEWAY_API_KEY as a server-only secret. WELP_AI_MODEL is optional and selects the model, not the authentication method.
+          </p>
+        ) : status?.configured && !status.verified ? (
+          <p className="notice-block" role="status">
+            Gateway authentication is present, but model availability has not yet been tested. The first successful market review will verify the provider connection.
           </p>
         ) : null}
         {message ? <p className="inline-message" role="status">{message}</p> : null}
@@ -268,7 +275,7 @@ export function AiAutomationWatch() {
               <span>Policy · {review.policyName}</span>
               <span>Mint · <code>{review.mint}</code></span>
               <span>Model · {review.model}</span>
-              <span>Feed · {new Date(review.marketUpdatedAt).toLocaleString()}</span>
+              <span>Feed observed · {new Date(review.marketUpdatedAt).toLocaleString()}</span>
               <span>Assets analyzed · {review.assetsAnalyzed}</span>
             </div>
             <div className="whitespace-pre-wrap text-sm leading-7 text-foreground">{review.answer}</div>
