@@ -57,6 +57,10 @@ export async function GET() {
     }));
     const eligible = assets.filter((asset) => asset.eligible).length;
     const coreScreeningCompleteAssets = assets.filter((asset) => asset.screeningDataComplete).length;
+    const liquidityReportedAssets = assets.filter((asset) => asset.liquidityUsd !== null).length;
+    const volumeReportedAssets = assets.filter((asset) => asset.volume24hUsd !== null).length;
+    const priceReportedAssets = assets.filter((asset) => asset.priceUsd !== null).length;
+    const priceChangeReportedAssets = assets.filter((asset) => asset.priceChange24h !== null).length;
     const pricePayload = priceResponse.ok ? await priceResponse.json().catch(() => null) : null;
     const solPrice = Number(pricePayload?.[SOL_MINT]?.usdPrice ?? pricePayload?.data?.[SOL_MINT]?.price);
     const solPriceUsd = Number.isFinite(solPrice) && solPrice > 0 ? solPrice : null;
@@ -72,10 +76,10 @@ export async function GET() {
       dataCoverage: {
         totalAssets: assets.length,
         coreScreeningCompleteAssets,
-        liquidityReportedAssets: assets.filter((asset) => asset.liquidityUsd !== null).length,
-        volumeReportedAssets: assets.filter((asset) => asset.volume24hUsd !== null).length,
-        priceReportedAssets: assets.filter((asset) => asset.priceUsd !== null).length,
-        priceChangeReportedAssets: assets.filter((asset) => asset.priceChange24h !== null).length,
+        liquidityReportedAssets,
+        volumeReportedAssets,
+        priceReportedAssets,
+        priceChangeReportedAssets,
       },
       solPriceUsd,
       total: assets.length,
@@ -83,12 +87,12 @@ export async function GET() {
       blocked: assets.length - eligible,
       // Aggregates sum only values actually supplied by Jupiter. Counts make
       // incomplete coverage visible instead of coercing null fields to zero.
-      liquidityUsd: assets.reduce((sum, asset) => sum + (asset.liquidityUsd ?? 0), 0),
-      liquidityReportedAssets: assets.filter((asset) => asset.liquidityUsd !== null).length,
-      volume24hUsd: assets.reduce((sum, asset) => sum + (asset.volume24hUsd ?? 0), 0),
-      volumeReportedAssets: assets.filter((asset) => asset.volume24hUsd !== null).length,
-      priceReportedAssets: assets.filter((asset) => asset.priceUsd !== null).length,
-      priceChangeReportedAssets: assets.filter((asset) => asset.priceChange24h !== null).length,
+      liquidityUsd: liquidityReportedAssets ? assets.reduce((sum, asset) => sum + (asset.liquidityUsd ?? 0), 0) : null,
+      liquidityReportedAssets,
+      volume24hUsd: volumeReportedAssets ? assets.reduce((sum, asset) => sum + (asset.volume24hUsd ?? 0), 0) : null,
+      volumeReportedAssets,
+      priceReportedAssets,
+      priceChangeReportedAssets,
       marketIntegrity: {
         provider: marketIntegrity.provider,
         state: marketIntegrity.state,
