@@ -15,8 +15,8 @@ import { AiAutomationWatch } from '@/components/AiAutomationWatch';
 export type FeatureKind = 'automation' | 'agent' | 'autonomous' | 'vault' | 'portfolio' | 'history' | 'activity' | 'marketplace' | 'support' | 'status' | 'governance' | 'risk' | 'apiKeys' | 'referral' | 'explorer';
 
 type Asset = {
-  mint: string; name: string; symbol: string; priceUsd: number; priceChange24h: number;
-  liquidityUsd: number; volume24hUsd: number; organicScore: number; score: number;
+  mint: string; name: string; symbol: string; priceUsd: number | null; priceChange24h: number | null;
+  liquidityUsd: number | null; volume24hUsd: number | null; organicScore: number | null; score: number;
   verified: boolean; eligible: boolean; state: string; blockers: string[]; warnings: string[];
 };
 type Feed = { assets: Asset[]; eligible: number; blocked: number; updatedAt: string; error?: string };
@@ -70,13 +70,13 @@ function AutomationPage() {
         try { sent = JSON.parse(localStorage.getItem('welp-watch-alerts-sent') || '{}') as Record<string, number>; } catch { sent = {}; }
         let notifications = 0;
         for (const policy of policies) {
-          const matches = (data.assets || []).filter((asset) => asset.eligible && asset.liquidityUsd >= policy.liquidity && asset.organicScore >= policy.organic && asset.priceChange24h >= -policy.drawdown && (!policy.verified || asset.verified));
+          const matches = (data.assets || []).filter((asset) => asset.eligible && asset.liquidityUsd !== null && asset.liquidityUsd >= policy.liquidity && asset.organicScore !== null && asset.organicScore >= policy.organic && asset.priceChange24h !== null && asset.priceChange24h >= -policy.drawdown && (!policy.verified || asset.verified));
           for (const asset of matches) {
             const key = policy.id + ':' + asset.mint;
             if (now - (sent[key] || 0) < 24 * 60 * 60 * 1000) continue;
             if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
               new Notification(asset.symbol + ' matches ' + policy.name, {
-                body: 'Score ' + asset.score + ' · Liquidity ' + String.fromCharCode(36) + Math.round(asset.liquidityUsd).toLocaleString() + '. Review the live signal before taking any action.',
+                body: 'Score ' + asset.score + ' · Liquidity ' + (asset.liquidityUsd === null ? 'unavailable' : String.fromCharCode(36) + Math.round(asset.liquidityUsd).toLocaleString()) + '. Review the live signal before taking any action.',
                 tag: key,
               });
               sent[key] = now;
@@ -141,7 +141,7 @@ function AutomationPage() {
       const response = await fetch('/api/markets', { cache: 'no-store' });
       const data = await response.json() as Feed;
       if (!response.ok) throw new Error(data.error || 'Live feed unavailable.');
-      const matches = (data.assets || []).filter((asset) => asset.eligible && asset.liquidityUsd >= policy.liquidity && asset.organicScore >= policy.organic && asset.priceChange24h >= -policy.drawdown && (!policy.verified || asset.verified));
+      const matches = (data.assets || []).filter((asset) => asset.eligible && asset.liquidityUsd !== null && asset.liquidityUsd >= policy.liquidity && asset.organicScore !== null && asset.organicScore >= policy.organic && asset.priceChange24h !== null && asset.priceChange24h >= -policy.drawdown && (!policy.verified || asset.verified));
       setResults(matches.slice(0, 12));
       setMessage('Evaluated against the current live snapshot. No order was created.');
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Evaluation failed.'); }
