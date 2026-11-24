@@ -88,6 +88,7 @@ test('missing market-cap, momentum and holder inputs are excluded and lower cove
   assert.equal(scored.priceChange1h, null);
   assert.equal(scored.topHoldersPercent, null);
   assert.equal(scored.scoreCoveragePct, 64);
+  assert.equal(scored.state, 'Watch');
   assert.equal(scored.eligible, true);
   assert.match(scored.warnings.join(' | '), /Market cap is unavailable/);
   assert.match(scored.warnings.join(' | '), /One-hour price change is unavailable/);
