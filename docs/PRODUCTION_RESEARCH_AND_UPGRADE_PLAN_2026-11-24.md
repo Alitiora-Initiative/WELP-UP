@@ -121,7 +121,7 @@ Before scaling public AI usage:
 - add adversarial prompt-injection tests for token names, metadata, socials and all upstream fields;
 - evaluate answers against a fixed dataset and reject responses that invent missing metrics or sources.
 
-AI SDK 7 supports streaming, tools, approvals, durable agents and telemetry. Those are enablers, not a reason to add an autonomous execution loop. Tool approval should apply to read-only or reversible actions first; trading remains a separate explicit wallet-signature flow.
+AI SDK 7 supports streaming, tool loops, approvals and telemetry. WELP's configured default, `anthropic/claude-sonnet-5.5`, is a current AI Gateway model; the Gateway listing currently shows pricing from $2 per million input tokens and $10 per million output tokens. That makes an explicit usage cap important before exposing it broadly. Use the existing model for evidence-heavy analysis only after a live generation smoke test; a cheaper model can be benchmarked for routine summaries. These SDK features are enablers, not a reason to add an autonomous execution loop. Tool approval should apply to read-only or reversible actions first; trading remains a separate explicit wallet-signature flow.
 
 ## Production gate order
 
@@ -170,5 +170,6 @@ WELP UP is not ready to call production-grade for real-money trading until:
 - Solana transaction landing and production RPC guidance: https://solana.com/docs/tools/transaction-landing
 - Helius Parsed Events and Parsed Streams announcement: https://www.helius.dev/blog/parsed-events-and-streams
 - Vercel AI SDK 7: https://vercel.com/blog/ai-sdk-7
+- Claude Sonnet 5.5 on AI Gateway (model ID and listed price): https://vercel.com/ai-gateway/models/anthropic/claude-sonnet-5.5
 - Vercel AI Gateway budgets: https://vercel.com/changelog/set-per-user-budgets-on-ai-gateway
 
