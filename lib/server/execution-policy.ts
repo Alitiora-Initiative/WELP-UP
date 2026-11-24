@@ -6,7 +6,7 @@ const integerEnv = (name: string, fallback: number) => {
 };
 
 export const EXECUTION_POLICY = Object.freeze({
-  rpcUrl: process.env.SOLANA_RPC_URL?.trim() || 'https://api.mainnet-beta.solana.com',
+  rpcUrl: process.env.SOLANA_RPC_URL?.trim() || 'https://api.mainnet.solana.com',
   privateRpcConfigured: Boolean(process.env.SOLANA_RPC_URL?.trim()),
   maxSlippageBps: integerEnv('WELP_MAX_SLIPPAGE_BPS', 50),
   maxPriorityFeeLamports: integerEnv('WELP_MAX_PRIORITY_FEE_LAMPORTS', 100_000),
