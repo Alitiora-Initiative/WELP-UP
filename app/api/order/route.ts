@@ -10,10 +10,6 @@ export const runtime = 'nodejs';
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
 export async function POST(request: NextRequest) {
-  // Never return a WELP-controlled order without an explicit referral destination.
-  if (!WELP_FEE_POLICY.collectionEnabled) {
-    return NextResponse.json({ error: 'WELP fee routing is not configured. Swaps are temporarily disabled until a referral account is configured.' }, { status: 503 });
-  }
   let body: Record<string, unknown>;
   try {
     body = await request.json();
@@ -81,6 +77,23 @@ export async function POST(request: NextRequest) {
         },
       },
       { status: assessment.state === 'unknown' ? 503 : 422, headers: { 'Cache-Control': 'no-store' } },
+    );
+  }
+
+  // Webacy must clear the token before the fee-routing gate or Jupiter is considered.
+  // WELP still fails closed if its server-owned referral destination is not configured.
+  if (!WELP_FEE_POLICY.collectionEnabled) {
+    return NextResponse.json(
+      {
+        error: 'Webacy cleared this token, but WELP fee routing is not configured. No Jupiter order was created.',
+        security: {
+          provider: 'Webacy',
+          state: 'passed',
+          riskScore: assessment.riskScore,
+          isHoneypot: false,
+        },
+      },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } },
     );
   }
 
