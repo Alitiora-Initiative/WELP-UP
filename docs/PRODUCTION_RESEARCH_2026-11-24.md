@@ -142,15 +142,16 @@ The next safe step is to move **alerts**, not trades, to a durable scheduled/eve
 
 The `production-readiness-2026-11` branch contains the following proposed improvements:
 
-1. **Score integrity:** replace the misleading 80–98 score mapping with a transparent 0–100 weighted average. Missing metrics are excluded instead of being assigned a neutral value. A separate percentage reports coverage of the configured score inputs.
+1. **Score integrity:** replace the misleading 80–98 score mapping with a transparent 0–100 weighted average. Missing metrics are excluded instead of being assigned a neutral value. A separate percentage reports coverage of the configured score inputs; missing prices, changes, liquidity, volume, holders and organic scores remain null and render as unavailable instead of zero.
 2. **Fail-closed core data:** no asset is marked eligible when liquidity, 24-hour buy/sell volume, freeze-authority status or top-holder concentration is missing. Known risks remain blockers; incomplete inputs are displayed as review warnings.
 3. **Independent market cross-check:** compare up to 30 highest-ranked Solana mints against DexScreener in one batch. Show provider match state and price delta separately; never silently blend the secondary provider into the primary feed or score.
 4. **Honest freshness metadata:** expose WELP observation time and the upstream cache window rather than implying that the API timestamp is the exact provider trade time.
-5. **AI analyst context:** pass score coverage and optional DexScreener deltas to the analyst. Prompt rules distinguish data quality, cross-provider disagreements and provider-derived facts from model interpretation.
-6. **AI Gateway status:** report detected API-key/OIDC auth separately from a successful model response. The user interface no longer instructs users to add an unrelated OpenAI key.
-7. **Signal-feed rate safety:** use one-minute shared revalidation for GeckoTerminal trending pools and OHLCV calls; report partial signal data if charts or fee-bearing quotes are unavailable.
-8. **RPC status honesty:** report a shared public Solana RPC as not production-ready when no dedicated `SOLANA_RPC_URL` is configured.
-9. **Regression coverage:** add tests for weighted scoring, missing inputs, score coverage, absence of fabricated buy pressure and DexScreener cross-check parsing.
+5. **Core screening completeness:** expose whether the core audit/market fields are present, and report feed-wide counts rather than labelling a partially observed market snapshot complete.
+6. **AI analyst context:** pass score coverage and optional DexScreener deltas to the analyst. Prompt rules distinguish data quality, cross-provider disagreements and provider-derived facts from model interpretation.
+7. **AI Gateway status:** report detected API-key/OIDC auth separately from a successful model response. The user interface no longer instructs users to add an unrelated OpenAI key.
+8. **Signal-feed rate safety:** use one-minute shared revalidation for GeckoTerminal trending pools and OHLCV calls; report partial signal data if charts or fee-bearing quotes are unavailable.
+9. **RPC status honesty:** report a shared public Solana RPC as not production-ready when no dedicated `SOLANA_RPC_URL` is configured.
+10. **Regression coverage:** add tests for weighted scoring, missing inputs, score coverage, absence of fabricated buy pressure and DexScreener cross-check parsing.
 
 These changes still require automated CI, Preview deployment checks, live provider tests and human review before production promotion.
 
