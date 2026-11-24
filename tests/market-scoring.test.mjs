@@ -115,3 +115,29 @@ test('Jupiter suspicious-token audit flag is a hard eligibility blocker', () => 
   assert.equal(scored.eligible, false);
   assert.match(scored.blockers.join(' | '), /Jupiter audit flags this token as suspicious/);
 });
+
+test('missing price and market fields remain null instead of being rendered as zero', () => {
+  const scored = scoreToken({
+    id: strongToken.id,
+    name: 'Incomplete token',
+    symbol: 'INC',
+    decimals: 6,
+    usdPrice: null,
+    mcap: null,
+    liquidity: null,
+    holderCount: null,
+    organicScore: null,
+    audit: {},
+    stats1h: {},
+    stats24h: {},
+  });
+  assert.equal(scored.priceUsd, null);
+  assert.equal(scored.priceChange24h, null);
+  assert.equal(scored.liquidityUsd, null);
+  assert.equal(scored.volume24hUsd, null);
+  assert.equal(scored.holders, null);
+  assert.equal(scored.organicScore, null);
+  assert.equal(scored.screeningDataComplete, false);
+  assert.equal(scored.eligible, false);
+  assert.equal(scored.confidence, 0);
+});
