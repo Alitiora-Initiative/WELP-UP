@@ -22,7 +22,8 @@
     "test:pump-metadata": "node --experimental-strip-types --test tests/pump-metadata.test.mjs",
     "prepare": "node scripts/install-git-hooks.mjs",
     "test:git-hooks": "node --experimental-strip-types --test tests/git-hooks.test.mjs",
-    "test:webacy-security": "node --experimental-strip-types --test tests/webacy-security.test.mjs"
+    "test:webacy-security": "node --experimental-strip-types --test tests/webacy-security.test.mjs",
+    "test:dex-cross-check": "node --experimental-strip-types --test tests/dex-cross-check.test.mjs"
   },
   "dependencies": {
     "@solana/kit": "8.5.0",

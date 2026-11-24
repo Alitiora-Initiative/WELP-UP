@@ -1,10 +1,31 @@
 # Production readiness checklist
 
-**Status as of 2026-11-17: not approved for real-money vault custody or autonomous trading.**
+**Status as of 2026-11-24: not approved for real-money vault custody, public deposits, copy trading or autonomous trading.**
 
 A read-only mainnet RPC check found no vault program configured or deployed. The custom launchpad source ID is not executable on mainnet. In the current development environment, no Jupiter referral account is configured, so WELP order/execute routes return 503. The manual Jupiter swap flow is therefore not verified end-to-end with real funds; do not describe it as live until the fee route is configured and a wallet-signed transaction is independently reconciled.
 
 This checklist distinguishes working public-data and wallet-approved features from infrastructure that is only designed, scaffolded, or absent. Do not change a status to complete without reproducible evidence linked in this document.
+
+## 24 November 2026 release-candidate findings
+
+The separate branch `production-readiness-2026-11` contains a proposed data-integrity and AI-status upgrade. **It is not merged or in production yet.** Review its CI and Preview deployment before promotion.
+
+- The market score now uses a 0–100 weighted average of observed score inputs, with a separate data-coverage percentage. Missing values are not assigned a neutral score. Missing core liquidity, 24-hour buy/sell volume, freeze-authority or top-holder data withholds eligibility.
+- The market board optionally compares up to 30 top-ranked Solana mints against DexScreener. The second source is context only; it does not overwrite Jupiter values, change the score or establish token safety.
+- GeckoTerminal trending-pool and candle calls now use one-minute Next.js revalidation to reduce pressure on the public endpoint. The signal response reports incomplete chart or quote coverage as partial.
+- The AI status route distinguishes Gateway authentication from a successful generation response. Vercel AI Gateway OIDC is the preferred no-secret path for Vercel deployments; `WELP_AI_MODEL` is an optional model override, not an API key.
+- System status identifies a shared public Solana RPC as non-production-ready when no dedicated `SOLANA_RPC_URL` is configured.
+
+**Provider and account checks from 24 November 2026:**
+
+- The reviewed Vercel custom-environment listing contained `WEBACY_API_KEY` but did not show `SOLANA_RPC_URL`, `NEXT_PUBLIC_SOLANA_RPC_URL`, `JUPITER_API_KEY`, or `AI_GATEWAY_API_KEY`. Vercel's deployment OIDC token is automatically provided at runtime and may not appear as a custom project variable; use the AI status endpoint and a real Preview request to verify it.
+- A live Solana RPC health check against the shared public endpoint is not adequate production RPC readiness. Configure a private server endpoint and a separately origin-restricted browser endpoint; test the latter with an actual wallet session.
+- Jupiter Token API keyless access is useful for prototyping but is documented at 0.5 requests per second. Configure a production project API key and monitor the rate/usage limits.
+- Prior live tests against Webacy returned HTTP 500 for Solana Trading Lite and HTTP 403 for URL screening. The key must be rotated, account permissions checked for both required endpoints, and both scans retested successfully before WELP claims Webacy protection is active.
+- The referral-fee configuration remains disabled; swap order/execute routes remain fail-closed until the fee destination is configured and a returned fee-bearing order is verified.
+
+The new market cross-check tests and score tests are part of the release branch CI. Passing unit tests does not prove provider availability, successful market responses, a successful AI generation, a fee-bearing Jupiter order, or an on-chain transaction.
+
 
 ## Currently implemented in the web application
 

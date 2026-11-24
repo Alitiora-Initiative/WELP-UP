@@ -8,7 +8,7 @@ const USDT_MINT = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB';
 const TOKEN_PROGRAMS = ['TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA', 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'];
 
 async function rpc<T>(method: string, params: unknown[]) {
-  const response = await fetch(process.env.SOLANA_RPC_URL ?? 'https://api.mainnet-beta.solana.com', {
+  const response = await fetch(process.env.SOLANA_RPC_URL ?? 'https://api.mainnet.solana.com', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),

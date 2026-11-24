@@ -12,7 +12,8 @@ const ACCEPTED_PROGRAM_LOADERS = new Set([
 ]);
 
 async function checkSolana() {
-  const endpoint = process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
+  const hasDedicatedRpc = Boolean(process.env.SOLANA_RPC_URL?.trim());
+  const endpoint = process.env.SOLANA_RPC_URL?.trim() || 'https://api.mainnet.solana.com';
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -23,8 +24,26 @@ async function checkSolana() {
   if (!response.ok) throw new Error('RPC returned ' + response.status);
   const data = await response.json();
   if (data.error || data.result !== 'ok') throw new Error('RPC did not report healthy');
-  return { name: 'Solana mainnet RPC', state: 'Operational', detail: 'Mainnet RPC health check passed.' };
+  return {
+    name: 'Solana mainnet RPC',
+    state: hasDedicatedRpc ? 'Operational · dedicated RPC' : 'Not configured · shared public RPC only',
+    detail: hasDedicatedRpc
+      ? 'Configured RPC health check passed.'
+      : 'The shared public RPC responded, but Solana documents public RPC as unsuitable for production applications. Configure a dedicated private RPC before production wallet and transaction traffic.',
+  };
 }
+
+function checkWalletRpcConfiguration() {
+  const clientEndpointConfigured = Boolean(process.env.NEXT_PUBLIC_SOLANA_RPC_URL?.trim());
+  return {
+    name: 'Browser wallet RPC',
+    state: clientEndpointConfigured ? 'Configured · public client endpoint' : 'Not configured · shared public RPC fallback',
+    detail: clientEndpointConfigured
+      ? 'A browser RPC endpoint is present in the build environment. Browser-side CORS, rate limits and transaction submission must still be tested from a real wallet session; the endpoint value is not exposed here.'
+      : 'The browser wallet client falls back to Solana shared public RPC. Configure NEXT_PUBLIC_SOLANA_RPC_URL with an origin-restricted provider endpoint for production wallet reads and submissions.',
+  };
+}
+
 async function checkJupiter() {
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (process.env.JUPITER_API_KEY) headers['x-api-key'] = process.env.JUPITER_API_KEY;
@@ -34,7 +53,7 @@ async function checkJupiter() {
   if (!response.ok) throw new Error('Jupiter returned ' + response.status);
   const data = await response.json();
   if (!Array.isArray(data) || !data.length) throw new Error('Jupiter returned no token data');
-  return { name: 'Jupiter Tokens API v2', state: 'Operational', detail: 'Live token feed reachable' };
+  return { name: 'Jupiter Tokens API v2', state: process.env.JUPITER_API_KEY ? 'Operational · API key' : 'Operational · keyless limited rate', detail: process.env.JUPITER_API_KEY ? 'Live token feed reachable with a project API key.' : 'Live token feed reachable without a project key; Jupiter documents keyless access at 0.5 requests per second. Add a production API key for higher limits and usage visibility.' };
 }
 async function checkVault() {
   const programId = process.env.WELP_VAULT_PROGRAM_ID || '';
@@ -42,7 +61,7 @@ async function checkVault() {
     return { name: 'Vault program', state: 'Not configured', detail: 'No mainnet program address is configured. Funding remains disabled.' };
   }
   try {
-    const response = await fetch(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com', {
+    const response = await fetch(process.env.SOLANA_RPC_URL || 'https://api.mainnet.solana.com', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getAccountInfo', params: [programId, { encoding: 'base64', commitment: 'confirmed' }] }),
@@ -64,7 +83,7 @@ async function checkVault() {
 async function checkCustomLaunchProgram() {
   const programId = WELP_LAUNCHPAD_PROGRAM_ID;
   try {
-    const response = await fetch(process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com', {
+    const response = await fetch(process.env.SOLANA_RPC_URL || 'https://api.mainnet.solana.com', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getAccountInfo', params: [programId, { encoding: 'base64', commitment: 'confirmed' }] }),
@@ -94,7 +113,8 @@ async function checkCustomLaunchProgram() {
 
 export async function GET() {
   const checks = await Promise.all([
-    checkSolana().catch((error) => ({ name: 'Solana mainnet RPC', state: 'Unavailable', detail: error instanceof Error ? error.message : 'RPC check failed' })),
+    checkSolana().catch((error) => ({ name: 'Solana server RPC', state: 'Unavailable', detail: error instanceof Error ? error.message : 'RPC check failed' })),
+    Promise.resolve(checkWalletRpcConfiguration()),
     checkJupiter().catch((error) => ({ name: 'Jupiter Tokens API v2', state: 'Unavailable', detail: error instanceof Error ? error.message : 'Feed check failed' })),
     checkVault(),
     checkCustomLaunchProgram(),

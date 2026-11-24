@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { scoreToken } from '@/lib/market-scoring';
+import { fetchDexScreenerCrossChecks } from '@/lib/dexscreener-cross-check';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,6 +27,15 @@ function providerFailure(error: string, status = 502) {
     total: 0,
     eligible: 0,
     blocked: 0,
+    watch: 0,
+    liquidityUsd: null,
+    liquidityReportedAssets: 0,
+    volume24hUsd: null,
+    volumeReportedAssets: 0,
+    priceReportedAssets: 0,
+    priceChangeReportedAssets: 0,
+    marketIntegrity: { provider: 'DexScreener', state: 'unavailable', checkedAssets: 0, matchedAssets: 0, requestedAssets: 0, updatedAt: new Date().toISOString(), error },
+    dataCoverage: { totalAssets: 0, coreScreeningCompleteAssets: 0, liquidityReportedAssets: 0, volumeReportedAssets: 0, priceReportedAssets: 0, priceChangeReportedAssets: 0 },
     assets: [],
   }, { status, headers: { 'Cache-Control': 'no-store' } });
 }
@@ -44,8 +54,23 @@ export async function GET() {
     if (!Array.isArray(payload)) return providerFailure('Jupiter returned an unexpected market-feed format.');
 
     const assets = payload.map(scoreToken).filter((asset) => asset.mint.length > 0);
-    assets.sort((a, b) => b.score - a.score || b.liquidityUsd - a.liquidityUsd);
+    if (assets.length === 0) return providerFailure('Jupiter returned no valid market assets.');
+    assets.sort((a, b) => b.score - a.score || (b.liquidityUsd ?? -1) - (a.liquidityUsd ?? -1));
+    // Independently compare the 30 highest-ranked rows. Cross-check data never changes
+    // the primary provider's values, deterministic score, or eligibility decision.
+    const marketIntegrity = await fetchDexScreenerCrossChecks(assets.slice(0, 30));
+    const crossCheckedAssets = assets.map((asset) => ({
+      ...asset,
+      marketCrossCheck: marketIntegrity.records[asset.mint] ?? { provider: 'DexScreener' as const, state: 'not_checked' as const },
+    }));
     const eligible = assets.filter((asset) => asset.eligible).length;
+    const blocked = assets.filter((asset) => asset.state === 'Blocked').length;
+    const watch = assets.filter((asset) => asset.state === 'Watch').length;
+    const coreScreeningCompleteAssets = assets.filter((asset) => asset.screeningDataComplete).length;
+    const liquidityReportedAssets = assets.filter((asset) => asset.liquidityUsd !== null).length;
+    const volumeReportedAssets = assets.filter((asset) => asset.volume24hUsd !== null).length;
+    const priceReportedAssets = assets.filter((asset) => asset.priceUsd !== null).length;
+    const priceChangeReportedAssets = assets.filter((asset) => asset.priceChange24h !== null).length;
     const pricePayload = priceResponse.ok ? await priceResponse.json().catch(() => null) : null;
     const solPrice = Number(pricePayload?.[SOL_MINT]?.usdPrice ?? pricePayload?.data?.[SOL_MINT]?.price);
     const solPriceUsd = Number.isFinite(solPrice) && solPrice > 0 ? solPrice : null;
@@ -53,16 +78,42 @@ export async function GET() {
     return NextResponse.json({
       source: 'Jupiter Tokens API v2',
       updatedAt: fetchedAt,
-      provider: { name: 'Jupiter Tokens API v2', state: 'Operational', fetchedAt },
+      observedAt: fetchedAt,
+      freshness: { upstreamCacheSeconds: 30, note: 'Observed by WELP at this time; provider data may be served from the shared 30-second cache window.' },
+      provider: { name: 'Jupiter Tokens API v2', state: 'Operational', access: process.env.JUPITER_API_KEY ? 'api-key' : 'keyless-limited', fetchedAt },
       priceProvider: { name: 'Jupiter Price API v3', state: priceState, fetchedAt, error: solPriceUsd === null ? 'SOL price was not returned.' : undefined },
-      dataQuality: priceState === 'Operational' ? 'complete' : 'partial',
+      dataQuality: priceState === 'Operational' && coreScreeningCompleteAssets === assets.length ? 'complete' : 'partial',
+      dataCoverage: {
+        totalAssets: assets.length,
+        coreScreeningCompleteAssets,
+        liquidityReportedAssets,
+        volumeReportedAssets,
+        priceReportedAssets,
+        priceChangeReportedAssets,
+      },
       solPriceUsd,
       total: assets.length,
       eligible,
-      blocked: assets.length - eligible,
-      liquidityUsd: assets.reduce((sum, asset) => sum + asset.liquidityUsd, 0),
-      volume24hUsd: assets.reduce((sum, asset) => sum + asset.volume24hUsd, 0),
-      assets,
+      blocked,
+      watch,
+      // Aggregates sum only values actually supplied by Jupiter. Counts make
+      // incomplete coverage visible instead of coercing null fields to zero.
+      liquidityUsd: liquidityReportedAssets ? assets.reduce((sum, asset) => sum + (asset.liquidityUsd ?? 0), 0) : null,
+      liquidityReportedAssets,
+      volume24hUsd: volumeReportedAssets ? assets.reduce((sum, asset) => sum + (asset.volume24hUsd ?? 0), 0) : null,
+      volumeReportedAssets,
+      priceReportedAssets,
+      priceChangeReportedAssets,
+      marketIntegrity: {
+        provider: marketIntegrity.provider,
+        state: marketIntegrity.state,
+        checkedAssets: marketIntegrity.checkedAssets,
+        matchedAssets: marketIntegrity.matchedAssets,
+        requestedAssets: marketIntegrity.requestedAssets,
+        updatedAt: marketIntegrity.updatedAt,
+        error: marketIntegrity.error,
+      },
+      assets: crossCheckedAssets,
     }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     return providerFailure(error instanceof Error ? error.message : 'The Jupiter market feed could not be reached.');

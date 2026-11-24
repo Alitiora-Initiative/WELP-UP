@@ -22,11 +22,12 @@ const strongToken = {
   stats24h: { priceChange: 2, buyVolume: 1_000_000, sellVolume: 1_000_000, numBuys: 10_000, numSells: 0 },
 };
 
-test('scoreToken ports the published 80–98 weighted quality model', () => {
+test('scoreToken calculates a transparent 0–100 weighted quality score with full coverage', () => {
   const scored = scoreToken(strongToken);
-  assert.equal(scored.score, 98);
+  assert.equal(scored.score, 100);
+  assert.equal(scored.dataCoverage, 100);
   assert.equal(scored.eligible, true);
-  assert.equal(scored.state, 'Eligible');
+  assert.equal(scored.state, 'Watch'); // Jupiter does not return a positive isSus flag or dev-balance field for this fixture
   assert.equal(scored.turnover, 100);
   assert.equal(scored.buyPressure, 100);
   assert.equal(scored.holders, 150_000);
@@ -49,7 +50,7 @@ test('hard gates block freeze authority, thin liquidity, low volume and concentr
   assert.equal(scored.blockers.length, 4);
 });
 
-test('soft risks remain visible as warnings without being promoted to hard blockers', () => {
+test('soft risks remain visible as warnings without becoming hard blockers', () => {
   const scored = scoreToken({
     ...strongToken,
     liquidity: 200_000,
@@ -73,7 +74,7 @@ test('soft risks remain visible as warnings without being promoted to hard block
   assert.match(scored.warnings.join(' | '), /not marked verified/);
 });
 
-test('missing market-cap, momentum and audit fields are explicit and do not receive invented score inputs', () => {
+test('missing core audit and market fields withhold eligibility and lower score coverage', () => {
   const scored = scoreToken({
     ...strongToken,
     mcap: null,
@@ -85,11 +86,20 @@ test('missing market-cap, momentum and audit fields are explicit and do not rece
   assert.equal(scored.turnover, null);
   assert.equal(scored.priceChange1h, null);
   assert.equal(scored.topHoldersPercent, null);
-  assert.equal(scored.eligible, true);
+  assert.equal(scored.eligible, false);
+  assert.equal(scored.dataCoverage, 64);
   assert.match(scored.warnings.join(' | '), /Market cap is unavailable/);
   assert.match(scored.warnings.join(' | '), /One-hour price change is unavailable/);
   assert.match(scored.warnings.join(' | '), /Holder concentration is unavailable/);
   assert.match(scored.warnings.join(' | '), /Freeze-authority status is not reported/);
+});
+
+test('missing buy/sell counts do not receive an invented neutral 50% buy-pressure input', () => {
+  const { stats24h, ...withoutCounts } = strongToken;
+  const scored = scoreToken({ ...withoutCounts, stats24h: { ...stats24h, numBuys: null, numSells: null } });
+  assert.equal(scored.buyPressure, null);
+  assert.equal(scored.dataCoverage, 88);
+  assert.match(scored.scoreBreakdown.join(' | '), /Buy pressure is not scored/);
 });
 
 test('Jupiter suspicious-token audit flag is a hard eligibility blocker', () => {
@@ -104,4 +114,50 @@ test('Jupiter suspicious-token audit flag is a hard eligibility blocker', () => 
   });
   assert.equal(scored.eligible, false);
   assert.match(scored.blockers.join(' | '), /Jupiter audit flags this token as suspicious/);
+});
+
+test('missing price and market fields remain null instead of being rendered as zero', () => {
+  const scored = scoreToken({
+    id: strongToken.id,
+    name: 'Incomplete token',
+    symbol: 'INC',
+    decimals: 6,
+    usdPrice: null,
+    mcap: null,
+    liquidity: null,
+    holderCount: null,
+    organicScore: null,
+    audit: {},
+    stats1h: {},
+    stats24h: {},
+  });
+  assert.equal(scored.priceUsd, null);
+  assert.equal(scored.priceChange24h, null);
+  assert.equal(scored.liquidityUsd, null);
+  assert.equal(scored.volume24hUsd, null);
+  assert.equal(scored.holders, null);
+  assert.equal(scored.organicScore, null);
+  assert.equal(scored.screeningDataComplete, false);
+  assert.equal(scored.eligible, false);
+  assert.equal(scored.dataCoverage, 0);
+});
+
+test('Jupiter audit devBalancePercentage is used as the developer concentration field', () => {
+  const scored = scoreToken({
+    ...strongToken,
+    audit: {
+      freezeAuthorityDisabled: true,
+      mintAuthorityDisabled: true,
+      topHoldersPercentage: 10,
+      devBalancePercentage: 21,
+    },
+  });
+  assert.equal(scored.eligible, false);
+  assert.match(scored.blockers.join(' | '), /Developer allocation exceeds 20%/);
+});
+
+test('Jupiter organic score is described as relative activity, not a safety rating', () => {
+  const scored = scoreToken(strongToken);
+  assert.match(scored.scoreBreakdown.join(' | '), /ecosystem-relative organic score/);
+  assert.match(scored.scoreBreakdown.join(' | '), /not a token-safety rating/);
 });

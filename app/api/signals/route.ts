@@ -12,15 +12,19 @@ export async function GET(request: NextRequest) {
   const updatedAt = new Date().toISOString();
   try {
     const signals = await loadSignals(owner);
+    const insufficientHistory = signals.filter((signal) => signal.reason === 'Not enough chart history').length;
+    const missingExecutionQuote = signals.filter((signal) => /fee|quote unavailable/i.test(signal.reason)).length;
+    const dataQuality = signals.length === 0 || insufficientHistory > 0 || missingExecutionQuote > 0 ? 'partial' : 'complete';
     return NextResponse.json({
       signals,
       count: signals.length,
       eligibleCount: signals.filter((signal) => signal.eligible).length,
       updatedAt,
-      provider: { name: 'GeckoTerminal OHLCV', state: 'Operational', fetchedAt: updatedAt },
+      provider: { name: 'GeckoTerminal OHLCV', state: 'Operational', observedAt: updatedAt, cacheWindowSeconds: 60 },
       quoteProvider: { name: 'Jupiter Swap API v2', state: WELP_FEE_POLICY.collectionEnabled ? 'Fee-bearing quotes enabled' : 'Blocked by fee configuration' },
       execution: { enabled: WELP_FEE_POLICY.collectionEnabled, feeConfigured: WELP_FEE_POLICY.collectionEnabled },
-      dataQuality: 'complete',
+      dataQuality,
+      dataCoverage: { totalSignals: signals.length, sufficientChartHistory: signals.length - insufficientHistory, liveJupiterQuotes: signals.length - missingExecutionQuote, cacheWindowSeconds: 60 },
     }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Could not load live signals.';

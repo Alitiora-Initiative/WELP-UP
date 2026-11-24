@@ -6,7 +6,7 @@ import { walletSigner } from '@solana/kit-plugin-wallet';
 import { ClientProvider } from '@solana/react';
 import type { ReactNode } from 'react';
 
-const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? 'https://api.mainnet-beta.solana.com';
+const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? 'https://api.mainnet.solana.com';
 
 export const client = createClient()
   .use(walletSigner({ chain: 'solana:mainnet' }))

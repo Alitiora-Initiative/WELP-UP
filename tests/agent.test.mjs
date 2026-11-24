@@ -27,6 +27,9 @@ test('buildAnalystSnapshot includes only bounded public market fields', () => {
       volume24hUsd: 45000,
       organicScore: 82,
       score: 91,
+      dataCoverage: 76,
+      screeningDataComplete: true,
+      marketCrossCheck: { provider: 'DexScreener', state: 'matched', priceDeltaPct: 1.25 },
       verified: true,
       eligible: true,
       blockers: [],
@@ -38,6 +41,9 @@ test('buildAnalystSnapshot includes only bounded public market fields', () => {
   assert.equal(snapshot.assets.length, 1);
   assert.equal(snapshot.assets[0].priceUsd, 1.25);
   assert.equal(snapshot.assets[0].eligible, true);
+  assert.equal(snapshot.assets[0].dataCoverage, 76);
+  assert.equal(snapshot.assets[0].screeningDataComplete, true);
+  assert.deepEqual(snapshot.assets[0].marketCrossCheck, { state: 'matched', priceDeltaPct: 1.25 });
   assert.deepEqual(snapshot.assets[0].warnings, ['Holder concentration unavailable']);
   assert.equal('mint' in snapshot.assets[0], false);
   assert.equal('privateKey' in snapshot.assets[0], false);

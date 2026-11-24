@@ -9,14 +9,15 @@ import { ArrowDownWideNarrow, ArrowUpRight, ChevronLeft, ChevronRight, CircleHel
 import { ChartPanel } from '@/components/ChartPanel';
 
 type Asset = {
-  mint: string; name: string; symbol: string; logo: string | null; priceUsd: number; priceChange24h: number;
-  liquidityUsd: number; volume24hUsd: number; holders: number; organicScore: number; score: number;
+  mint: string; name: string; symbol: string; logo: string | null; priceUsd: number | null; priceChange24h: number | null;
+  liquidityUsd: number | null; volume24hUsd: number | null; holders: number | null; organicScore: number | null; score: number; dataCoverage: number; screeningDataComplete: boolean;
+  marketCrossCheck?: { provider: 'DexScreener'; state: 'matched' | 'no_pair' | 'unavailable' | 'not_checked'; priceDeltaPct?: number | null };
   verified: boolean; state: 'Eligible' | 'Watch' | 'Blocked'; eligible: boolean; blockers: string[]; warnings: string[];
 };
-type Feed = { updatedAt: string; total: number; eligible: number; blocked: number; liquidityUsd: number; volume24hUsd: number; assets: Asset[]; error?: string };
+type Feed = { updatedAt: string; total: number; eligible: number; blocked: number; liquidityUsd: number | null; liquidityReportedAssets?: number; volume24hUsd: number | null; volumeReportedAssets?: number; assets: Asset[]; dataQuality?: 'complete' | 'partial' | 'unavailable'; dataCoverage?: { coreScreeningCompleteAssets: number; totalAssets: number }; marketIntegrity?: { state: string; matchedAssets: number; checkedAssets: number; requestedAssets: number; updatedAt: string; error?: string }; error?: string };
 type Filter = 'All' | 'Eligible' | 'Blocked' | 'Score 90+' | 'Verified';
-const compact = (value: number) => value >= 1e9 ? '$' + (value / 1e9).toFixed(1) + 'B' : value >= 1e6 ? '$' + (value / 1e6).toFixed(1) + 'M' : value >= 1e3 ? '$' + (value / 1e3).toFixed(value >= 1e5 ? 0 : 1) + 'K' : '$' + value.toFixed(2);
-const price = (value: number) => value >= 1000 ? '$' + value.toLocaleString('en-US', { maximumFractionDigits: 2 }) : value >= 1 ? '$' + value.toFixed(2) : value >= .01 ? '$' + value.toFixed(4) : '$' + value.toPrecision(4);
+const compact = (value: number | null) => value === null ? '—' : value >= 1e9 ? '$' + (value / 1e9).toFixed(1) + 'B' : value >= 1e6 ? '$' + (value / 1e6).toFixed(1) + 'M' : value >= 1e3 ? '$' + (value / 1e3).toFixed(value >= 1e5 ? 0 : 1) + 'K' : '$' + value.toFixed(2);
+const price = (value: number | null) => value === null ? '—' : value >= 1000 ? '$' + value.toLocaleString('en-US', { maximumFractionDigits: 2 }) : value >= 1 ? '$' + value.toFixed(2) : value >= .01 ? '$' + value.toFixed(4) : '$' + value.toPrecision(4);
 const short = (value: string) => value.slice(0, 5) + '…' + value.slice(-5);
 const EMPTY_ASSETS: Asset[] = [];
 
@@ -67,7 +68,7 @@ export function MarketBoard() {
       const matchesTab = filter === 'All' || (filter === 'Eligible' && asset.eligible) || (filter === 'Blocked' && !asset.eligible) || (filter === 'Score 90+' && asset.score >= 90) || (filter === 'Verified' && asset.verified);
       return matchesText && matchesTab;
     });
-    return filteredRows.sort((a, b) => sort === 'liquidity' ? b.liquidityUsd - a.liquidityUsd : sort === 'volume' ? b.volume24hUsd - a.volume24hUsd : b.score - a.score);
+    return filteredRows.sort((a, b) => sort === 'liquidity' ? (b.liquidityUsd ?? -1) - (a.liquidityUsd ?? -1) : sort === 'volume' ? (b.volume24hUsd ?? -1) - (a.volume24hUsd ?? -1) : b.score - a.score);
   }, [assets, query, filter, sort]);
   const selectedAssets = assets.filter((asset) => selected.includes(asset.mint));
   const swapTarget = selectedAssets.find((asset) => asset.eligible) ?? null;
@@ -96,10 +97,10 @@ export function MarketBoard() {
     </div><div className="feed-actions"><span className={'live-status ' + (feed && !error ? 'is-live' : 'is-muted')}><i />{loading && !feed ? 'CONNECTING' : error ? 'FEED ISSUE' : 'LIVE FEED'}</span><button className="outline-button" onClick={() => void refresh()} disabled={loading}><RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh</button></div></div>
 
     <section className="market-stats">
-      <div><span>TRACKED ASSETS</span><strong>{feed ? feed.total.toFixed(0) : '—'}</strong><small>Top organic Solana assets from the live feed</small></div>
+      <div><span>TRACKED ASSETS</span><strong>{feed ? feed.total.toFixed(0) : '—'}</strong><small>Top organic Solana assets · {feed?.dataCoverage?.coreScreeningCompleteAssets ?? '—'} / {feed?.total ?? '—'} core datasets complete</small></div>
       <div><span>ELIGIBLE NOW</span><strong>{feed ? feed.eligible : '—'}</strong><small>Passed every hard rule</small></div>
-      <div><span>TRACKED LIQUIDITY</span><strong>{feed ? compact(feed.liquidityUsd) : '—'}</strong><small>Sum across the tracked set</small></div>
-      <div><span>24H VOLUME</span><strong>{feed ? compact(feed.volume24hUsd) : '—'}</strong><small>Feed updated {updated}</small></div>
+      <div><span>OBSERVED LIQUIDITY</span><strong>{feed ? compact(feed.liquidityUsd) : '—'}</strong><small>Reported for {feed?.liquidityReportedAssets ?? '—'} of {feed?.total ?? '—'} assets</small></div>
+      <div><span>OBSERVED 24H VOLUME</span><strong>{feed ? compact(feed.volume24hUsd) : '—'}</strong><small>Reported for {feed?.volumeReportedAssets ?? '—'} of {feed?.total ?? '—'} assets</small></div>
     </section>
 
     {error ? <div className="feed-error" role="alert"><strong>Market feed unavailable</strong><span>{error}</span><button className="text-action" onClick={() => void refresh()}>Try again</button></div> : null}
@@ -121,8 +122,8 @@ export function MarketBoard() {
         {rows.map((asset) => <tr key={asset.mint}>
           <td><input type="checkbox" aria-label={'Select ' + asset.symbol} checked={selected.includes(asset.mint)} onChange={() => setSelected((current) => current.includes(asset.mint) ? current.filter((id) => id !== asset.mint) : [...current, asset.mint])} /></td>
           <td><div className="asset-cell">{asset.logo ? <img src={asset.logo} alt="" loading="lazy" /> : <span className="asset-avatar">{asset.symbol.slice(0,1)}</span>}<div><strong>{asset.symbol}{asset.verified ? <span className="verified-mark" title="Feed-verified"> V</span> : null}</strong><small>{asset.name}</small><code title={asset.mint}>{short(asset.mint)}</code></div></div></td>
-          <td className="numeric">{price(asset.priceUsd)}</td><td className={'numeric ' + (asset.priceChange24h >= 0 ? 'positive' : 'negative')}>{asset.priceChange24h >= 0 ? '+' : ''}{asset.priceChange24h.toFixed(2)}%</td>
-          <td className="numeric">{compact(asset.liquidityUsd)}</td><td className="numeric">{compact(asset.volume24hUsd)}</td><td className="numeric">{asset.organicScore}</td><td className="score-cell">{asset.score}</td>
+          <td className="numeric">{price(asset.priceUsd)}</td><td className={'numeric ' + (asset.priceChange24h === null ? '' : asset.priceChange24h >= 0 ? 'positive' : 'negative')}>{asset.priceChange24h === null ? '—' : (asset.priceChange24h >= 0 ? '+' : '') + asset.priceChange24h.toFixed(2) + '%'}</td>
+          <td className="numeric">{compact(asset.liquidityUsd)}</td><td className="numeric">{compact(asset.volume24hUsd)}</td><td className="numeric">{asset.organicScore === null ? '—' : asset.organicScore}</td><td className="score-cell">{asset.score}<small>{Math.round(asset.dataCoverage)}% data</small><small>{asset.screeningDataComplete ? 'Core checks complete' : 'Core data missing'}</small>{typeof asset.marketCrossCheck?.priceDeltaPct === 'number' ? <small>DEX {asset.marketCrossCheck.priceDeltaPct >= 0 ? '+' : ''}{asset.marketCrossCheck.priceDeltaPct.toFixed(2)}%</small> : asset.marketCrossCheck?.state === 'no_pair' ? <small>No DEX pair</small> : asset.marketCrossCheck?.state === 'unavailable' ? <small>DEX unavailable</small> : null}</td>
           <td><span className={'asset-state state-' + asset.state.toLowerCase()}>{asset.state}</span><small className="state-reason">{asset.blockers[0] || asset.warnings[0] || ''}</small></td>
           <td><button type="button" className="market-chart-button" aria-pressed={chartMint === asset.mint} onClick={() => setChartMint(asset.mint)}>Chart</button></td>
           <td><Link className="outline-button" href={'/swap?mint=' + encodeURIComponent(asset.mint)}>{asset.eligible ? 'Buy' : 'Review'}</Link></td>
@@ -133,6 +134,6 @@ export function MarketBoard() {
       <div className="market-pagination"><span>Showing {filtered.length ? (page - 1) * pageSize + 1 : 0}–{Math.min(page * pageSize, filtered.length)} of {filtered.length}</span><div><button aria-label="Previous page" disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}><ChevronLeft size={15} /></button><span>Page {page} of {pages}</span><button aria-label="Next page" disabled={page >= pages} onClick={() => setPage((value) => Math.min(pages, value + 1))}><ChevronRight size={15} /></button></div></div>
     </section>
     {chartAsset ? <ChartPanel mint={chartAsset.mint} name={chartAsset.name} symbol={chartAsset.symbol} /> : null}
-    <div className="market-disclosures"><section><span>FEED CONTRACT</span><p>Prices, liquidity and volume come from Jupiter Tokens API v2. This page refreshes every 60 seconds and when the tab becomes visible. Venue fees, market hours and outages belong to the venue.</p></section><section><span>WHAT THE SCORE MEANS</span><p>The score is a weighted read of live fields — organic activity, depth, turnover, holder spread, buy pressure and short-term calm — mapped into an 80–98 band. It is not a probability of profit.</p></section><section><span>BEFORE YOU ROUTE AN ORDER</span><p>A qualified row is still a volatile asset. Review the route and price impact on the swap desk, then sign one transaction at a time in your wallet.</p><Link href="/swap">Open trade desk <ArrowUpRight size={13} /></Link></section></div>
+    <div className="market-disclosures"><section><span>INDEPENDENT DATA CHECK</span><p>{feed?.marketIntegrity ? `${feed.marketIntegrity.matchedAssets} of ${feed.marketIntegrity.requestedAssets} requested assets matched a live DexScreener pair (${feed.marketIntegrity.state}). Cross-checks cover up to 30 top-ranked assets. Price differences are shown for review; DexScreener data never silently replaces Jupiter data or changes the eligibility score.` : 'Waiting for an independent DexScreener check.'} {feed?.marketIntegrity?.error ? feed.marketIntegrity.error : ''}</p></section><section><span>FEED CONTRACT</span><p>Primary prices, liquidity and volume come from Jupiter Tokens API v2. The independent DexScreener check is a separate market-data source, not a security audit. This page refreshes every 60 seconds; provider data may be served from its documented cache window.</p></section><section><span>WHAT THE SCORE MEANS</span><p>The score is a 0–100 weighted average of available inputs — organic activity, depth, turnover, holder spread, buy pressure and short-term calm. Data coverage is shown separately; missing fields are not assigned neutral values. A score is not a probability of profit.</p></section><section><span>BEFORE YOU ROUTE AN ORDER</span><p>A qualified row is still a volatile asset. Review the route and price impact on the swap desk, then sign one transaction at a time in your wallet.</p><Link href="/swap">Open trade desk <ArrowUpRight size={13} /></Link></section></div>
   </main>;
 }

@@ -87,7 +87,7 @@ async function fetchCandles(pool: string): Promise<Candle[]> {
   url.searchParams.set('aggregate', '5');
   url.searchParams.set('limit', '60');
   url.searchParams.set('currency', 'usd');
-  const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(14_000) });
+  const response = await fetch(url, { headers: { Accept: 'application/json;version=20230203' }, next: { revalidate: 60 }, signal: AbortSignal.timeout(14_000) });
   if (!response.ok) return [];
   const data = record(await response.json());
   const rows: unknown[] = record(record(data.data).attributes).ohlcv_list as unknown[] ?? [];
@@ -182,7 +182,8 @@ function analyze(pool: Pool, candles: Candle[], order: Record<string, unknown> |
 
 export async function loadSignals(owner: string): Promise<Signal[]> {
   const response = await fetch(`${GECKO}/networks/solana/trending_pools?page=1&include=base_token,quote_token`, {
-    cache: 'no-store',
+    headers: { Accept: 'application/json;version=20230203' },
+    next: { revalidate: 60 },
     signal: AbortSignal.timeout(15_000),
   });
   if (!response.ok) throw new Error('Live pool discovery is temporarily unavailable.');
