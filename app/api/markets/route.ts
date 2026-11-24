@@ -53,6 +53,7 @@ export async function GET() {
     if (!Array.isArray(payload)) return providerFailure('Jupiter returned an unexpected market-feed format.');
 
     const assets = payload.map(scoreToken).filter((asset) => asset.mint.length > 0);
+    if (assets.length === 0) return providerFailure('Jupiter returned no valid market assets.');
     assets.sort((a, b) => b.score - a.score || (b.liquidityUsd ?? -1) - (a.liquidityUsd ?? -1));
     // Independently compare the 30 highest-ranked rows. Cross-check data never changes
     // the primary provider's values, deterministic score, or eligibility decision.
@@ -62,6 +63,8 @@ export async function GET() {
       marketCrossCheck: marketIntegrity.records[asset.mint] ?? { provider: 'DexScreener' as const, state: 'not_checked' as const },
     }));
     const eligible = assets.filter((asset) => asset.eligible).length;
+    const blocked = assets.filter((asset) => asset.state === 'Blocked').length;
+    const watch = assets.filter((asset) => asset.state === 'Watch').length;
     const coreScreeningCompleteAssets = assets.filter((asset) => asset.screeningDataComplete).length;
     const liquidityReportedAssets = assets.filter((asset) => asset.liquidityUsd !== null).length;
     const volumeReportedAssets = assets.filter((asset) => asset.volume24hUsd !== null).length;
@@ -90,7 +93,8 @@ export async function GET() {
       solPriceUsd,
       total: assets.length,
       eligible,
-      blocked: assets.length - eligible,
+      blocked,
+      watch,
       // Aggregates sum only values actually supplied by Jupiter. Counts make
       // incomplete coverage visible instead of coercing null fields to zero.
       liquidityUsd: liquidityReportedAssets ? assets.reduce((sum, asset) => sum + (asset.liquidityUsd ?? 0), 0) : null,
