@@ -93,13 +93,13 @@ export async function fetchDexScreenerCrossChecks(
   }
 
   try {
-    const addresses = batch.map((asset) => asset.mint).join(',');
+    const addresses = batch.map((asset) => encodeURIComponent(asset.mint)).join(',');
     const response = await fetch(
-      `https://api.dexscreener.com/tokens/v1/solana/${encodeURIComponent(addresses)}`,
+      `https://api.dexscreener.com/tokens/v1/solana/${addresses}`,
       {
         headers: { Accept: 'application/json' },
         next: { revalidate: 30 },
-        signal: AbortSignal.timeout(8_000),
+        signal: AbortSignal.timeout(3_500),
       },
     );
     if (!response.ok) throw new Error(`DexScreener returned HTTP ${response.status}.`);
