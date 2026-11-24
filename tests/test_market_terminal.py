@@ -16,10 +16,11 @@ class FakeData:
     def __init__(self):
         self.price = 100.0
         self.asset_class = "stock"
+        self.quote_age_seconds = 0
 
     def quote(self, symbol):
         import time
-        return Quote(symbol, self.asset_class, self.price, "USD", time.time(), "test fixture", quality="unit_test_only")
+        return Quote(symbol, self.asset_class, self.price, "USD", time.time() - self.quote_age_seconds, "test fixture", quality="unit_test_only")
 
     def bars(self, symbol, limit=200):
         import time
@@ -76,6 +77,24 @@ class MarketTerminalTests(unittest.TestCase):
                 broker.open("BBB", 2.0)
             with self.assertRaises(RiskRejected):
                 broker.open("AAA", 1.0)
+            store.close()
+
+    def test_stale_quote_does_not_replace_last_saved_position_mark(self):
+        with tempfile.TemporaryDirectory() as folder:
+            settings = self.settings(Path(folder))
+            store = Store(settings.database, settings.initial_equity)
+            data = FakeData()
+            broker = PaperBroker(settings, store, data)
+            opened = broker.open("TEST", 2.0, side=1)
+            position_id = opened["position_id"]
+            store.update_mark(position_id, 95.0)
+            data.quote_age_seconds = 60 * 60  # older than the 20-minute stock quote limit
+
+            state = broker.mark_equity()
+            position = store.open_positions()[0]
+            self.assertAlmostEqual(position["mark_price"], 95.0)
+            self.assertAlmostEqual(state["equity"], store.cash() + position["units"] * 95.0)
+            self.assertTrue(any(row["category"] == "MARK_STALE" for row in store.recent_decisions(10)))
             store.close()
 
     def test_high_water_drawdown_triggers_at_20_percent_even_above_initial(self):
