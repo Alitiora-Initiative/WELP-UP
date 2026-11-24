@@ -33,7 +33,7 @@ function finite(value: unknown): number | null {
 
 export function parseDexScreenerTokenPairs(
   mints: string[],
-  primaryPrices: Record<string, number>,
+  primaryPrices: Record<string, number | null>,
   payload: unknown,
 ): Record<string, DexCrossCheck> {
   const rows = Array.isArray(payload) ? payload.map(record) : [];
@@ -75,7 +75,7 @@ export function parseDexScreenerTokenPairs(
 }
 
 export async function fetchDexScreenerCrossChecks(
-  assets: Array<{ mint: string; priceUsd: number }>,
+  assets: Array<{ mint: string; priceUsd: number | null }>,
 ): Promise<DexCrossCheckSummary> {
   const updatedAt = new Date().toISOString();
   const batch = assets.filter((asset) => MINT_RE.test(asset.mint)).slice(0, 30);
