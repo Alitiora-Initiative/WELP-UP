@@ -32,14 +32,14 @@ export type ScoredMarketToken = {
   symbol: string;
   logo: string | null;
   decimals: number;
-  priceUsd: number;
-  priceChange24h: number;
+  priceUsd: number | null;
+  priceChange24h: number | null;
   priceChange1h: number | null;
-  liquidityUsd: number;
-  volume24hUsd: number;
+  liquidityUsd: number | null;
+  volume24hUsd: number | null;
   marketCapUsd: number | null;
-  holders: number;
-  organicScore: number;
+  holders: number | null;
+  organicScore: number | null;
   score: number;
   scoreCoveragePct: number;
   verified: boolean;
@@ -71,6 +71,7 @@ export function scoreToken(value: unknown): ScoredMarketToken {
   const organic = clamp(organicValue ?? 0);
   const holdersValue = optionalNumber(row.holderCount);
   const holders = Math.max(0, Math.trunc(holdersValue ?? 0));
+  const priceUsdValue = optionalNumber(row.usdPrice);
   const mcap = optionalNumber(row.mcap);
   const topHolders = optionalNumber(audit.topHoldersPercentage);
   const developerOwnership = optionalNumber(audit.developerOwnershipPercentage);
@@ -151,6 +152,7 @@ export function scoreToken(value: unknown): ScoredMarketToken {
   if (!tradeCountsAvailable) warnings.push('Buy/sell trade counts are unavailable; buy pressure is not scored');
   const change24hValue = optionalNumber(s24.priceChange);
   const change24h = change24hValue ?? 0;
+  if (priceUsdValue === null || priceUsdValue <= 0) warnings.push('USD price is unavailable');
   if (change24hValue === null) warnings.push('24-hour price change is unavailable');
   if (scoreCoveragePct < 80) warnings.push('Score input coverage is only ' + scoreCoveragePct + '%; treat this quality score as low-confidence');
   if (change24h <= -25) warnings.push('24-hour drawdown is ' + change24h.toFixed(1) + '%');
@@ -177,14 +179,14 @@ export function scoreToken(value: unknown): ScoredMarketToken {
     symbol: String(row.symbol ?? '—').slice(0, 20),
     logo: typeof row.icon === 'string' ? row.icon : null,
     decimals: Math.max(0, Math.min(18, Math.trunc(number(row.decimals)))),
-    priceUsd: Math.max(0, number(row.usdPrice)),
-    priceChange24h: change24h,
+    priceUsd: priceUsdValue !== null && priceUsdValue > 0 ? priceUsdValue : null,
+    priceChange24h: change24hValue,
     priceChange1h: change1h,
-    liquidityUsd: liquidity,
-    volume24hUsd: volume,
+    liquidityUsd: rawLiquidity === null ? null : liquidity,
+    volume24hUsd: volumeAvailable ? volume : null,
     marketCapUsd: mcap,
-    holders,
-    organicScore: Math.round(organic),
+    holders: holdersValue === null ? null : holders,
+    organicScore: organicValue === null ? null : Math.round(organic),
     score,
     scoreCoveragePct,
     verified: row.isVerified === true,
