@@ -9,14 +9,23 @@ import { ArrowDownWideNarrow, ArrowUpRight, ChevronLeft, ChevronRight, CircleHel
 import { ChartPanel } from '@/components/ChartPanel';
 
 type Asset = {
-  mint: string; name: string; symbol: string; logo: string | null; priceUsd: number; priceChange24h: number;
-  liquidityUsd: number; volume24hUsd: number; holders: number; organicScore: number; score: number;
+  mint: string; name: string; symbol: string; logo: string | null; priceUsd: number | null; priceChange24h: number | null;
+  liquidityUsd: number | null; volume24hUsd: number | null; holders: number | null; organicScore: number | null; score: number; scoreCoveragePct: number;
   verified: boolean; state: 'Eligible' | 'Watch' | 'Blocked'; eligible: boolean; blockers: string[]; warnings: string[];
 };
-type Feed = { updatedAt: string; total: number; eligible: number; blocked: number; liquidityUsd: number; volume24hUsd: number; assets: Asset[]; error?: string };
+type Feed = { updatedAt: string; total: number; eligible: number; blocked: number; liquidityUsd: number | null; volume24hUsd: number | null; assets: Asset[]; error?: string };
 type Filter = 'All' | 'Eligible' | 'Blocked' | 'Score 90+' | 'Verified';
-const compact = (value: number) => value >= 1e9 ? '$' + (value / 1e9).toFixed(1) + 'B' : value >= 1e6 ? '$' + (value / 1e6).toFixed(1) + 'M' : value >= 1e3 ? '$' + (value / 1e3).toFixed(value >= 1e5 ? 0 : 1) + 'K' : '$' + value.toFixed(2);
-const price = (value: number) => value >= 1000 ? '$' + value.toLocaleString('en-US', { maximumFractionDigits: 2 }) : value >= 1 ? '$' + value.toFixed(2) : value >= .01 ? '$' + value.toFixed(4) : '$' + value.toPrecision(4);
+type Universe = 'toporganicscore' | 'toptrending' | 'toptraded' | 'recent';
+type Interval = '5m' | '1h' | '6h' | '24h';
+const UNIVERSE_OPTIONS: Array<{ key: Universe; label: string }> = [
+  { key: 'toporganicscore', label: 'Organic' },
+  { key: 'toptrending', label: 'Trending' },
+  { key: 'toptraded', label: 'Most traded' },
+  { key: 'recent', label: 'New pools' },
+];
+const INTERVAL_OPTIONS: Interval[] = ['5m', '1h', '6h', '24h'];
+const compact = (value: number | null) => value === null ? '—' : value >= 1e9 ? '$' + (value / 1e9).toFixed(1) + 'B' : value >= 1e6 ? '$' + (value / 1e6).toFixed(1) + 'M' : value >= 1e3 ? '$' + (value / 1e3).toFixed(value >= 1e5 ? 0 : 1) + 'K' : '$' + value.toFixed(2);
+const price = (value: number | null) => value === null ? '—' : value >= 1000 ? '$' + value.toLocaleString('en-US', { maximumFractionDigits: 2 }) : value >= 1 ? '$' + value.toFixed(2) : value >= .01 ? '$' + value.toFixed(4) : '$' + value.toPrecision(4);
 const short = (value: string) => value.slice(0, 5) + '…' + value.slice(-5);
 const EMPTY_ASSETS: Asset[] = [];
 
@@ -27,6 +36,8 @@ export function MarketBoard() {
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('All');
+  const [universe, setUniverse] = useState<Universe>('toporganicscore');
+  const [interval, setInterval] = useState<Interval>('24h');
   const [sort, setSort] = useState<'score' | 'liquidity' | 'volume'>('score');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<string[]>([]);
@@ -40,7 +51,8 @@ export function MarketBoard() {
     if (!quiet) setLoading(true);
     setError('');
     try {
-      const response = await fetch('/api/markets', { cache: 'no-store' });
+      const params = new URLSearchParams({ universe, interval });
+      const response = await fetch('/api/markets?' + params.toString(), { cache: 'no-store' });
       const data = await response.json() as Feed;
       if (!response.ok) throw new Error(data.error || 'Could not load the live market feed.');
       setFeed(data);
@@ -48,7 +60,7 @@ export function MarketBoard() {
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Market feed unavailable.');
     } finally { setLoading(false); }
-  }, []);
+  }, [universe, interval]);
 
   useEffect(() => {
     const initial = window.setTimeout(() => void refresh(), 0);
@@ -67,7 +79,7 @@ export function MarketBoard() {
       const matchesTab = filter === 'All' || (filter === 'Eligible' && asset.eligible) || (filter === 'Blocked' && !asset.eligible) || (filter === 'Score 90+' && asset.score >= 90) || (filter === 'Verified' && asset.verified);
       return matchesText && matchesTab;
     });
-    return filteredRows.sort((a, b) => sort === 'liquidity' ? b.liquidityUsd - a.liquidityUsd : sort === 'volume' ? b.volume24hUsd - a.volume24hUsd : b.score - a.score);
+    return filteredRows.sort((a, b) => sort === 'liquidity' ? (b.liquidityUsd ?? -1) - (a.liquidityUsd ?? -1) : sort === 'volume' ? (b.volume24hUsd ?? -1) - (a.volume24hUsd ?? -1) : b.score - a.score);
   }, [assets, query, filter, sort]);
   const selectedAssets = assets.filter((asset) => selected.includes(asset.mint));
   const swapTarget = selectedAssets.find((asset) => asset.eligible) ?? null;
@@ -82,6 +94,7 @@ export function MarketBoard() {
     });
   }
   const updated = feed?.updatedAt ? new Date(feed.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
+  const universeLabel = UNIVERSE_OPTIONS.find((option) => option.key === universe)?.label ?? 'Organic';
   const tabs: Array<{ key: Filter; value: number }> = [
     { key: 'All', value: feed?.total ?? 0 }, { key: 'Eligible', value: feed?.eligible ?? 0 },
     { key: 'Blocked', value: feed?.blocked ?? 0 }, { key: 'Score 90+', value: assets.filter((a) => a.score >= 90).length },
@@ -96,13 +109,26 @@ export function MarketBoard() {
     </div><div className="feed-actions"><span className={'live-status ' + (feed && !error ? 'is-live' : 'is-muted')}><i />{loading && !feed ? 'CONNECTING' : error ? 'FEED ISSUE' : 'LIVE FEED'}</span><button className="outline-button" onClick={() => void refresh()} disabled={loading}><RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh</button></div></div>
 
     <section className="market-stats">
-      <div><span>TRACKED ASSETS</span><strong>{feed ? feed.total.toFixed(0) : '—'}</strong><small>Top organic Solana assets from the live feed</small></div>
+      <div><span>TRACKED ASSETS</span><strong>{feed ? feed.total.toFixed(0) : '—'}</strong><small>{universeLabel}{universe === 'recent' ? ' pool discovery' : ' · ' + interval} from Jupiter</small></div>
       <div><span>ELIGIBLE NOW</span><strong>{feed ? feed.eligible : '—'}</strong><small>Passed every hard rule</small></div>
       <div><span>TRACKED LIQUIDITY</span><strong>{feed ? compact(feed.liquidityUsd) : '—'}</strong><small>Sum across the tracked set</small></div>
       <div><span>24H VOLUME</span><strong>{feed ? compact(feed.volume24hUsd) : '—'}</strong><small>Feed updated {updated}</small></div>
     </section>
 
     {error ? <div className="feed-error" role="alert"><strong>Market feed unavailable</strong><span>{error}</span><button className="text-action" onClick={() => void refresh()}>Try again</button></div> : null}
+    <div className="market-discovery-tabs" aria-label="Market discovery source">
+      <span>DISCOVERY</span>
+      <div className="control-segment" role="group" aria-label="Choose live discovery feed">
+        {UNIVERSE_OPTIONS.map((option) => <button key={option.key} type="button" className={universe === option.key ? 'is-selected' : ''} aria-pressed={universe === option.key} onClick={() => { setUniverse(option.key); setFilter('All'); setPage(1); setSelected([]); setChartMint(''); setFeed(null); setLoading(true); setError(''); }}>{option.label}</button>)}
+      </div>
+      {universe !== 'recent' ? <>
+        <span>WINDOW</span>
+        <div className="control-segment" role="group" aria-label="Choose market discovery period">
+          {INTERVAL_OPTIONS.map((value) => <button key={value} type="button" className={interval === value ? 'is-selected' : ''} aria-pressed={interval === value} onClick={() => { setInterval(value); setPage(1); setSelected([]); setFeed(null); setLoading(true); setError(''); }}>{value}</button>)}
+        </div>
+      </> : null}
+    </div>
+
     <div className="market-toolbar"><label className="market-search"><Search size={16} /><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Search symbol, name or mint" aria-label="Search symbol, name or mint" /></label><div className="market-sort"><span>Sort</span><div className="control-segment" role="group" aria-label="Sort assets">{([{ value: 'score', label: 'Score' }, { value: 'liquidity', label: 'Liquidity' }, { value: 'volume', label: '24h volume' }] as const).map((option) => <button key={option.value} type="button" className={sort === option.value ? 'is-selected' : ''} aria-pressed={sort === option.value} onClick={() => { setSort(option.value); setPage(1); }}>{option.label}</button>)}</div><button className="text-action" onClick={() => setRulesOpen((value) => !value)}><CircleHelp size={14} /> Why a row is blocked</button></div></div>
 
     {rulesOpen ? <div className="rules-explainer"><div><strong>Hard rules</strong><span>Active freeze authority · liquidity below $100k · 24h volume below $100k · top holders above 60%.</span></div><div><strong>Warnings</strong><span>Liquidity below $250k · 24h drawdown beyond −25% · concentrated holders · incomplete feed data.</span></div><button onClick={() => setRulesOpen(false)} aria-label="Close explanation">×</button></div> : null}
@@ -121,8 +147,8 @@ export function MarketBoard() {
         {rows.map((asset) => <tr key={asset.mint}>
           <td><input type="checkbox" aria-label={'Select ' + asset.symbol} checked={selected.includes(asset.mint)} onChange={() => setSelected((current) => current.includes(asset.mint) ? current.filter((id) => id !== asset.mint) : [...current, asset.mint])} /></td>
           <td><div className="asset-cell">{asset.logo ? <img src={asset.logo} alt="" loading="lazy" /> : <span className="asset-avatar">{asset.symbol.slice(0,1)}</span>}<div><strong>{asset.symbol}{asset.verified ? <span className="verified-mark" title="Feed-verified"> V</span> : null}</strong><small>{asset.name}</small><code title={asset.mint}>{short(asset.mint)}</code></div></div></td>
-          <td className="numeric">{price(asset.priceUsd)}</td><td className={'numeric ' + (asset.priceChange24h >= 0 ? 'positive' : 'negative')}>{asset.priceChange24h >= 0 ? '+' : ''}{asset.priceChange24h.toFixed(2)}%</td>
-          <td className="numeric">{compact(asset.liquidityUsd)}</td><td className="numeric">{compact(asset.volume24hUsd)}</td><td className="numeric">{asset.organicScore}</td><td className="score-cell">{asset.score}</td>
+          <td className="numeric">{price(asset.priceUsd)}</td><td className={'numeric ' + (asset.priceChange24h === null ? '' : asset.priceChange24h >= 0 ? 'positive' : 'negative')}>{asset.priceChange24h === null ? '—' : (asset.priceChange24h >= 0 ? '+' : '') + asset.priceChange24h.toFixed(2) + '%'}</td>
+          <td className="numeric">{compact(asset.liquidityUsd)}</td><td className="numeric">{compact(asset.volume24hUsd)}</td><td className="numeric">{asset.organicScore === null ? '—' : asset.organicScore}</td><td className="score-cell" title={"Observed weighted score inputs: " + asset.scoreCoveragePct + "%"}>{asset.score}<small>{asset.scoreCoveragePct}% inputs</small></td>
           <td><span className={'asset-state state-' + asset.state.toLowerCase()}>{asset.state}</span><small className="state-reason">{asset.blockers[0] || asset.warnings[0] || ''}</small></td>
           <td><button type="button" className="market-chart-button" aria-pressed={chartMint === asset.mint} onClick={() => setChartMint(asset.mint)}>Chart</button></td>
           <td><Link className="outline-button" href={'/swap?mint=' + encodeURIComponent(asset.mint)}>{asset.eligible ? 'Buy' : 'Review'}</Link></td>
@@ -133,6 +159,6 @@ export function MarketBoard() {
       <div className="market-pagination"><span>Showing {filtered.length ? (page - 1) * pageSize + 1 : 0}–{Math.min(page * pageSize, filtered.length)} of {filtered.length}</span><div><button aria-label="Previous page" disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}><ChevronLeft size={15} /></button><span>Page {page} of {pages}</span><button aria-label="Next page" disabled={page >= pages} onClick={() => setPage((value) => Math.min(pages, value + 1))}><ChevronRight size={15} /></button></div></div>
     </section>
     {chartAsset ? <ChartPanel mint={chartAsset.mint} name={chartAsset.name} symbol={chartAsset.symbol} /> : null}
-    <div className="market-disclosures"><section><span>FEED CONTRACT</span><p>Prices, liquidity and volume come from Jupiter Tokens API v2. This page refreshes every 60 seconds and when the tab becomes visible. Venue fees, market hours and outages belong to the venue.</p></section><section><span>WHAT THE SCORE MEANS</span><p>The score is a weighted read of live fields — organic activity, depth, turnover, holder spread, buy pressure and short-term calm — mapped into an 80–98 band. It is not a probability of profit.</p></section><section><span>BEFORE YOU ROUTE AN ORDER</span><p>A qualified row is still a volatile asset. Review the route and price impact on the swap desk, then sign one transaction at a time in your wallet.</p><Link href="/swap">Open trade desk <ArrowUpRight size={13} /></Link></section></div>
+    <div className="market-disclosures"><section><span>FEED CONTRACT</span><p>Prices, liquidity and volume come from Jupiter Tokens API v2. This page refreshes every 60 seconds and when the tab becomes visible. Venue fees, market hours and outages belong to the venue.</p></section><section><span>WHAT THE SCORE MEANS</span><p>The 0–100 quality score uses only fields actually returned by the live feed. Missing inputs are excluded rather than filled with neutral values; the percentage beside each score shows observed weighted-input coverage, not overall security-data completeness. Low coverage appears as Watch. It is not a probability of profit or a safety guarantee.</p></section><section><span>BEFORE YOU ROUTE AN ORDER</span><p>A qualified row is still a volatile asset. Review the route and price impact on the swap desk, then sign one transaction at a time in your wallet.</p><Link href="/swap">Open trade desk <ArrowUpRight size={13} /></Link></section></div>
   </main>;
 }

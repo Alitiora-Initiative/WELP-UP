@@ -28,11 +28,11 @@ type Asset = {
   name: string;
   symbol: string;
   logo?: string | null;
-  priceUsd: number;
-  priceChange24h: number;
-  liquidityUsd: number;
-  volume24hUsd: number;
-  organicScore: number;
+  priceUsd: number | null;
+  priceChange24h: number | null;
+  liquidityUsd: number | null;
+  volume24hUsd: number | null;
+  organicScore: number | null;
   score: number;
   verified: boolean;
   eligible: boolean;
@@ -43,8 +43,8 @@ type Feed = {
   total: number;
   eligible: number;
   blocked: number;
-  liquidityUsd: number;
-  volume24hUsd: number;
+  liquidityUsd: number | null;
+  volume24hUsd: number | null;
   updatedAt: string;
   solPriceUsd: number | null;
   provider?: { name: string; state: string; error?: string };
@@ -62,7 +62,7 @@ type DevelopmentFund = {
 type ServiceCheck = { name: string; state: string; detail: string };
 type ServiceStatus = { updatedAt: string; overall: string; error?: string; checks: ServiceCheck[] };
 
-const money = (value: number) => value >= 1e9
+const money = (value: number | null) => value === null ? '—' : value >= 1e9
   ? '$' + (value / 1e9).toFixed(1) + 'B'
   : value >= 1e6
     ? '$' + (value / 1e6).toFixed(1) + 'M'
@@ -70,7 +70,7 @@ const money = (value: number) => value >= 1e9
       ? '$' + (value / 1e3).toFixed(1) + 'K'
       : '$' + value.toFixed(2);
 
-const price = (value: number) => value >= 1000
+const price = (value: number | null) => value === null ? '—' : value >= 1000
   ? '$' + value.toLocaleString('en-US', { maximumFractionDigits: 2 })
   : value >= 1
     ? '$' + value.toFixed(2)
@@ -289,7 +289,7 @@ export function TerminalHome() {
             <div className="home-candidate-table-row" key={asset.mint}>
               <div className="home-candidate-asset">{asset.logo ? <img className="home-candidate-avatar home-candidate-avatar-image" src={asset.logo} alt="" loading="lazy" /> : <span className="home-candidate-avatar">{asset.symbol.slice(0, 1).toUpperCase()}</span>}<span><strong>{asset.symbol}</strong><small>{asset.name}</small></span></div>
               <strong className="home-candidate-price">{price(asset.priceUsd)}</strong>
-              <strong className={asset.priceChange24h >= 0 ? 'positive' : 'negative'}>{asset.priceChange24h >= 0 ? '+' : ''}{asset.priceChange24h.toFixed(2)}%</strong>
+              <strong className={asset.priceChange24h === null ? '' : asset.priceChange24h >= 0 ? 'positive' : 'negative'}>{asset.priceChange24h === null ? '—' : (asset.priceChange24h >= 0 ? '+' : '') + asset.priceChange24h.toFixed(2) + '%'}</strong>
               <span className="home-candidate-liquidity">{money(asset.liquidityUsd)}</span>
               <span className="home-candidate-score">{asset.score}<small>/100</small></span>
               <Link href={'/swap?mint=' + encodeURIComponent(asset.mint)} className="home-candidate-route" aria-label={'Review ' + asset.symbol + ' swap route'}>Review <ArrowUpRight size={13} /></Link>
