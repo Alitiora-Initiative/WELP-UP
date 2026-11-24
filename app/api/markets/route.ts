@@ -27,6 +27,7 @@ function providerFailure(error: string, status = 502) {
     total: 0,
     eligible: 0,
     blocked: 0,
+    marketIntegrity: { provider: 'DexScreener', state: 'unavailable', checkedAssets: 0, matchedAssets: 0, requestedAssets: 0, updatedAt: new Date().toISOString(), error },
     assets: [],
   }, { status, headers: { 'Cache-Control': 'no-store' } });
 }
@@ -45,7 +46,7 @@ export async function GET() {
     if (!Array.isArray(payload)) return providerFailure('Jupiter returned an unexpected market-feed format.');
 
     const assets = payload.map(scoreToken).filter((asset) => asset.mint.length > 0);
-    assets.sort((a, b) => b.score - a.score || b.liquidityUsd - a.liquidityUsd);
+    assets.sort((a, b) => b.score - a.score || (b.liquidityUsd ?? -1) - (a.liquidityUsd ?? -1));
     // Independently compare the 30 highest-ranked rows. Cross-check data never changes
     // the primary provider's values, deterministic score, or eligibility decision.
     const marketIntegrity = await fetchDexScreenerCrossChecks(assets.slice(0, 30));
@@ -70,8 +71,14 @@ export async function GET() {
       total: assets.length,
       eligible,
       blocked: assets.length - eligible,
-      liquidityUsd: assets.reduce((sum, asset) => sum + asset.liquidityUsd, 0),
-      volume24hUsd: assets.reduce((sum, asset) => sum + asset.volume24hUsd, 0),
+      // Aggregates sum only values actually supplied by Jupiter. Counts make
+      // incomplete coverage visible instead of coercing null fields to zero.
+      liquidityUsd: assets.reduce((sum, asset) => sum + (asset.liquidityUsd ?? 0), 0),
+      liquidityReportedAssets: assets.filter((asset) => asset.liquidityUsd !== null).length,
+      volume24hUsd: assets.reduce((sum, asset) => sum + (asset.volume24hUsd ?? 0), 0),
+      volumeReportedAssets: assets.filter((asset) => asset.volume24hUsd !== null).length,
+      priceReportedAssets: assets.filter((asset) => asset.priceUsd !== null).length,
+      priceChangeReportedAssets: assets.filter((asset) => asset.priceChange24h !== null).length,
       marketIntegrity: {
         provider: marketIntegrity.provider,
         state: marketIntegrity.state,
