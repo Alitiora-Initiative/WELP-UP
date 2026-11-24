@@ -1,0 +1,21 @@
+[Unit]
+Description=WELP UP Global Markets Research and Paper Trading Watcher
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=welp
+WorkingDirectory=/opt/welp-up
+EnvironmentFile=-/opt/welp-up/.env
+ExecStart=/opt/welp-up/.venv/bin/python -m market_terminal watch --interval 60
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/welp-up-data
+Environment=WELP_MARKET_DATA_DIR=/opt/welp-up-data
+
+[Install]
+WantedBy=multi-user.target
