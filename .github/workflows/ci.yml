@@ -59,6 +59,7 @@ jobs:
       - run: npm run test:agent
       - run: npm run test:program-gates
       - run: npm run test:market-scoring
+      - run: npm run test:dex-cross-check
       - run: npm run test:launchpad-config
       - run: npm run test:pump-metadata
       - run: npm run test:vercel-deploy-gate
