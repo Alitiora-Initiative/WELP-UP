@@ -1,5 +1,5 @@
 import { generateText } from 'ai';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { GET as getMarketFeed } from '@/app/api/markets/route';
 import { buildAnalystSnapshot, normalizeAnalystQuestion } from '@/lib/market-analyst';
 
@@ -81,7 +81,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const marketResponse = await getMarketFeed();
+    const marketUrl = new URL('/api/markets', request.url);
+    const marketResponse = await getMarketFeed(new NextRequest(marketUrl));
     if (!marketResponse.ok) {
       return NextResponse.json({ error: 'Live market data is unavailable. The analyst will not use stale or invented data.' }, { status: 502 });
     }
