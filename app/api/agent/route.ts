@@ -29,8 +29,14 @@ const DEFAULT_MODEL = 'anthropic/claude-sonnet-5.5';
 
 export async function GET() {
   const model = process.env.WELP_AI_MODEL?.trim() || DEFAULT_MODEL;
+  const hasApiKey = Boolean(process.env.AI_GATEWAY_API_KEY);
+  const hasVercelOidc = Boolean(process.env.VERCEL_OIDC_TOKEN);
+  const configured = hasApiKey || hasVercelOidc;
   return NextResponse.json({
-    configured: true,
+    configured,
+    verified: false,
+    state: configured ? 'configured_unverified' : 'missing_authentication',
+    authMethod: hasApiKey ? 'api-key' : hasVercelOidc ? 'vercel-oidc' : 'none',
     provider: 'vercel-ai-gateway',
     model,
     mode: 'analysis-only',
@@ -43,6 +49,9 @@ export async function GET() {
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) {
     return NextResponse.json({ error: 'Cross-origin requests are not accepted.' }, { status: 403 });
+  }
+  if (!process.env.AI_GATEWAY_API_KEY && !process.env.VERCEL_OIDC_TOKEN) {
+    return NextResponse.json({ error: 'AI Gateway authentication is not available. Deploy on Vercel with OIDC or configure AI_GATEWAY_API_KEY.' }, { status: 503 });
   }
 
   const now = Date.now();
@@ -118,6 +127,7 @@ export async function POST(request: Request) {
       answer: result.text,
       model,
       provider: 'vercel-ai-gateway',
+      providerState: 'verified',
       marketUpdatedAt: snapshot.updatedAt,
       assetsAnalyzed: snapshot.assets.length,
       mode: 'analysis-only',
