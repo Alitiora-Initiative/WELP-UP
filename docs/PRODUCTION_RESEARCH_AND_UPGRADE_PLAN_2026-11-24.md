@@ -80,6 +80,15 @@ Enable row-level security on exposed tables. Keep raw event storage and service-
 
 For a Solana indexer, evaluate Helius Parsed Events for history/backfill and Parsed Streams for live decoded transactions. Helius announced these products in September 2026; they are in open beta and available on paid plans. Keep the standard Solana RPC transaction/signature as the final evidence and reconcile missed stream messages by backfill. Deduplicate on signature plus instruction/event identity. Treat the indexer as a derived read model, not the chain's source of truth.
 
+### 3.1. Benchmark a second Solana risk provider and pre-sign simulation
+
+Because the current Webacy live checks are failing, evaluate GoPlus as an independent security adapter:
+- GoPlus documents a Solana Token Security API (Beta) for SPL/SPL-2022 mints.
+- It separately documents a Solana pre-execution endpoint that accepts an encoded transaction. This is a better match for pre-sign protection of a prepared Jupiter swap than relying only on token-level honeypot flags.
+- The endpoints require the documented authorization token. Confirm the account's current quota, latency, retention and terms directly in its developer dashboard; do not assume a general free-tier limit applies to every Solana endpoint.
+
+Do not combine vendor scores into a synthetic “safe” badge. Normalize provider output into explicit evidence (e.g. mint/freeze authority, holder concentration, liquidity lock, transfer restrictions, simulation outcome, token/asset deltas, warnings and unknown fields). Preserve each vendor's source, observation time and raw response hash. Maintain fixed benign/risky token fixtures and transaction simulations to compare detection, false positives, timeouts and schema drift. If vendors conflict, show the conflict and keep the affected action blocked until a deterministic policy resolves it. A provider's green result is not an audit or guarantee.
+
 ### 3. Replace shared public RPC as production infrastructure
 
 Provision a primary private RPC endpoint and a separately operated fallback. Measure:
@@ -169,6 +178,8 @@ WELP UP is not ready to call production-grade for real-money trading until:
 - Solana RPC provider selection: https://solana.com/docs/rpc/providers
 - Solana transaction landing and production RPC guidance: https://solana.com/docs/tools/transaction-landing
 - Helius Parsed Events and Parsed Streams announcement: https://www.helius.dev/blog/parsed-events-and-streams
+- GoPlus Solana Token Security API (Beta): https://docs.gopluslabs.io/reference/solanatokensecurityusingget
+- GoPlus Solana pre-execution simulation: https://docs.gopluslabs.io/reference/preruntxusingpost
 - Vercel AI SDK 7: https://vercel.com/blog/ai-sdk-7
 - Claude Sonnet 5.5 on AI Gateway (model ID and listed price): https://vercel.com/ai-gateway/models/anthropic/claude-sonnet-5.5
 - Vercel AI Gateway budgets: https://vercel.com/changelog/set-per-user-budgets-on-ai-gateway
