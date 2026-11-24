@@ -5,14 +5,14 @@ import Link from 'next/link';
 import { ArrowUpRight, LoaderCircle, RefreshCw, ShieldAlert, ShieldCheck } from 'lucide-react';
 
 type Asset = {
-  mint: string; name: string; symbol: string; priceUsd: number; priceChange24h: number;
-  liquidityUsd: number; volume24hUsd: number; holders: number; organicScore: number;
+  mint: string; name: string; symbol: string; priceUsd: number | null; priceChange24h: number | null;
+  liquidityUsd: number | null; volume24hUsd: number | null; holders: number | null; organicScore: number | null;
   score: number; confidence: number; verified: boolean; state: 'Eligible' | 'Watch' | 'Blocked'; eligible: boolean;
   blockers: string[]; warnings: string[]; confidenceBreakdown: string[];
 };
 type Feed = { assets: Asset[]; updatedAt: string; eligible: number; blocked: number; error?: string };
-const cash = (value: number) => value >= 1e6 ? '$' + (value / 1e6).toFixed(1) + 'M' : value >= 1e3 ? '$' + (value / 1e3).toFixed(1) + 'K' : '$' + value.toFixed(2);
-const quote = (value: number) => value >= 1 ? '$' + value.toFixed(2) : value >= .01 ? '$' + value.toFixed(4) : '$' + value.toPrecision(4);
+const cash = (value: number | null) => value === null ? '—' : value >= 1e6 ? '$' + (value / 1e6).toFixed(1) + 'M' : value >= 1e3 ? '$' + (value / 1e3).toFixed(1) + 'K' : '$' + value.toFixed(2);
+const quote = (value: number | null) => value === null ? '—' : value >= 1 ? '$' + value.toFixed(2) : value >= .01 ? '$' + value.toFixed(4) : '$' + value.toPrecision(4);
 
 export function SignalsBoard() {
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -39,7 +39,7 @@ export function SignalsBoard() {
     {error ? <div className="feed-error" role="alert">{error}</div> : null}
     <div className="signal-cards">{shown.map((asset) => <article className="signal-card" key={asset.mint}>
       <div className="signal-card-top"><div><span className="signal-symbol">{asset.symbol}</span>{asset.verified ? <span className="verified-mark">V</span> : null}<small>{asset.name}</small></div><div className="signal-score"><small>SCORE</small><strong>{asset.score}</strong><small>{Math.round(asset.confidence)}% data coverage</small></div></div>
-      <div className="signal-metrics"><div><small>PRICE</small><strong>{quote(asset.priceUsd)}</strong></div><div><small>24H</small><strong className={asset.priceChange24h >= 0 ? 'positive' : 'negative'}>{asset.priceChange24h >= 0 ? '+' : ''}{asset.priceChange24h.toFixed(2)}%</strong></div><div><small>LIQUIDITY</small><strong>{cash(asset.liquidityUsd)}</strong></div><div><small>24H VOLUME</small><strong>{cash(asset.volume24hUsd)}</strong></div><div><small>HOLDERS</small><strong>{asset.holders.toLocaleString()}</strong></div><div><small>ORGANIC</small><strong>{asset.organicScore}</strong></div></div>
+      <div className="signal-metrics"><div><small>PRICE</small><strong>{quote(asset.priceUsd)}</strong></div><div><small>24H</small><strong className={asset.priceChange24h === null ? '' : asset.priceChange24h >= 0 ? 'positive' : 'negative'}>{asset.priceChange24h === null ? '—' : (asset.priceChange24h >= 0 ? '+' : '') + asset.priceChange24h.toFixed(2) + '%'}</strong></div><div><small>LIQUIDITY</small><strong>{cash(asset.liquidityUsd)}</strong></div><div><small>24H VOLUME</small><strong>{cash(asset.volume24hUsd)}</strong></div><div><small>HOLDERS</small><strong>{asset.holders === null ? '—' : asset.holders.toLocaleString()}</strong></div><div><small>ORGANIC</small><strong>{asset.organicScore === null ? '—' : asset.organicScore}</strong></div></div>
       <div className={'signal-result ' + (asset.eligible ? 'pass' : 'blocked')}>{asset.eligible ? <ShieldCheck size={15} /> : <ShieldAlert size={15} />}<span>{asset.blockers[0] || asset.warnings[0] || 'Passed every hard rule with no open warnings'}</span></div>
       <details className="signal-breakdown"><summary>Why this score?</summary><ul>{asset.confidenceBreakdown.map((reason) => <li key={reason}>{reason}</li>)}</ul></details>
       <Link className="signal-route" href={'/swap?mint=' + encodeURIComponent(asset.mint)}>Route <ArrowUpRight size={13} /></Link>
