@@ -109,6 +109,25 @@ class MarketTerminalTests(unittest.TestCase):
             self.assertEqual(store.get_meta("kill_switch"), "1")
             store.close()
 
+    def test_kill_switch_retries_pending_closes_when_fresh_data_returns(self):
+        with tempfile.TemporaryDirectory() as folder:
+            settings = self.settings(Path(folder))
+            store = Store(settings.database, settings.initial_equity)
+            data = FakeData()
+            broker = PaperBroker(settings, store, data)
+            broker.open("TEST", 2.0)
+            store.set_cash(5.9)  # simulate a drawdown beyond the account threshold
+            data.quote_age_seconds = 60 * 60
+            state = broker.mark_equity()
+            self.assertTrue(broker._check_kill_switch(state))
+            self.assertEqual(len(store.open_positions()), 1)  # stale quote cannot be used to fake a close
+
+            data.quote_age_seconds = 0
+            broker.manage()
+            self.assertEqual(len(store.open_positions()), 0)
+            self.assertEqual(store.get_meta("kill_switch"), "1")
+            store.close()
+
     def test_kill_switch_is_persistent_and_blocks_entries(self):
         with tempfile.TemporaryDirectory() as folder:
             settings = self.settings(Path(folder))
