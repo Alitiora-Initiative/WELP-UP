@@ -99,7 +99,7 @@ test('missing buy/sell counts do not receive an invented neutral 50% buy-pressur
   const scored = scoreToken({ ...withoutCounts, stats24h: { ...stats24h, numBuys: null, numSells: null } });
   assert.equal(scored.buyPressure, null);
   assert.equal(scored.dataCoverage, 88);
-  assert.match(scored.dataCoverageBreakdown.join(' | '), /Buy pressure is not scored/);
+  assert.match(scored.scoreBreakdown.join(' | '), /Buy pressure is not scored/);
 });
 
 test('Jupiter suspicious-token audit flag is a hard eligibility blocker', () => {
