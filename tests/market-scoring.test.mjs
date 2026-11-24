@@ -25,9 +25,9 @@ const strongToken = {
 test('scoreToken calculates a transparent 0–100 weighted quality score with full coverage', () => {
   const scored = scoreToken(strongToken);
   assert.equal(scored.score, 100);
-  assert.equal(scored.confidence, 100);
+  assert.equal(scored.dataCoverage, 100);
   assert.equal(scored.eligible, true);
-  assert.equal(scored.state, 'Watch'); // liquidity-lock status is not included in this provider snapshot
+  assert.equal(scored.state, 'Watch'); // Jupiter does not return a positive isSus flag or dev-balance field for this fixture
   assert.equal(scored.turnover, 100);
   assert.equal(scored.buyPressure, 100);
   assert.equal(scored.holders, 150_000);
@@ -87,7 +87,7 @@ test('missing core audit and market fields withhold eligibility and lower score 
   assert.equal(scored.priceChange1h, null);
   assert.equal(scored.topHoldersPercent, null);
   assert.equal(scored.eligible, false);
-  assert.equal(scored.confidence, 64);
+  assert.equal(scored.dataCoverage, 64);
   assert.match(scored.warnings.join(' | '), /Market cap is unavailable/);
   assert.match(scored.warnings.join(' | '), /One-hour price change is unavailable/);
   assert.match(scored.warnings.join(' | '), /Holder concentration is unavailable/);
@@ -98,8 +98,8 @@ test('missing buy/sell counts do not receive an invented neutral 50% buy-pressur
   const { stats24h, ...withoutCounts } = strongToken;
   const scored = scoreToken({ ...withoutCounts, stats24h: { ...stats24h, numBuys: null, numSells: null } });
   assert.equal(scored.buyPressure, null);
-  assert.equal(scored.confidence, 88);
-  assert.match(scored.confidenceBreakdown.join(' | '), /Buy pressure is not scored/);
+  assert.equal(scored.dataCoverage, 88);
+  assert.match(scored.dataCoverageBreakdown.join(' | '), /Buy pressure is not scored/);
 });
 
 test('Jupiter suspicious-token audit flag is a hard eligibility blocker', () => {
@@ -139,5 +139,25 @@ test('missing price and market fields remain null instead of being rendered as z
   assert.equal(scored.organicScore, null);
   assert.equal(scored.screeningDataComplete, false);
   assert.equal(scored.eligible, false);
-  assert.equal(scored.confidence, 0);
+  assert.equal(scored.dataCoverage, 0);
+});
+
+test('Jupiter audit devBalancePercentage is used as the developer concentration field', () => {
+  const scored = scoreToken({
+    ...strongToken,
+    audit: {
+      freezeAuthorityDisabled: true,
+      mintAuthorityDisabled: true,
+      topHoldersPercentage: 10,
+      devBalancePercentage: 21,
+    },
+  });
+  assert.equal(scored.eligible, false);
+  assert.match(scored.blockers.join(' | '), /Developer allocation exceeds 20%/);
+});
+
+test('Jupiter organic score is described as relative activity, not a safety rating', () => {
+  const scored = scoreToken(strongToken);
+  assert.match(scored.scoreBreakdown.join(' | '), /ecosystem-relative organic score/);
+  assert.match(scored.scoreBreakdown.join(' | '), /not a token-safety rating/);
 });
