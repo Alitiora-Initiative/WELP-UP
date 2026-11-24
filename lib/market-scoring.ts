@@ -149,7 +149,10 @@ export function scoreToken(value: unknown): ScoredMarketToken {
   if (mcap === null || mcap <= 0) warnings.push('Market cap is unavailable; turnover is not scored');
   if (change1h === null) warnings.push('One-hour price change is unavailable; momentum is not scored');
   if (!tradeCountsAvailable) warnings.push('Buy/sell trade counts are unavailable; buy pressure is not scored');
-  const change24h = number(s24.priceChange);
+  const change24hValue = optionalNumber(s24.priceChange);
+  const change24h = change24hValue ?? 0;
+  if (change24hValue === null) warnings.push('24-hour price change is unavailable');
+  if (scoreCoveragePct < 80) warnings.push('Score input coverage is only ' + scoreCoveragePct + '%; treat this quality score as low-confidence');
   if (change24h <= -25) warnings.push('24-hour drawdown is ' + change24h.toFixed(1) + '%');
   if (row.isVerified !== true) warnings.push('Token is not marked verified by the feed');
 
