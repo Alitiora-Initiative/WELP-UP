@@ -34,6 +34,7 @@ export type ScoredMarketToken = {
   score: number;
   /** Share of the configured scoring inputs supplied by the provider, 0–100. */
   confidence: number;
+  screeningDataComplete: boolean;
   verified: boolean;
   suspicious: boolean;
   turnover: number | null;
@@ -179,6 +180,7 @@ export function scoreToken(value: unknown): ScoredMarketToken {
     organicScore: organicKnown ? Math.round(organic) : null,
     score: Math.round(score * 100) / 100,
     confidence,
+    screeningDataComplete: missingCriticalData.length === 0,
     verified: row.isVerified === true,
     suspicious,
     turnover,
