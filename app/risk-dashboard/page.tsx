@@ -1,2 +1,5 @@
-import { TerminalFeaturePage } from '@/components/TerminalFeaturePages';
-export default function RiskDashboardPage() { return <TerminalFeaturePage kind="risk" />; }
+import WebacyRiskConsole from '@/components/WebacyRiskConsole';
+
+export default function RiskDashboardPage() {
+  return <WebacyRiskConsole />;
+}
