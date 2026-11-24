@@ -82,7 +82,7 @@ Do not add Birdeye as a hard dependency yet. First measure the value of the exis
 
 A public Solana RPC health check does not make an application production-grade. Solana explicitly says shared public RPC endpoints are not intended for production applications and may return 429/403 under load.
 
-**Release action:** configure a dedicated private RPC provider for server-side Solana reads and transaction handling. Evaluate providers against mainnet latency from WELP's deployment region, request rate, WebSocket availability, historical transaction coverage, commitment levels, price, key rotation, monitoring and tested failover. Keep provider credentials server-side.
+**Release action:** configure two distinct RPC configurations. Use `SOLANA_RPC_URL` as the private server-side endpoint for backend reads and transaction handling, and `NEXT_PUBLIC_SOLANA_RPC_URL` as a browser-exposed endpoint with origin-restricted credentials and suitable browser rate limits for wallet reads/submission. Never place a server-only credential in a `NEXT_PUBLIC_` variable. Evaluate the provider against mainnet latency from WELP's deployment region, request rate, WebSocket availability, historical transaction coverage, commitment levels, price, key rotation, monitoring and tested failover. Use a second private server endpoint for failover.
 
 For a durable history and later accounting engine, evaluate Helius **Parsed Events API and Parsed Streams** rather than building a new indexer around the older Enhanced Transactions API. Helius announced Parsed Events and Streams on 3 September 2026; the products decode transactions across thousands of programs, offer historical REST/GraphQL queries and event streaming, and were released as open beta on paid plans. Its 3 November 2026 Parsed Events Scan API can filter wallet history by program, instruction or token mint. Helius states the older Enhanced Transactions API is in maintenance mode and recommends Parsed Events for new mainnet integrations.
 
@@ -150,7 +150,7 @@ The `production-readiness-2026-11` branch contains the following proposed improv
 6. **AI analyst context:** pass score coverage and optional DexScreener deltas to the analyst. Prompt rules distinguish data quality, cross-provider disagreements and provider-derived facts from model interpretation.
 7. **AI Gateway status:** report detected API-key/OIDC auth separately from a successful model response. The user interface no longer instructs users to add an unrelated OpenAI key.
 8. **Signal-feed rate safety:** use one-minute shared revalidation for GeckoTerminal trending pools and OHLCV calls; report partial signal data if charts or fee-bearing quotes are unavailable.
-9. **RPC status honesty:** report a shared public Solana RPC as not production-ready when no dedicated `SOLANA_RPC_URL` is configured.
+9. **RPC status honesty:** report the server RPC and browser wallet RPC separately; identify shared public Solana RPC fallbacks as not production-ready and distinguish a configured browser endpoint from a verified wallet-session test.
 10. **Regression coverage:** add tests for weighted scoring, missing inputs, score coverage, absence of fabricated buy pressure and DexScreener cross-check parsing.
 
 These changes still require automated CI, Preview deployment checks, live provider tests and human review before production promotion.
