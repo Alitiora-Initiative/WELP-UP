@@ -1,41 +1,45 @@
-# Webacy Security Integration
+# Webacy security controls in WELP UP
 
-WELP UP proxies Webacy API calls from Next.js server routes. The browser never receives the provider credential.
+Webacy is an active server-side security dependency in WELP UP's real flows, not only a separate risk dashboard.
 
-## Configuration
+## Pre-swap protection (Solana)
 
-Set `WEBACY_API_KEY` as a **Sensitive** Vercel environment variable for Production, Preview and Development. Do not use a `NEXT_PUBLIC_` prefix and do not commit the credential to Git. The API key is sent to Webacy using the `x-api-key` header.
+Before the server requests a Jupiter order, `POST /api/order` identifies the non-SOL mint and calls:
 
-## Enabled operations
+`GET https://api.webacy.com/trading-lite/{mint}`
 
-The dashboard at `/risk-dashboard` calls the server-only `POST /api/webacy` route. The route is an allowlist, not an arbitrary URL proxy.
+The API key is read only from `WEBACY_API_KEY` on the server and sent in the `x-api-key` header. WELP uses Webacy's documented quick-pass criteria:
 
-- **Solana token scan:** `GET /trading-lite/{mint}?chain=sol` — token security indicators, top-holder share, snipers/bundlers, deployer activity, mint and freeze authority.
-- **Early holder analysis:** `GET /holder-analysis/{mint}?chain=sol` — holder behaviour and early buyer analysis. Data availability depends on provider retention.
-- **Token pool intelligence:** `GET /tokens/{mint}/pools?chain=sol`.
-- **Wallet due diligence:** `GET /addresses/{address}`, `GET /quick-profile/{address}`, and `GET /addresses/sanctioned/{address}` for selected supported chain. The EVM wallet path additionally requests `/addresses/{address}/approvals` and `/addresses/{address}/poisoning`; those two calls are intentionally omitted for Solana.
-- **Transaction risk:** `GET /transactions/{txHash}?chain=...`, including Solana signatures.
-- **URL risk:** `POST /url` for HTTP(S) phishing/malware analysis.
-- **Pool analytics:** `GET /tokens/pools/{poolAddress}?chain=...&timeFrame=...`.
-- **Discovery:** `GET /tokens/trending` and `GET /tokens/pools/trending?chain=sol`.
-- **Provider usage:** `GET /usage/current`.
-- **EVM contract analysis:** `GET /contracts/{address}?chain=...` for supported EVM networks.
+- Allow only when `isHoneypot === false` and `riskScore < 50`.
+- Block a token when `isHoneypot === true` or `riskScore >= 50`.
+- Fail closed if the key is missing, the provider times out/errors, or the response lacks either required field.
+- Only after this check passes does WELP request a Jupiter quote/order. The returned quote includes a compact Webacy pass result shown in the review panel.
 
-## Safety boundaries
+This does not simulate the serialized Solana transaction. Webacy's documented `POST /scan/transaction` and EIP-712 simulation examples are EVM transaction flows, not Solana transaction decoding/signing.
 
-- This integration is read-only. It does not sign, broadcast, or modify a wallet transaction.
-- A Webacy result is an additional risk signal, not an audit, guarantee, financial recommendation, or proof that an asset is safe.
-- Provider errors, unsupported input, missing fields, stale data, or unavailable scans must be treated as **unknown**, never as a clean result.
-- Webacy documents raw EVM transaction simulation and EIP-712 signature scanning for EVM chains. Those operations are not used for Solana signing.
-- Webacy's poisoning and standalone approval endpoints are documented for EVM chains; the UI labels them as such and does not send Solana addresses to those endpoints.
-- Webacy's ERC-4626 vault and RWA/stablecoin risk products are not an audit or security assessment of WELP's custom Solana Anchor vault.
-- API rate limits and plan quotas apply. Avoid tight polling or repeated refreshes; prefer cached provider results.
+## Launch link protection
+
+Before a Pump.fun launch transaction is prepared, creator-provided website, X and Telegram links are screened using:
+
+`POST https://api.webacy.com/url/check`
+
+WELP blocks phishing/malware results, incomplete/unknown provider responses, and links with a score above 40 (caution/high range). Users can omit optional links and still prepare a launch. The logo URL is handled separately by existing hardened image ingestion: HTTPS-only, DNS lookup with public-IP enforcement and pinned destination, redirect limits, max-size and MIME/magic-byte validation, then the image is pinned to IPFS.
+
+## Existing wallet/dashboard checks
+
+The optional Webacy console also uses documented address quick-profile, sanctions, approvals, poisoning, contract and pool endpoints. URL screening uses `/url/check`. The optional console is supplemental; swap/launch controls above are server-enforced.
+
+## Security boundaries
+
+- Do not put the Webacy key in client code or in a `NEXT_PUBLIC_*` variable.
+- Provider errors and incomplete fields are unknown; they must never be converted to a pass.
+- Webacy signals are risk indicators, not guarantees or independent audits.
+- Solana Trading Lite screens the token; it is not a simulation of the final Jupiter transaction.
+- Rotate a credential immediately if it has been shared outside the private Vercel environment.
 
 ## References
 
-- [Webacy API reference](https://docs.webacy.com/)
-- [Authentication](https://docs.webacy.com/api-reference/authentication)
-- [Solana trading-lite](https://docs.webacy.com/api-reference/trading-lite/get-simplified-token-analysis-with-security-indicators)
-- [Holder analysis](https://docs.webacy.com/api-reference/holder-analysis/get-detailed-early-holder-analysis-for-a-token)
-- [Threat risk](https://docs.webacy.com/api-reference/threat-risks/threat-considerations-for-an-address)
-- [Transaction risk](https://docs.webacy.com/api-reference/transaction-risks/risk-details-for-a-transaction)
+- [Webacy DEX token screening](https://docs.webacy.com/guides/dex-token-screening)
+- [Webacy dApp browser security](https://docs.webacy.com/guides/dapp-browser-security)
+- [Webacy consumer wallet security](https://docs.webacy.com/guides/wallet-security)
+- [Webacy transaction simulation](https://docs.webacy.com/guides/transaction-simulation)

@@ -109,9 +109,9 @@ export async function POST(request: NextRequest) {
 
     let path = '';
     if (action === 'token') {
-      path = '/trading-lite/' + encodeURIComponent(address) + '?' + queryString({ chain: 'sol', refreshCache: body.refreshCache === true });
+      path = '/trading-lite/' + encodeURIComponent(address);
     } else if (action === 'holders') {
-      path = '/holder-analysis/' + encodeURIComponent(address) + '?' + queryString({ chain, useCache: true, maxHolders: 10000 });
+      path = '/holder-analysis/' + encodeURIComponent(address) + '?' + queryString({ chain });
     } else if (action === 'tokenPools') {
       path = '/tokens/' + encodeURIComponent(address) + '/pools?' + queryString({ chain });
     } else {
@@ -128,11 +128,11 @@ export async function POST(request: NextRequest) {
     const encoded = encodeURIComponent(address);
     const jobs: Array<[string, Promise<UpstreamResult>]> = [
       ['threats', webacy('/addresses/' + encoded + '?' + queryString({ chain, show_low_risk: true }))],
-      ['exposure', webacy('/quick-profile/' + encoded + '?' + queryString({ chain, withApprovals: true }))],
+      ['exposure', webacy('/addresses/' + encoded + '/quick-profile?' + queryString({ chain }))],
       ['sanctions', webacy('/addresses/sanctioned/' + encoded + '?' + queryString({ chain }))],
     ];
     if (EVM_CHAINS.has(chain)) {
-      jobs.push(['approvals', webacy('/addresses/' + encoded + '/approvals?' + queryString({ chain }))]);
+      jobs.push(['approvals', webacy('/wallets/' + encoded + '/approvals?' + queryString({ chain }))]);
       jobs.push(['poisoning', webacy('/addresses/' + encoded + '/poisoning?' + queryString({ chain, useCache: true }))]);
     }
     const settled = await Promise.all(jobs.map(async ([key, promise]) => [key, await promise] as const));
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
     let url: URL;
     try { url = new URL(body.url); } catch { return jsonError('Enter a complete http or https URL.', 400); }
     if (url.protocol !== 'https:' && url.protocol !== 'http:') return jsonError('Only http and https URLs can be checked.', 400);
-    const result = await webacy('/url', { method: 'POST', body: { url: url.toString() } });
+    const result = await webacy('/url/check', { method: 'POST', body: { url: url.toString() } });
     return NextResponse.json({ provider: 'Webacy', action, updatedAt, ...result }, { status: result.state === 'available' ? 200 : result.status });
   }
 

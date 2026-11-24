@@ -45,6 +45,7 @@ type Order = {
   feeMint?: string;
   slippageBps?: number;
   taker: string;
+  security?: { provider: 'Webacy'; state: 'passed'; riskScore: number; isHoneypot: false };
 };
 
 const EMPTY_SIGNALS: Signal[] = [];
@@ -133,7 +134,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
   const [amount, setAmount] = useState('0.001');
   const [order, setOrder] = useState<Order | null>(null);
   const [orderTime, setOrderTime] = useState(0);
-  const [pending, setPending] = useState<'quote' | 'sign' | ''>('');
+  const [pending, setPending] = useState<'security' | 'quote' | 'sign' | ''>('');
   const [tradeError, setTradeError] = useState('');
   const [signature, setSignature] = useState('');
 
@@ -272,7 +273,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
       setTradeError('Keep at least 0.003 SOL in the wallet for fees.');
       return;
     }
-    setPending('quote');
+    setPending('security');
     setOrder(null);
     try {
       const response = await fetch('/api/order', {
@@ -464,6 +465,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
                   <div className="quote-line"><span>Price impact</span><strong>{orderImpact !== null && Number.isFinite(orderImpact) ? `${orderImpact.toFixed(3)}%` : 'Unavailable'}</strong></div>
                   <div className="quote-line"><span>Max slippage</span><strong>{((order.slippageBps ?? 50) / 100).toFixed(2)}%</strong></div>
                   {typeof order.feeBps === 'number' ? <div className="quote-line"><span>Referral fee</span><strong>{(order.feeBps / 100).toFixed(2)}% · {feeAsset}</strong></div> : <div className="quote-line"><span>Referral fee</span><strong>Not returned</strong></div>}
+                  <div className="quote-line"><span>Webacy token screen</span><strong>Passed · risk {order.security?.riskScore ?? '—'}/100</strong></div>
                   <div className="quote-line"><span>Route</span><strong>{routeLabels.length ? routeLabels.join(' → ') : 'Jupiter best route'}</strong></div>
                   <p className="quote-note">Minimum received and fees come from this live order. Your wallet shows the exact transaction; approve only if its details match this quote.</p>
                 </div>
@@ -476,7 +478,7 @@ export function Dashboard({ view = 'console' }: { view?: DashboardView }) {
                 </button>
               ) : (
                 <button className="primary-button" onClick={() => void createQuote()} disabled={!connected || pending !== '' || !activeToken}>
-                  {pending === 'quote' ? <><LoaderCircle className="spin" size={16} /> Getting Jupiter quote…</> : <><ArrowDownUp size={16} /> Get quote</>}
+                  {pending === 'security' || pending === 'quote' ? <><LoaderCircle className="spin" size={16} /> Webacy check + Jupiter quote…</> : <><ArrowDownUp size={16} /> Get quote</>}
                 </button>
               )}
               <p className="swap-caption"><LockKeyhole size={13} /> Quotes require a connected wallet and configured fee route. Every swap is reviewed and signed in your selected wallet.</p>

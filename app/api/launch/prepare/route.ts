@@ -7,6 +7,8 @@ import {
 } from '@solana/kit';
 import { brandLaunchName, brandLaunchSymbol } from '@/lib/launch-branding';
 import { PumpMetadataError, uploadPumpTokenMetadata } from '@/lib/server/pump-metadata';
+import { getWebacyUrlScan } from '@/lib/server/webacy';
+import { evaluateWebacyUrlScan } from '@/lib/server/webacy-policy';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -91,6 +93,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     return NextResponse.json({ error: 'One of the social links is invalid.' }, { status: 400 });
+  }
+
+  // Check creator-supplied outbound links before publishing them in token
+  // metadata. Logo ingestion uses separate DNS-pinned SSRF and image validation.
+  const outboundLinks = [
+    ['Project website', social.website],
+    ['X profile', social.twitter],
+    ['Telegram', social.telegram],
+  ] as const;
+  const providedLinks = outboundLinks.filter((entry): entry is readonly [string, string] => Boolean(entry[1]));
+  const urlScans = await Promise.all(providedLinks.map(async ([label, url]) => ({
+    label,
+    result: await getWebacyUrlScan(url),
+  })));
+  for (const scan of urlScans) {
+    if (!scan.result.ok) {
+      return NextResponse.json({
+        error: `WELP could not verify the ${scan.label} with Webacy. Remove the optional link or retry when the security service is available. No launch transaction was prepared.`,
+        security: { provider: 'Webacy', state: 'unknown' },
+      }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
+    }
+    const assessment = evaluateWebacyUrlScan(scan.result.data);
+    if (assessment.state !== 'allow') {
+      return NextResponse.json({
+        error: `The ${scan.label} was not cleared by Webacy: ${assessment.reason || 'security review required'}. Remove or replace that link before launching.`,
+        security: { provider: 'Webacy', state: assessment.state, riskScore: assessment.riskScore },
+      }, { status: assessment.state === 'unknown' ? 503 : 422, headers: { 'Cache-Control': 'no-store' } });
+    }
   }
 
   const initialBuySol = Number(body.initialBuySol ?? 0.01);

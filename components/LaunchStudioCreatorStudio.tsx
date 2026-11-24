@@ -336,6 +336,7 @@ export function LaunchStudioCreatorStudio() {
         <label className="lp-field"><span>Project website (HTTPS)</span><input value={website} onChange={(event) => setWebsite(event.target.value)} maxLength={200} placeholder="https://example.com" autoComplete="url" /></label>
         <label className="lp-field"><span>X profile (HTTPS)</span><input value={twitter} onChange={(event) => setTwitter(event.target.value)} maxLength={200} placeholder="https://x.com/project" autoComplete="url" /></label>
         <label className="lp-field"><span>Telegram (HTTPS)</span><input value={telegram} onChange={(event) => setTelegram(event.target.value)} maxLength={200} placeholder="https://t.me/project" autoComplete="url" /></label>
+        <p className="lp-muted">Webacy checks your project website and social links for phishing or high-risk domains before the launch transaction is prepared. Remove a flagged link to continue.</p>
       </div>
       {rail === 'welp' ? (
         <p className="lp-fee-note">

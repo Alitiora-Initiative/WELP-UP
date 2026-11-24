@@ -3,6 +3,8 @@ import { requestOrder } from '@/lib/jupiter';
 import { SOL_MINT } from '@/lib/constants';
 import { WELP_FEE_POLICY } from '@/lib/server/fee-policy';
 import { EXECUTION_POLICY, validateSwapRisk } from '@/lib/server/execution-policy';
+import { getWebacySolanaTokenScan } from '@/lib/server/webacy';
+import { evaluateSolanaTokenScan } from '@/lib/server/webacy-policy';
 
 export const runtime = 'nodejs';
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -53,6 +55,35 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: riskError, policy: { maxSlippageBps: EXECUTION_POLICY.maxSlippageBps, maxSolInputLamports: EXECUTION_POLICY.maxSolInputLamports } }, { status: 400 });
   }
 
+  // A signable Jupiter order is never returned until Webacy Trading Lite
+  // positively clears the non-SOL mint. Unknown provider results fail closed.
+  const tokenMint = inputMint === SOL_MINT ? outputMint : inputMint;
+  const webacyScan = await getWebacySolanaTokenScan(tokenMint);
+  if (!webacyScan.ok) {
+    return NextResponse.json(
+      {
+        error: 'WELP could not verify this token with Webacy. No signable swap order was created.',
+        security: { provider: 'Webacy', state: 'unknown', reason: webacyScan.error },
+      },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } },
+    );
+  }
+  const assessment = evaluateSolanaTokenScan(webacyScan.data);
+  if (assessment.state !== 'allow') {
+    return NextResponse.json(
+      {
+        error: assessment.reason || 'Webacy could not clear this token for swapping.',
+        security: {
+          provider: 'Webacy',
+          state: assessment.state,
+          riskScore: assessment.riskScore,
+          isHoneypot: assessment.isHoneypot,
+        },
+      },
+      { status: assessment.state === 'unknown' ? 503 : 422, headers: { 'Cache-Control': 'no-store' } },
+    );
+  }
+
   try {
     const order = await requestOrder({
       inputMint,
@@ -62,7 +93,11 @@ export async function POST(request: NextRequest) {
       slippageBps,
       ...(referralAccount ? { referralAccount, referralFeeBps } : {}),
     });
-    return NextResponse.json({ ...order, taker }, { headers: { 'Cache-Control': 'no-store' } });
+    return NextResponse.json({
+      ...order,
+      taker,
+      security: { provider: 'Webacy', state: 'passed', riskScore: assessment.riskScore, isHoneypot: false },
+    }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Order request failed.';
     return NextResponse.json({ error: message }, { status: 502 });
