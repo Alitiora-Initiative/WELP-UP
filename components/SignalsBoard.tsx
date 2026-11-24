@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowUpRight, LoaderCircle, RefreshCw, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { ArrowUpRight, CircleAlert, LoaderCircle, RefreshCw, ShieldAlert, ShieldCheck } from 'lucide-react';
 
 type Asset = {
   mint: string; name: string; symbol: string; priceUsd: number | null; priceChange24h: number | null;
@@ -19,7 +19,7 @@ export function SignalsBoard() {
   const [updated, setUpdated] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState<'All' | 'Eligible' | 'Blocked'>('All');
+  const [filter, setFilter] = useState<'All' | 'Eligible' | 'Watch' | 'Blocked'>('All');
   const refresh = useCallback(async () => {
     setLoading(true); setError('');
     try {
@@ -31,21 +31,21 @@ export function SignalsBoard() {
     finally { setLoading(false); }
   }, []);
   useEffect(() => { const timer = window.setTimeout(() => void refresh(), 0); return () => window.clearTimeout(timer); }, [refresh]);
-  const shown = assets.filter((asset) => filter === 'All' || (filter === 'Eligible' && asset.eligible) || (filter === 'Blocked' && !asset.eligible));
+  const shown = assets.filter((asset) => filter === 'All' || asset.state === filter);
   return <main className="terminal-page feature-page">
     <div className="page-heading"><div><div className="eyebrow"><i className="eyebrow-dot" /> DETERMINISTIC RULE ENGINE · NO PREDICTION</div><h1>Signals with <span>the reason attached.</span></h1><p>Each tracked asset is tested against published hard rules, then scored from available live fields. Missing inputs reduce the displayed data-coverage percentage and may withhold eligibility.</p></div><button className="outline-button" onClick={() => void refresh()} disabled={loading}><RefreshCw size={14} className={loading ? 'spin' : ''} /> Re-scan</button></div>
     <section className="market-stats four"><div><span>SCANNED</span><strong>{assets.length || '—'}</strong><small>Live assets read from Jupiter</small></div><div><span>ELIGIBLE</span><strong>{assets.filter((a) => a.state === 'Eligible').length}</strong><small>Core fields present, no review warnings</small></div><div><span>WATCH</span><strong>{assets.filter((a) => a.state === 'Watch').length}</strong><small>Warnings or missing non-core fields</small></div><div><span>BLOCKED</span><strong>{assets.filter((a) => a.state === 'Blocked').length}</strong><small>At least one hard rule failed</small></div></section>
-    <div className="filter-row">{(['All', 'Eligible', 'Blocked'] as const).map((value) => <button key={value} className={filter === value ? 'filter-chip active' : 'filter-chip'} onClick={() => setFilter(value)}>{value}</button>)}<span className="muted-note">Feed checked {updated ? new Date(updated).toLocaleTimeString() : '—'}</span></div>
+    <div className="filter-row">{(['All', 'Eligible', 'Watch', 'Blocked'] as const).map((value) => <button key={value} className={filter === value ? 'filter-chip active' : 'filter-chip'} onClick={() => setFilter(value)}>{value}</button>)}<span className="muted-note">Feed checked {updated ? new Date(updated).toLocaleTimeString() : '—'}</span></div>
     {error ? <div className="feed-error" role="alert">{error}</div> : null}
     <div className="signal-cards">{shown.map((asset) => <article className="signal-card" key={asset.mint}>
       <div className="signal-card-top"><div><span className="signal-symbol">{asset.symbol}</span>{asset.verified ? <span className="verified-mark">V</span> : null}<small>{asset.name}</small></div><div className="signal-score"><small>SCORE</small><strong>{asset.score}</strong><small>{Math.round(asset.dataCoverage)}% data coverage</small><small>{asset.screeningDataComplete ? 'Core screening data complete' : 'Core screening fields missing'}</small></div></div>
       <div className="signal-metrics"><div><small>PRICE</small><strong>{quote(asset.priceUsd)}</strong></div><div><small>24H</small><strong className={asset.priceChange24h === null ? '' : asset.priceChange24h >= 0 ? 'positive' : 'negative'}>{asset.priceChange24h === null ? '—' : (asset.priceChange24h >= 0 ? '+' : '') + asset.priceChange24h.toFixed(2) + '%'}</strong></div><div><small>LIQUIDITY</small><strong>{cash(asset.liquidityUsd)}</strong></div><div><small>24H VOLUME</small><strong>{cash(asset.volume24hUsd)}</strong></div><div><small>HOLDERS</small><strong>{asset.holders === null ? '—' : asset.holders.toLocaleString()}</strong></div><div><small>ORGANIC</small><strong>{asset.organicScore === null ? '—' : asset.organicScore}</strong></div></div>
-      <div className={'signal-result ' + (asset.eligible ? 'pass' : 'blocked')}>{asset.eligible ? <ShieldCheck size={15} /> : <ShieldAlert size={15} />}<span>{asset.blockers[0] || asset.warnings[0] || 'Passed every hard rule with no open warnings'}</span></div>
-      <details className="signal-breakdown"><summary>Why this score?</summary><ul>{asset.dataCoverageBreakdown.map((reason) => <li key={reason}>{reason}</li>)}</ul></details>
+      <div className={'signal-result ' + (asset.state === 'Eligible' ? 'pass' : asset.state === 'Watch' ? 'watch' : 'blocked')}>{asset.state === 'Eligible' ? <ShieldCheck size={15} /> : asset.state === 'Watch' ? <CircleAlert size={15} /> : <ShieldAlert size={15} />}<span>{asset.state}: {asset.blockers[0] || asset.warnings[0] || 'Passed the available hard rules'}</span></div>
+      <details className="signal-breakdown"><summary>Why this score?</summary><ul>{asset.scoreBreakdown.map((reason) => <li key={reason}>{reason}</li>)}</ul></details>
       <Link className="signal-route" href={'/swap?mint=' + encodeURIComponent(asset.mint)}>Route <ArrowUpRight size={13} /></Link>
     </article>)}</div>
     {!shown.length && !loading ? <div className="empty-panel">No assets match this filter.</div> : null}
     {loading && !assets.length ? <div className="empty-panel"><LoaderCircle className="spin" /> Loading live signal snapshot…</div> : null}
-    <section className="market-disclosures"><div><span>HOW THE SCORE IS BUILT</span><p>Organic activity 32% · liquidity depth 20% · turnover 15% · holder spread 13% · buy pressure 12% · short-term calm 8%. The score ranks feed quality; it does not predict a return.</p></div><div><span>HARD RULES</span><p>Freeze authority active, liquidity below $100k, 24-hour volume below $100k, top holders above 60%, developer allocation above 20%, unlocked liquidity, or a reported honeypot blocks a row. Missing audit fields stay visible as warnings.</p></div><div><span>SCOPE</span><p>The engine reads public market data only. It does not know your wallet, sign transactions or place orders.</p></div></section>
+    <section className="market-disclosures"><div><span>HOW THE SCORE IS BUILT</span><p>Jupiter organic score 32% · liquidity depth 20% · turnover 15% · holder spread 13% · buy pressure 12% · short-term calm 8%. Jupiter’s organic score is ecosystem-relative, not a safety rating. WELP’s weighted desk score is a heuristic, not a backtested predictor.</p></div><div><span>HARD RULES</span><p>Freeze authority active, liquidity below $100k, 24-hour volume below $100k, top holders above 60%, developer allocation above 20%, or Jupiter’s isSus flag blocks a row. Jupiter’s market feed does not prove liquidity is locked or a token is not a honeypot; Webacy token screening is a separate fail-closed check before swap-order creation.</p></div><div><span>SCOPE</span><p>The engine reads public market data only. It does not know your wallet, sign transactions or place orders.</p></div></section>
   </main>;
 }
