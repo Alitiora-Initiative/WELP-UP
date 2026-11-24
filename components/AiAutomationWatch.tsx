@@ -136,7 +136,7 @@ export function AiAutomationWatch() {
             (!policy.verified || asset.verified),
           )
           .map((asset) => ({ policy, asset, key: policy.id + ':' + asset.mint })),
-      ).sort((a, b) => b.asset.score - a.asset.score || b.asset.liquidityUsd - a.asset.liquidityUsd);
+      ).sort((a, b) => b.asset.score - a.asset.score || (b.asset.liquidityUsd ?? -1) - (a.asset.liquidityUsd ?? -1));
 
       let reviewed: Record<string, number> = {};
       try {
