@@ -13,7 +13,7 @@ export type AnalystAsset = {
   topHoldersPercent: number | null;
   organicScore: number | null;
   score: number | null;
-  confidence: number | null;
+  dataCoverage: number | null;
   screeningDataComplete: boolean;
   marketCrossCheck: { state: 'matched' | 'no_pair' | 'unavailable' | 'not_checked'; priceDeltaPct: number | null } | null;
   verified: boolean;
@@ -66,7 +66,7 @@ export function buildAnalystSnapshot(value: unknown): { updatedAt: string | null
       topHoldersPercent: finite(asset.topHoldersPercent),
       organicScore: finite(asset.organicScore),
       score: finite(asset.score),
-      confidence: finite(asset.confidence),
+      dataCoverage: finite(asset.dataCoverage),
       screeningDataComplete: asset.screeningDataComplete === true,
       marketCrossCheck: (() => {
         const check = record(asset.marketCrossCheck);
@@ -115,7 +115,7 @@ function assetLine(asset: AnalystAsset) {
   return [
     asset.symbol || asset.name,
     'score ' + (asset.score === null ? 'n/a' : asset.score.toFixed(1)),
-    'data coverage ' + (asset.confidence === null ? 'unavailable' : asset.confidence.toFixed(0) + '%'),
+    'data coverage ' + (asset.dataCoverage === null ? 'unavailable' : asset.dataCoverage.toFixed(0) + '%'),
     asset.screeningDataComplete ? 'core risk fields complete' : 'core risk fields incomplete; eligibility is withheld',
     asset.marketCrossCheck?.state === 'matched' && asset.marketCrossCheck.priceDeltaPct !== null
       ? 'DexScreener price delta ' + percent(asset.marketCrossCheck.priceDeltaPct)
