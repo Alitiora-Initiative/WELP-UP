@@ -59,17 +59,26 @@ class PaperBroker:
         for pos in self.store.open_positions():
             symbol = pos["symbol"]
             quote = quotes.get(symbol)
+            fetched = quote is None
             if quote is None:
                 try:
                     quote = self.data.quote(symbol)
-                    if self._fresh(quote):
-                        self.store.save_quote(quote.to_dict())
                 except Exception as exc:
                     self.store.log("MARK_UNAVAILABLE", f"No new price for {symbol}: {exc}", symbol)
                     quote = None
-            mark = quote.price if quote is not None else float(pos["mark_price"])
-            if quote is not None and self._fresh(quote):
+            if quote is not None and self._fresh(quote) and quote.is_real_market_data:
+                mark = quote.price
+                if fetched:
+                    self.store.save_quote(quote.to_dict())
                 self.store.update_mark(int(pos["id"]), mark)
+            else:
+                if quote is not None:
+                    self.store.log(
+                        "MARK_STALE",
+                        f"Ignoring stale or unverified quote (age={quote.age_seconds:.1f}s, source={quote.source}); using last stored mark",
+                        symbol,
+                    )
+                mark = float(pos["mark_price"])
             notional = float(pos["units"]) * mark
             exposure += notional
             if int(pos["side"]) == 1:
