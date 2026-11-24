@@ -43,9 +43,9 @@ type Feed = {
   total: number;
   eligible: number;
   blocked: number;
-  liquidityUsd: number;
+  liquidityUsd: number | null;
   liquidityReportedAssets?: number;
-  volume24hUsd: number;
+  volume24hUsd: number | null;
   volumeReportedAssets?: number;
   updatedAt: string;
   solPriceUsd: number | null;
