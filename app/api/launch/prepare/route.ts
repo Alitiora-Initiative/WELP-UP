@@ -97,13 +97,13 @@ export async function POST(request: NextRequest) {
 
   // Check creator-supplied outbound links before publishing them in token
   // metadata. Logo ingestion uses separate DNS-pinned SSRF and image validation.
-  const outboundLinks = [
-    ['Project website', social.website],
-    ['X profile', social.twitter],
-    ['Telegram', social.telegram],
-  ] as const;
-  const providedLinks = outboundLinks.filter((entry): entry is readonly [string, string] => Boolean(entry[1]));
-  const urlScans = await Promise.all(providedLinks.map(async ([label, url]) => ({
+  const outboundLinks: Array<{ label: string; url: string }> = [
+    { label: 'Project website', url: social.website ?? '' },
+    { label: 'X profile', url: social.twitter ?? '' },
+    { label: 'Telegram', url: social.telegram ?? '' },
+  ];
+  const providedLinks = outboundLinks.filter((entry) => entry.url.length > 0);
+  const urlScans = await Promise.all(providedLinks.map(async ({ label, url }) => ({
     label,
     result: await getWebacyUrlScan(url),
   })));
