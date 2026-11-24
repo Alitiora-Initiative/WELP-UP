@@ -36,3 +36,24 @@ test('ignores invalid mints and malformed provider rows', () => {
   assert.equal(Object.keys(checks).length, 1);
   assert.equal(checks[mintA].state, 'no_pair');
 });
+
+test('derives the quote-token USD price from the pair base price and native ratio', () => {
+  const checks = parseDexScreenerTokenPairs(
+    [mintB],
+    { [mintB]: 0.5 },
+    [{
+      chainId: 'solana',
+      pairAddress: 'QuotePool11111111111111111111111111111111',
+      baseToken: { address: mintA },
+      quoteToken: { address: mintB },
+      priceUsd: '2',
+      priceNative: '4',
+      liquidity: { usd: 500_000 },
+      volume: { h24: 100_000 },
+    }],
+  );
+  assert.equal(checks[mintB].state, 'matched');
+  assert.equal(checks[mintB].pairSide, 'quote');
+  assert.equal(checks[mintB].priceUsd, 0.5);
+  assert.equal(checks[mintB].priceDeltaPct, 0);
+});
