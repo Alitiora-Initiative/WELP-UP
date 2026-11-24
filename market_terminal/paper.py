@@ -96,6 +96,10 @@ class PaperBroker:
 
     def _check_kill_switch(self, state: dict[str, float]) -> bool:
         if self.store.get_meta("kill_switch") == "1":
+            # Keep retrying any liquidation that was pending because a provider
+            # had no fresh price during the initial kill-switch event.
+            if self.store.open_positions():
+                self.close_all(reason="persistent kill switch liquidation retry", allow_locked=True)
             return True
         threshold_initial = state["initial"] * (1 - self.settings.max_drawdown_pct)
         threshold_high = state["high_water"] * (1 - self.settings.max_drawdown_pct)
