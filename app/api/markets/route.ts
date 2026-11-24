@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { scoreToken } from '@/lib/market-scoring';
+import { fetchDexScreenerCrossChecks } from '@/lib/dexscreener-cross-check';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -45,6 +46,13 @@ export async function GET() {
 
     const assets = payload.map(scoreToken).filter((asset) => asset.mint.length > 0);
     assets.sort((a, b) => b.score - a.score || b.liquidityUsd - a.liquidityUsd);
+    // Independently compare the 30 highest-ranked rows. Cross-check data never changes
+    // the primary provider's values, deterministic score, or eligibility decision.
+    const marketIntegrity = await fetchDexScreenerCrossChecks(assets.slice(0, 30));
+    const crossCheckedAssets = assets.map((asset) => ({
+      ...asset,
+      marketCrossCheck: marketIntegrity.records[asset.mint] ?? { provider: 'DexScreener' as const, state: 'not_checked' as const },
+    }));
     const eligible = assets.filter((asset) => asset.eligible).length;
     const pricePayload = priceResponse.ok ? await priceResponse.json().catch(() => null) : null;
     const solPrice = Number(pricePayload?.[SOL_MINT]?.usdPrice ?? pricePayload?.data?.[SOL_MINT]?.price);
@@ -53,7 +61,9 @@ export async function GET() {
     return NextResponse.json({
       source: 'Jupiter Tokens API v2',
       updatedAt: fetchedAt,
-      provider: { name: 'Jupiter Tokens API v2', state: 'Operational', fetchedAt },
+      observedAt: fetchedAt,
+      freshness: { upstreamCacheSeconds: 30, note: 'Observed by WELP at this time; provider data may be served from the shared 30-second cache window.' },
+      provider: { name: 'Jupiter Tokens API v2', state: 'Operational', access: process.env.JUPITER_API_KEY ? 'api-key' : 'keyless-limited', fetchedAt },
       priceProvider: { name: 'Jupiter Price API v3', state: priceState, fetchedAt, error: solPriceUsd === null ? 'SOL price was not returned.' : undefined },
       dataQuality: priceState === 'Operational' ? 'complete' : 'partial',
       solPriceUsd,
@@ -62,7 +72,16 @@ export async function GET() {
       blocked: assets.length - eligible,
       liquidityUsd: assets.reduce((sum, asset) => sum + asset.liquidityUsd, 0),
       volume24hUsd: assets.reduce((sum, asset) => sum + asset.volume24hUsd, 0),
-      assets,
+      marketIntegrity: {
+        provider: marketIntegrity.provider,
+        state: marketIntegrity.state,
+        checkedAssets: marketIntegrity.checkedAssets,
+        matchedAssets: marketIntegrity.matchedAssets,
+        requestedAssets: marketIntegrity.requestedAssets,
+        updatedAt: marketIntegrity.updatedAt,
+        error: marketIntegrity.error,
+      },
+      assets: crossCheckedAssets,
     }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     return providerFailure(error instanceof Error ? error.message : 'The Jupiter market feed could not be reached.');
