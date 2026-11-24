@@ -16,9 +16,9 @@ type MarketAsset = {
   mint: string;
   symbol: string;
   eligible: boolean;
-  liquidityUsd: number;
-  organicScore: number;
-  priceChange24h: number;
+  liquidityUsd: number | null;
+  organicScore: number | null;
+  priceChange24h: number | null;
   score: number;
   verified: boolean;
 };
@@ -130,9 +130,9 @@ export function AiAutomationWatch() {
         feed.assets
           .filter((asset) =>
             asset.eligible &&
-            asset.liquidityUsd >= policy.liquidity &&
-            asset.organicScore >= policy.organic &&
-            asset.priceChange24h >= -policy.drawdown &&
+            asset.liquidityUsd !== null && asset.liquidityUsd >= policy.liquidity &&
+            asset.organicScore !== null && asset.organicScore >= policy.organic &&
+            asset.priceChange24h !== null && asset.priceChange24h >= -policy.drawdown &&
             (!policy.verified || asset.verified),
           )
           .map((asset) => ({ policy, asset, key: policy.id + ':' + asset.mint })),
