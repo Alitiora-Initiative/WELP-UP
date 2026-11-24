@@ -23,14 +23,14 @@ export type ScoredMarketToken = {
   symbol: string;
   logo: string | null;
   decimals: number;
-  priceUsd: number;
-  priceChange24h: number;
+  priceUsd: number | null;
+  priceChange24h: number | null;
   priceChange1h: number | null;
-  liquidityUsd: number;
-  volume24hUsd: number;
+  liquidityUsd: number | null;
+  volume24hUsd: number | null;
   marketCapUsd: number | null;
-  holders: number;
-  organicScore: number;
+  holders: number | null;
+  organicScore: number | null;
   score: number;
   /** Share of the configured scoring inputs supplied by the provider, 0–100. */
   confidence: number;
@@ -96,7 +96,7 @@ export function scoreToken(value: unknown): ScoredMarketToken {
   const turnover = mcap !== null && mcap > 0 && volumeKnown
     ? clamp(volume / mcap / 1.5 * 100)
     : null;
-  const holderScore = holdersKnown && holders > 0 ? logScale(holders, 500, 150_000) : null;
+  const holderScore = holdersKnown ? logScale(holders, 500, 150_000) : null;
 
   // Missing metrics are excluded from the weighted average and reduce confidence.
   // They are never replaced with neutral or invented values.
@@ -149,8 +149,9 @@ export function scoreToken(value: unknown): ScoredMarketToken {
   if (!volumeKnown) warnings.push('24-hour volume is unavailable');
   if (change1h === null) warnings.push('One-hour price change is unavailable; momentum contributes no score');
   if (!tradesKnown || totalTrades === 0) warnings.push('Buy/sell trade counts are unavailable; buy pressure contributes no score');
-  const change24h = optionalNumber(s24.priceChange) ?? 0;
-  if (change24h <= -25) warnings.push('24-hour drawdown is ' + change24h.toFixed(1) + '%');
+  const change24h = optionalNumber(s24.priceChange);
+  if (change24h === null) warnings.push('24-hour price change is unavailable');
+  else if (change24h <= -25) warnings.push('24-hour drawdown is ' + change24h.toFixed(1) + '%');
   if (row.isVerified !== true) warnings.push('Token is not marked verified by the feed');
 
   const confidenceBreakdown = [
@@ -168,14 +169,14 @@ export function scoreToken(value: unknown): ScoredMarketToken {
     symbol: String(row.symbol ?? '—').slice(0, 20),
     logo: typeof row.icon === 'string' ? row.icon : null,
     decimals: Math.max(0, Math.min(18, Math.trunc(number(row.decimals)))),
-    priceUsd: Math.max(0, number(row.usdPrice)),
+    priceUsd: optionalNumber(row.usdPrice) !== null && optionalNumber(row.usdPrice)! > 0 ? optionalNumber(row.usdPrice) : null,
     priceChange24h: change24h,
     priceChange1h: change1h,
-    liquidityUsd: liquidity,
-    volume24hUsd: volume,
+    liquidityUsd: liquidityKnown ? liquidity : null,
+    volume24hUsd: volumeKnown ? volume : null,
     marketCapUsd: mcap,
-    holders,
-    organicScore: Math.round(organic),
+    holders: holdersKnown ? holders : null,
+    organicScore: organicKnown ? Math.round(organic) : null,
     score: Math.round(score * 100) / 100,
     confidence,
     verified: row.isVerified === true,
