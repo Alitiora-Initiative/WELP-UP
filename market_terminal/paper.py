@@ -210,7 +210,11 @@ class PaperBroker:
             stop_hit = quote.price <= float(pos["stop_price"]) if side == 1 else quote.price >= float(pos["stop_price"])
             target_hit = quote.price >= float(pos["take_profit_price"]) if side == 1 else quote.price <= float(pos["take_profit_price"])
             if stop_hit or target_hit:
-                self.close_position(int(pos["id"]), "stop-loss" if stop_hit else "take-profit")
+                self.close_position(
+                    int(pos["id"]),
+                    "stop-loss" if stop_hit else "take-profit",
+                    allow_locked=self.store.get_meta("kill_switch") == "1",
+                )
             checked.append(pos["symbol"])
         state = self.mark_equity()
         locked = self._check_kill_switch(state)
