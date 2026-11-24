@@ -7,7 +7,7 @@ export type AnalystAsset = {
   liquidityUsd: number | null;
   volume24hUsd: number | null;
   marketCapUsd: number | null;
-  holders: number;
+  holders: number | null;
   turnover: number | null;
   buyPressure: number | null;
   topHoldersPercent: number | null;
@@ -59,7 +59,7 @@ export function buildAnalystSnapshot(value: unknown): { updatedAt: string | null
       liquidityUsd: finite(asset.liquidityUsd),
       volume24hUsd: finite(asset.volume24hUsd),
       marketCapUsd: finite(asset.marketCapUsd),
-      holders: Math.max(0, Math.trunc(finite(asset.holders) ?? 0)),
+      holders: finite(asset.holders) === null ? null : Math.max(0, Math.trunc(finite(asset.holders)!)),
       turnover: finite(asset.turnover),
       buyPressure: finite(asset.buyPressure),
       topHoldersPercent: finite(asset.topHoldersPercent),
@@ -119,6 +119,8 @@ function assetLine(asset: AnalystAsset) {
       : asset.marketCrossCheck ? 'DexScreener check ' + asset.marketCrossCheck.state : 'no independent market check',
     'liquidity ' + money(asset.liquidityUsd),
     'volume24h ' + money(asset.volume24hUsd),
+    'holders ' + (asset.holders === null ? 'unavailable' : asset.holders.toLocaleString('en-US')),
+    'organic score ' + (asset.organicScore === null ? 'unavailable' : asset.organicScore.toFixed(0)),
     'change24h ' + percent(asset.priceChange24h),
     asset.eligible ? 'eligible' : 'not eligible',
     asset.blockers.length ? 'blocks: ' + asset.blockers.join('; ') : '',
