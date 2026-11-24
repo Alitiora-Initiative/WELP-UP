@@ -2,6 +2,7 @@ export type DexCrossCheck = {
   provider: 'DexScreener';
   state: 'matched' | 'no_pair' | 'unavailable' | 'not_checked';
   pairAddress?: string;
+  pairSide?: 'base' | 'quote';
   priceUsd?: number;
   liquidityUsd?: number | null;
   volume24hUsd?: number | null;
@@ -41,20 +42,36 @@ export function parseDexScreenerTokenPairs(
 
   for (const mint of mints) {
     if (!MINT_RE.test(mint)) continue;
-    const candidates = rows.filter((pair) => {
+    const candidates = rows.flatMap((pair) => {
+      if (pair.chainId !== 'solana') return [];
       const base = record(pair.baseToken);
-      return pair.chainId === 'solana' && base.address === mint &&
-        finite(pair.priceUsd) !== null && finite(pair.priceUsd)! > 0;
+      const quote = record(pair.quoteToken);
+      const basePriceUsd = finite(pair.priceUsd);
+      if (base.address === mint && basePriceUsd !== null && basePriceUsd > 0) {
+        return [{ pair, pairSide: 'base' as const, priceUsd: basePriceUsd }];
+      }
+      if (quote.address === mint) {
+        const priceNative = finite(pair.priceNative);
+        const quotePriceUsd = basePriceUsd !== null && basePriceUsd > 0 && priceNative !== null && priceNative > 0
+          ? basePriceUsd / priceNative
+          : null;
+        if (quotePriceUsd !== null && Number.isFinite(quotePriceUsd) && quotePriceUsd > 0) {
+          return [{ pair, pairSide: 'quote' as const, priceUsd: quotePriceUsd }];
+        }
+      }
+      return [];
     });
-    candidates.sort((a, b) => (finite(record(b.liquidity).usd) ?? 0) - (finite(record(a.liquidity).usd) ?? 0));
-    const pair = candidates[0];
+    candidates.sort((a, b) =>
+      (finite(record(b.pair.liquidity).usd) ?? 0) - (finite(record(a.pair.liquidity).usd) ?? 0),
+    );
+    const selected = candidates[0];
 
-    if (!pair) {
+    if (!selected) {
       records[mint] = { provider: 'DexScreener', state: 'no_pair' };
       continue;
     }
 
-    const priceUsd = finite(pair.priceUsd)!;
+    const { pair, pairSide, priceUsd } = selected;
     const liquidityUsd = finite(record(pair.liquidity).usd);
     const volume24hUsd = finite(record(pair.volume).h24);
     const primaryPrice = finite(primaryPrices[mint]);
@@ -65,6 +82,7 @@ export function parseDexScreenerTokenPairs(
       provider: 'DexScreener',
       state: 'matched',
       pairAddress: typeof pair.pairAddress === 'string' ? pair.pairAddress : undefined,
+      pairSide,
       priceUsd,
       liquidityUsd,
       volume24hUsd,
