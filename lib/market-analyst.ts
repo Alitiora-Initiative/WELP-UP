@@ -13,6 +13,8 @@ export type AnalystAsset = {
   topHoldersPercent: number | null;
   organicScore: number | null;
   score: number | null;
+  confidence: number | null;
+  marketCrossCheck: { state: 'matched' | 'no_pair' | 'unavailable' | 'not_checked'; priceDeltaPct: number | null } | null;
   verified: boolean;
   suspicious: boolean;
   eligible: boolean;
@@ -63,6 +65,13 @@ export function buildAnalystSnapshot(value: unknown): { updatedAt: string | null
       topHoldersPercent: finite(asset.topHoldersPercent),
       organicScore: finite(asset.organicScore),
       score: finite(asset.score),
+      confidence: finite(asset.confidence),
+      marketCrossCheck: (() => {
+        const check = record(asset.marketCrossCheck);
+        const state = check.state;
+        if (state !== 'matched' && state !== 'no_pair' && state !== 'unavailable' && state !== 'not_checked') return null;
+        return { state, priceDeltaPct: finite(check.priceDeltaPct) };
+      })(),
       verified: asset.verified === true,
       suspicious: asset.suspicious === true,
       eligible: asset.eligible === true,
@@ -104,10 +113,14 @@ function assetLine(asset: AnalystAsset) {
   return [
     asset.symbol || asset.name,
     'score ' + (asset.score === null ? 'n/a' : asset.score.toFixed(1)),
+    'data coverage ' + (asset.confidence === null ? 'unavailable' : asset.confidence.toFixed(0) + '%'),
+    asset.marketCrossCheck?.state === 'matched' && asset.marketCrossCheck.priceDeltaPct !== null
+      ? 'DexScreener price delta ' + percent(asset.marketCrossCheck.priceDeltaPct)
+      : asset.marketCrossCheck ? 'DexScreener check ' + asset.marketCrossCheck.state : 'no independent market check',
     'liquidity ' + money(asset.liquidityUsd),
     'volume24h ' + money(asset.volume24hUsd),
     'change24h ' + percent(asset.priceChange24h),
-    asset.eligible ? 'eligible' : 'blocked',
+    asset.eligible ? 'eligible' : 'not eligible',
     asset.blockers.length ? 'blocks: ' + asset.blockers.join('; ') : '',
     asset.warnings.length ? 'warnings: ' + asset.warnings.join('; ') : '',
   ].filter(Boolean).join(' · ');
