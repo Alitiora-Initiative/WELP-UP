@@ -111,3 +111,41 @@ This is a staged plan, not a promise that a provider, market, or trading product
 - [ ] Add explicit export and retention controls for locally recorded activity.
 - [ ] Add position-level history only after data can be verified from on-chain transactions; never infer P&L from a wallet balance line.
 - [ ] Consider authenticated cross-device history only with a published privacy model and clear consent.
+
+
+## Product growth strategy expansion
+
+The broader direction is to become a trusted research, execution and launch workstation. The detailed architecture, data contracts, risk boundaries and release gates are in [docs/PRODUCT_GROWTH_STRATEGY.md](docs/PRODUCT_GROWTH_STRATEGY.md). Items below are planned until they have code, tests and production evidence.
+
+### P0 — Trust, measurement and transparent scoring
+- [x] Replace the artificial 80–98 score mapping with a versioned 0–100 weighted quality score and an explicit 80-point eligibility floor.
+- [x] Separate low-quality Watch rows from hard-rule Blocked rows in the API and market/signal filters.
+- [ ] Add a durable append-only signal journal with the exact market snapshot, source timestamps, pool/mint identity, score-model version, entry reference, and risk checks for every published signal.
+- [ ] Define fixed evaluation horizons and publish signal outcomes separately from executed-trade P&L.
+- [ ] Reconcile executed fills from confirmed Solana signatures, including failed attempts, fees, tips, route impact, token decimals and missing-price periods.
+
+### P1 — Strategy studio and repeatable research
+- [ ] Replace hard-coded-only strategy templates with versioned user-owned configurations, server validation and explicit import/export.
+- [ ] Add strategy backtests/replays only when sourced historical candles are available; label every replay as simulated and keep it out of live-performance rankings.
+- [ ] Add walk-forward testing, out-of-sample evaluation, fees/slippage sensitivity, drawdown and sample-size reporting.
+- [ ] Keep every strategy change versioned so prior records cannot be overwritten by new settings.
+
+### P2 — Execution reliability and permissioned automation
+- [ ] Implement transaction simulation, bounded priority-fee estimation, stale-quote detection, blockhash checks, idempotency and failure reconciliation.
+- [ ] Evaluate a Jito/private-transaction route and dedicated RPC providers; do not promise sandwich prevention or silently fall back to public routing.
+- [ ] Finish the audited vault, owner-controlled caps, pause/revoke, withdrawal and executor isolation before delegated signing or unattended trades.
+- [ ] Add a user-visible kill switch and alerts for stale feeds, RPC degradation, repeated failures and drawdown thresholds.
+
+### P3 — Launch intelligence and distribution
+- [ ] Add a launch-risk review using verifiable mint/program authority, liquidity, holder concentration, creator history and available pool data.
+- [ ] Add branded signal cards only from immutable signal-journal records, with visible timestamps, model version and later outcome updates.
+- [ ] Build a Telegram companion for alerts and approval handoff; require authenticated wallet linking, short-lived action tokens, replay protection and a final wallet/vault policy check.
+- [ ] Keep copy strategies read-only until the creator identity, complete verified record, follower limits, revocation and audited execution path exist.
+
+### P4 — Adaptive models, monetization and market expansion
+- [ ] Start with offline evaluation and shadow-mode model candidates; require out-of-sample improvement and human release approval before model promotion.
+- [ ] Add a strategy marketplace only after the performance dataset and identity controls are independently reproducible.
+- [ ] Introduce transparent paid tiers for research depth, alerts and strategy tooling; keep fee disclosure and a no-execution research path.
+- [ ] Expand beyond Solana only after each market has licensed/maintained data, correct venue semantics, independent risk rules and a reviewed execution partner. Tokenized equities are not equivalent to direct brokerage access.
+
+**Release rule:** no live P&L, win rate, leaderboards, copy-trading status, protected-MEV claim, RL/self-learning claim, protocol revenue or cross-market execution claim until the relevant system is implemented and independently verifiable.
