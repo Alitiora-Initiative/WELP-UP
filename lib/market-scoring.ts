@@ -110,6 +110,7 @@ export function scoreToken(value: unknown): ScoredMarketToken {
   if (organic < 60) warnings.push('Low organic score: ' + organic.toFixed(0) + '/100');
   if (mcap === null || mcap <= 0) warnings.push('Market cap is unavailable; turnover contributes no score');
   if (change1h === null) warnings.push('One-hour price change is unavailable; momentum contributes no score');
+  if (totalTrades === 0) warnings.push('Buy pressure is unavailable; this input contributes no score');
   const change24h = number(s24.priceChange);
   if (change24h <= -25) warnings.push('24-hour drawdown is ' + change24h.toFixed(1) + '%');
   if (score < MARKET_SCORING_MODEL.entryFloor) warnings.push('Weighted quality score is below the 80-point entry floor');
