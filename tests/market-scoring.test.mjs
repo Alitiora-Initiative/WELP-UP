@@ -60,7 +60,7 @@ test('soft risks remain visible as warnings without being promoted to hard block
       mintAuthorityDisabled: false,
       topHoldersPercentage: 50,
     },
-    stats1h: { priceChange: 0 }, 
+    stats1h: { priceChange: 0 },
     stats24h: { priceChange: -30, buyVolume: 1_000_000, sellVolume: 1_000_000, numBuys: 10_000, numSells: 0 },
   });
   assert.equal(scored.score, 73);
