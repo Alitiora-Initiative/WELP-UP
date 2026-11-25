@@ -2,11 +2,11 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-22c55e)](LICENSE) [![Solana: Mainnet](https://img.shields.io/badge/Solana-Mainnet-111111)](https://welpup.fun)
 
-WELP UP is a Solana market research and wallet-signed trading interface at [welpup.fun](https://welpup.fun). Fork the repo, open a pull request, and send updates. Reviewers merge changes that keep live data honest and wallet signing in the user's wallet. It provides live market reads, rule-based signals, wallet-derived portfolio data, market analysis and a token launch interface.
+WELP UP is a Solana market research and wallet-signed trading interface at [welpup.fun](https://welpup.fun). Fork the repo, open a pull request, and send updates. Reviewers merge changes that keep live data honest and wallet signing in the user's wallet. It provides live market reads, transparent 0–100 rule-based quality scores, wallet-derived portfolio data, market analysis and a token launch interface. The product expansion plan is documented in [docs/PRODUCT_GROWTH_STRATEGY.md](docs/PRODUCT_GROWTH_STRATEGY.md).
 
 ## Current feature boundaries
 
-- **Markets and signals:** read live upstream Solana market data. Feed or RPC outages are reported as unavailable; the app does not fabricate prices, balances, listings or volume.
+- **Markets and signals:** read live upstream Solana market data. The versioned quality score uses a 0–100 scale with an 80-point eligibility floor; it is a heuristic, not a win probability. Feed or RPC outages are reported as unavailable; the app does not fabricate prices, balances, listings or volume.
 - **Trading:** Jupiter Swap API v2 orders are designed for user review and wallet signing; automated trading and custody are not enabled. WELP swap order and execute routes fail closed until a server-side Jupiter referral account and fee are configured. Each returned order must include the configured fee basis points. This referral route is separate from WELP's undeployed on-chain treasury program and does not implement the proposed 60/40 treasury settlement.
 - **Pump launch:** the launch route prepares a PumpPortal `create` transaction targeting the Pump bonding-curve pool; the connected wallet must sign it, and the site submits the signed transaction to Solana. A successful transaction's mint is its Solana contract address (CA). This does not guarantee listing or indexing by third-party platforms.
 - **Custom supply and decimals:** the WELP program is not executable on mainnet. Keep the rail disabled until the binary and program ID are verified, an independent security review is complete, and both `WELP_LAUNCHPAD_ENABLED` and `WELP_LAUNCHPAD_SECURITY_REVIEWED` are explicitly enabled.

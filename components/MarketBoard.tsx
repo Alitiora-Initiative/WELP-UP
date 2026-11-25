@@ -13,8 +13,8 @@ type Asset = {
   liquidityUsd: number; volume24hUsd: number; holders: number; organicScore: number; score: number;
   verified: boolean; state: 'Eligible' | 'Watch' | 'Blocked'; eligible: boolean; blockers: string[]; warnings: string[];
 };
-type Feed = { updatedAt: string; total: number; eligible: number; blocked: number; liquidityUsd: number; volume24hUsd: number; assets: Asset[]; error?: string };
-type Filter = 'All' | 'Eligible' | 'Blocked' | 'Score 90+' | 'Verified';
+type Feed = { updatedAt: string; total: number; eligible: number; watch: number; blocked: number; liquidityUsd: number; volume24hUsd: number; assets: Asset[]; error?: string };
+type Filter = 'All' | 'Eligible' | 'Watch' | 'Blocked' | 'Score 90+' | 'Verified';
 const compact = (value: number) => value >= 1e9 ? '$' + (value / 1e9).toFixed(1) + 'B' : value >= 1e6 ? '$' + (value / 1e6).toFixed(1) + 'M' : value >= 1e3 ? '$' + (value / 1e3).toFixed(value >= 1e5 ? 0 : 1) + 'K' : '$' + value.toFixed(2);
 const price = (value: number) => value >= 1000 ? '$' + value.toLocaleString('en-US', { maximumFractionDigits: 2 }) : value >= 1 ? '$' + value.toFixed(2) : value >= .01 ? '$' + value.toFixed(4) : '$' + value.toPrecision(4);
 const short = (value: string) => value.slice(0, 5) + '…' + value.slice(-5);
@@ -64,7 +64,7 @@ export function MarketBoard() {
     const q = query.trim().toLowerCase();
     const filteredRows = assets.filter((asset) => {
       const matchesText = !q || asset.symbol.toLowerCase().includes(q) || asset.name.toLowerCase().includes(q) || asset.mint.toLowerCase().includes(q);
-      const matchesTab = filter === 'All' || (filter === 'Eligible' && asset.eligible) || (filter === 'Blocked' && !asset.eligible) || (filter === 'Score 90+' && asset.score >= 90) || (filter === 'Verified' && asset.verified);
+      const matchesTab = filter === 'All' || (filter === 'Eligible' && asset.eligible) || (filter === 'Watch' && asset.state === 'Watch') || (filter === 'Blocked' && asset.state === 'Blocked') || (filter === 'Score 90+' && asset.score >= 90) || (filter === 'Verified' && asset.verified);
       return matchesText && matchesTab;
     });
     return filteredRows.sort((a, b) => sort === 'liquidity' ? b.liquidityUsd - a.liquidityUsd : sort === 'volume' ? b.volume24hUsd - a.volume24hUsd : b.score - a.score);
@@ -84,7 +84,7 @@ export function MarketBoard() {
   const updated = feed?.updatedAt ? new Date(feed.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
   const tabs: Array<{ key: Filter; value: number }> = [
     { key: 'All', value: feed?.total ?? 0 }, { key: 'Eligible', value: feed?.eligible ?? 0 },
-    { key: 'Blocked', value: feed?.blocked ?? 0 }, { key: 'Score 90+', value: assets.filter((a) => a.score >= 90).length },
+    { key: 'Watch', value: feed?.watch ?? assets.filter((a) => a.state === 'Watch').length }, { key: 'Blocked', value: feed?.blocked ?? assets.filter((a) => a.state === 'Blocked').length }, { key: 'Score 90+', value: assets.filter((a) => a.score >= 90).length },
     { key: 'Verified', value: assets.filter((a) => a.verified).length },
   ];
 
@@ -97,15 +97,15 @@ export function MarketBoard() {
 
     <section className="market-stats">
       <div><span>TRACKED ASSETS</span><strong>{feed ? feed.total.toFixed(0) : '—'}</strong><small>Top organic Solana assets from the live feed</small></div>
-      <div><span>ELIGIBLE NOW</span><strong>{feed ? feed.eligible : '—'}</strong><small>Passed every hard rule</small></div>
+      <div><span>ELIGIBLE NOW</span><strong>{feed ? feed.eligible : '—'}</strong><small>Passed the 80-point floor and hard rules</small></div>
       <div><span>TRACKED LIQUIDITY</span><strong>{feed ? compact(feed.liquidityUsd) : '—'}</strong><small>Sum across the tracked set</small></div>
       <div><span>24H VOLUME</span><strong>{feed ? compact(feed.volume24hUsd) : '—'}</strong><small>Feed updated {updated}</small></div>
     </section>
 
     {error ? <div className="feed-error" role="alert"><strong>Market feed unavailable</strong><span>{error}</span><button className="text-action" onClick={() => void refresh()}>Try again</button></div> : null}
-    <div className="market-toolbar"><label className="market-search"><Search size={16} /><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Search symbol, name or mint" aria-label="Search symbol, name or mint" /></label><div className="market-sort"><span>Sort</span><div className="control-segment" role="group" aria-label="Sort assets">{([{ value: 'score', label: 'Score' }, { value: 'liquidity', label: 'Liquidity' }, { value: 'volume', label: '24h volume' }] as const).map((option) => <button key={option.value} type="button" className={sort === option.value ? 'is-selected' : ''} aria-pressed={sort === option.value} onClick={() => { setSort(option.value); setPage(1); }}>{option.label}</button>)}</div><button className="text-action" onClick={() => setRulesOpen((value) => !value)}><CircleHelp size={14} /> Why a row is blocked</button></div></div>
+    <div className="market-toolbar"><label className="market-search"><Search size={16} /><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Search symbol, name or mint" aria-label="Search symbol, name or mint" /></label><div className="market-sort"><span>Sort</span><div className="control-segment" role="group" aria-label="Sort assets">{([{ value: 'score', label: 'Score' }, { value: 'liquidity', label: 'Liquidity' }, { value: 'volume', label: '24h volume' }] as const).map((option) => <button key={option.value} type="button" className={sort === option.value ? 'is-selected' : ''} aria-pressed={sort === option.value} onClick={() => { setSort(option.value); setPage(1); }}>{option.label}</button>)}</div><button className="text-action" onClick={() => setRulesOpen((value) => !value)}><CircleHelp size={14} /> Explain watch and block rules</button></div></div>
 
-    {rulesOpen ? <div className="rules-explainer"><div><strong>Hard rules</strong><span>Active freeze authority · liquidity below $100k · 24h volume below $100k · top holders above 60%.</span></div><div><strong>Warnings</strong><span>Liquidity below $250k · 24h drawdown beyond −25% · concentrated holders · incomplete feed data.</span></div><button onClick={() => setRulesOpen(false)} aria-label="Close explanation">×</button></div> : null}
+    {rulesOpen ? <div className="rules-explainer"><div><strong>Hard rules</strong><span>Active freeze authority · liquidity below $100k · 24h volume below $100k · top holders above 60%.</span></div><div><strong>Watch score</strong><span>Weighted quality below 80/100. Missing inputs contribute no positive points and remain visible as warnings.</span></div><div><strong>Warnings</strong><span>Liquidity below $250k · 24h drawdown beyond −25% · concentrated holders · incomplete feed data.</span></div><button onClick={() => setRulesOpen(false)} aria-label="Close explanation">×</button></div> : null}
 
     <section className="market-board">
       <div className="market-board-heading"><div><h2>market board</h2><span>{feed ? feed.total + ' assets' : '—'} · {pageSize} per page · {updated}</span></div></div>
@@ -133,6 +133,6 @@ export function MarketBoard() {
       <div className="market-pagination"><span>Showing {filtered.length ? (page - 1) * pageSize + 1 : 0}–{Math.min(page * pageSize, filtered.length)} of {filtered.length}</span><div><button aria-label="Previous page" disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}><ChevronLeft size={15} /></button><span>Page {page} of {pages}</span><button aria-label="Next page" disabled={page >= pages} onClick={() => setPage((value) => Math.min(pages, value + 1))}><ChevronRight size={15} /></button></div></div>
     </section>
     {chartAsset ? <ChartPanel mint={chartAsset.mint} name={chartAsset.name} symbol={chartAsset.symbol} /> : null}
-    <div className="market-disclosures"><section><span>FEED CONTRACT</span><p>Prices, liquidity and volume come from Jupiter Tokens API v2. This page refreshes every 60 seconds and when the tab becomes visible. Venue fees, market hours and outages belong to the venue.</p></section><section><span>WHAT THE SCORE MEANS</span><p>The score is a weighted read of live fields — organic activity, depth, turnover, holder spread, buy pressure and short-term calm — mapped into an 80–98 band. It is not a probability of profit.</p></section><section><span>BEFORE YOU ROUTE AN ORDER</span><p>A qualified row is still a volatile asset. Review the route and price impact on the swap desk, then sign one transaction at a time in your wallet.</p><Link href="/swap">Open trade desk <ArrowUpRight size={13} /></Link></section></div>
+    <div className="market-disclosures"><section><span>FEED CONTRACT</span><p>Prices, liquidity and volume come from Jupiter Tokens API v2. This page refreshes every 60 seconds and when the tab becomes visible. Venue fees, market hours and outages belong to the venue.</p></section><section><span>WHAT THE SCORE MEANS</span><p>The score is a weighted read of live fields — organic activity, depth, turnover, holder spread, buy pressure and short-term calm — reported on a 0–100 scale. An 80-point floor is required for eligibility; the score is not a probability of profit or a return forecast.</p></section><section><span>BEFORE YOU ROUTE AN ORDER</span><p>A qualified row is still a volatile asset. Review the route and price impact on the swap desk, then sign one transaction at a time in your wallet.</p><Link href="/swap">Open trade desk <ArrowUpRight size={13} /></Link></section></div>
   </main>;
 }

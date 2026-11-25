@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { scoreToken } from '@/lib/market-scoring';
+import { MARKET_SCORING_MODEL, scoreToken } from '@/lib/market-scoring';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,6 +25,7 @@ function providerFailure(error: string, status = 502) {
     dataQuality: 'unavailable',
     total: 0,
     eligible: 0,
+    watch: 0,
     blocked: 0,
     assets: [],
   }, { status, headers: { 'Cache-Control': 'no-store' } });
@@ -46,6 +47,8 @@ export async function GET() {
     const assets = payload.map(scoreToken).filter((asset) => asset.mint.length > 0);
     assets.sort((a, b) => b.score - a.score || b.liquidityUsd - a.liquidityUsd);
     const eligible = assets.filter((asset) => asset.eligible).length;
+    const watch = assets.filter((asset) => asset.state === 'Watch').length;
+    const blocked = assets.filter((asset) => asset.state === 'Blocked').length;
     const pricePayload = priceResponse.ok ? await priceResponse.json().catch(() => null) : null;
     const solPrice = Number(pricePayload?.[SOL_MINT]?.usdPrice ?? pricePayload?.data?.[SOL_MINT]?.price);
     const solPriceUsd = Number.isFinite(solPrice) && solPrice > 0 ? solPrice : null;
@@ -59,7 +62,14 @@ export async function GET() {
       solPriceUsd,
       total: assets.length,
       eligible,
-      blocked: assets.length - eligible,
+      watch,
+      blocked,
+      scoringModel: {
+        id: MARKET_SCORING_MODEL.id,
+        scoreRange: [MARKET_SCORING_MODEL.scoreMin, MARKET_SCORING_MODEL.scoreMax],
+        entryFloor: MARKET_SCORING_MODEL.entryFloor,
+        interpretation: 'Weighted market-quality heuristic; not a probability of profit or a return forecast.',
+      },
       liquidityUsd: assets.reduce((sum, asset) => sum + asset.liquidityUsd, 0),
       volume24hUsd: assets.reduce((sum, asset) => sum + asset.volume24hUsd, 0),
       assets,

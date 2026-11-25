@@ -1,5 +1,12 @@
 type Row = Record<string, unknown>;
 
+export const MARKET_SCORING_MODEL = {
+  id: 'welp-market-quality-v2',
+  scoreMin: 0,
+  scoreMax: 100,
+  entryFloor: 80,
+} as const;
+
 const rec = (value: unknown): Row =>
   value && typeof value === 'object' && !Array.isArray(value) ? value as Row : {};
 const number = (value: unknown, fallback = 0) =>
@@ -77,9 +84,9 @@ export function scoreToken(value: unknown): ScoredMarketToken {
     + depth * 0.20
     + (turnover ?? 0) * 0.15
     + holderScore * 0.13
-    + buyPressure * 0.12
+    + (totalTrades > 0 ? buyPressure : 0) * 0.12
     + momentum * 0.08;
-  const score = Math.round(80 + 18 * quality / 100);
+  const score = Math.round(clamp(quality, MARKET_SCORING_MODEL.scoreMin, MARKET_SCORING_MODEL.scoreMax));
 
   const blockers: string[] = [];
   const warnings: string[] = [];
@@ -103,9 +110,12 @@ export function scoreToken(value: unknown): ScoredMarketToken {
   if (organic < 60) warnings.push('Low organic score: ' + organic.toFixed(0) + '/100');
   if (mcap === null || mcap <= 0) warnings.push('Market cap is unavailable; turnover contributes no score');
   if (change1h === null) warnings.push('One-hour price change is unavailable; momentum contributes no score');
+  if (totalTrades === 0) warnings.push('Buy pressure is unavailable; this input contributes no score');
   const change24h = number(s24.priceChange);
   if (change24h <= -25) warnings.push('24-hour drawdown is ' + change24h.toFixed(1) + '%');
+  if (score < MARKET_SCORING_MODEL.entryFloor) warnings.push('Weighted quality score is below the 80-point entry floor');
   if (row.isVerified !== true) warnings.push('Token is not marked verified by the feed');
+  const eligible = blockers.length === 0 && score >= MARKET_SCORING_MODEL.entryFloor;
   const confidenceBreakdown = [
     `Organic activity contributes ${Math.round(organic * 0.32)} of the quality points (32% weight).`,
     `Liquidity depth contributes ${Math.round(depth * 0.20)} points from ${liquidity.toLocaleString('en-US')} USD.`,
@@ -130,14 +140,14 @@ export function scoreToken(value: unknown): ScoredMarketToken {
     marketCapUsd: mcap,
     holders,
     organicScore: Math.round(organic),
-    score: clamp(score, 80, 98),
+    score,
     verified: row.isVerified === true,
     suspicious,
     turnover,
     buyPressure: totalTrades > 0 ? buyPressure : null,
     topHoldersPercent: topHolders,
-    state: blockers.length ? 'Blocked' : warnings.length ? 'Watch' : 'Eligible',
-    eligible: blockers.length === 0,
+    state: blockers.length ? 'Blocked' : eligible ? 'Eligible' : 'Watch',
+    eligible,
     blockers,
     warnings,
     confidenceBreakdown,
