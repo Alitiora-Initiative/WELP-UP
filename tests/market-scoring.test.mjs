@@ -53,7 +53,7 @@ test('soft risks remain visible as warnings without being promoted to hard block
   const scored = scoreToken({
     ...strongToken,
     holderCount: 500,
-    organicScore: 100,
+    organicScore: 55,
     isVerified: false,
     audit: {
       freezeAuthorityDisabled: true,
@@ -63,9 +63,10 @@ test('soft risks remain visible as warnings without being promoted to hard block
     stats1h: { priceChange: 0 }, 
     stats24h: { priceChange: -30, buyVolume: 1_000_000, sellVolume: 1_000_000, numBuys: 10_000, numSells: 0 },
   });
-  assert.equal(scored.score, 87);
-  assert.equal(scored.eligible, true);
-  assert.equal(scored.state, 'Eligible');
+  assert.equal(scored.score, 73);
+  assert.equal(scored.eligible, false);
+  assert.equal(scored.state, 'Watch');
+  assert.equal(scored.blockers.length, 0);
   assert.match(scored.warnings.join(' | '), /Mint authority is active/);
   assert.match(scored.warnings.join(' | '), /Small holder base/);
   assert.match(scored.warnings.join(' | '), /Top holders own 50.0%/);
@@ -93,6 +94,16 @@ test('missing market-cap, momentum and audit fields are explicit and do not rece
   assert.match(scored.warnings.join(' | '), /One-hour price change is unavailable/);
   assert.match(scored.warnings.join(' | '), /Holder concentration is unavailable/);
   assert.match(scored.warnings.join(' | '), /Freeze-authority status is not reported/);
+});
+
+test('missing buy and sell counts do not receive neutral positive points', () => {
+  const scored = scoreToken({
+    ...strongToken,
+    stats24h: { priceChange: 0, buyVolume: 1_000_000, sellVolume: 1_000_000 },
+  });
+  assert.equal(scored.buyPressure, null);
+  assert.equal(scored.score, 88);
+  assert.match(scored.warnings.join(' | '), /Buy pressure is unavailable/);
 });
 
 test('weak but otherwise unblocked assets stay below the entry floor', () => {
